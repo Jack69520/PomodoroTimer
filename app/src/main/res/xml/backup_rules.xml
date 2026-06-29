@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自动备份策略（Android Auto Backup / Device Transfer）
+  采用白名单：仅下列路径参与备份。
+  - 包含：Room 数据库、设备级 UI 偏好（PomodoroPrefs）、当前账户指针（account_prefs）
+  - 未列入即不备份：password_security_prefs、ActiveSessionPrefs 等敏感/临时数据
+-->
+<full-backup-content>
+    <include domain="database" path="pomodoro_db" />
+    <include domain="database" path="pomodoro_db-shm" />
+    <include domain="database" path="pomodoro_db-wal" />
+    <include domain="sharedpref" path="PomodoroPrefs.xml" />
+    <include domain="sharedpref" path="account_prefs.xml" />
+    <include domain="sharedpref" path="privacy_consent_prefs.xml" />
+</full-backup-content>

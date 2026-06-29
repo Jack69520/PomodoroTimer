@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="start_focus_25"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_focus_25"
+        android:shortcutShortLabel="@string/shortcut_focus_25_short"
+        android:shortcutLongLabel="@string/shortcut_focus_25_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.skyinit.pomodorotimer"
+            android:targetClass="com.skyinit.pomodorotimer.MainActivity">
+            <extra
+                android:name="shortcut_action"
+                android:value="start_focus_25" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="view_statistics"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_statistics"
+        android:shortcutShortLabel="@string/shortcut_statistics_short"
+        android:shortcutLongLabel="@string/shortcut_statistics_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.skyinit.pomodorotimer"
+            android:targetClass="com.skyinit.pomodorotimer.MainActivity">
+            <extra
+                android:name="shortcut_action"
+                android:value="view_statistics" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="enable_blocking"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_blocking"
+        android:shortcutShortLabel="@string/shortcut_blocking_short"
+        android:shortcutLongLabel="@string/shortcut_blocking_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.skyinit.pomodorotimer"
+            android:targetClass="com.skyinit.pomodorotimer.MainActivity">
+            <extra
+                android:name="shortcut_action"
+                android:value="enable_blocking" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

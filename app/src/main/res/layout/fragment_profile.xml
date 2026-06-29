@@ -1,0 +1,306 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scrollbars="none"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="0dp"
+        android:orientation="vertical">
+
+        <!-- 账户信息区域 -->
+        <LinearLayout
+            android:id="@+id/account_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/account_section_background"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:elevation="8dp"
+            android:shadowColor="@color/black"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="2">
+
+            <ImageView
+                android:id="@+id/account_avatar"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_default_avatar"
+                android:scaleType="centerCrop"
+                android:background="@drawable/circle_background"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="20dp">
+
+                <TextView
+                    android:id="@+id/account_nickname"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_login_prompt"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/account_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="14sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/rounded_background_light"
+                    android:padding="6dp"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:alpha="0.6"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_tap_to_view"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="2dp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 统计信息卡片 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/account_section_background"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp"
+            android:elevation="6dp"
+            android:shadowColor="@color/black"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="2">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_timer"
+                    android:layout_marginEnd="12dp"
+                    android:tint="@color/text_primary"/>
+
+                <TextView
+                    android:id="@+id/count_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="32sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_today_completed_pomodoros"
+                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"/>
+
+        </LinearLayout>
+
+        <!-- 应用屏蔽功能卡片 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/account_section_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:elevation="4dp"
+            android:shadowColor="@color/black"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="2">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/profile_app_blocking"
+                    android:textSize="18sp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"/>
+
+                <Switch
+                    android:id="@+id/app_blocking_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/app_blocking_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_app_blocking_description"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:lineSpacingExtra="4dp"/>
+
+            <Button
+                android:id="@+id/btn_app_blocking_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/blocking_title_manage_apps"
+                android:textSize="16sp"
+                android:background="@drawable/button_blue_background"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"/>
+
+
+        </LinearLayout>
+
+
+        <!-- 功能按钮卡片 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/account_section_background"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp"
+            android:elevation="4dp"
+            android:shadowColor="@color/black"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="2">
+
+            <!-- 设置按钮 -->
+            <LinearLayout
+                android:id="@+id/btn_settings"
+                style="@style/FunctionButton"
+                android:background="@drawable/function_button_settings_background"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    style="@style/FunctionButtonIcon"
+                    android:src="@drawable/ic_settings_white"/>
+
+                <TextView
+                    style="@style/FunctionButtonText"
+                    android:text="@string/settings_title"/>
+
+                <ImageView
+                    style="@style/FunctionButtonArrow"
+                    android:src="@drawable/ic_arrow_right_white"/>
+
+            </LinearLayout>
+
+            <!-- 开发实验室按钮 -->
+            <LinearLayout
+                android:id="@+id/btn_dev_lab"
+                style="@style/FunctionButton"
+                android:background="@drawable/function_button_dev_lab_background"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    style="@style/FunctionButtonIcon"
+                    android:src="@drawable/ic_lab_white"/>
+
+                <TextView
+                    style="@style/FunctionButtonText"
+                    android:text="@string/title_dev_lab"/>
+
+                <ImageView
+                    style="@style/FunctionButtonArrow"
+                    android:src="@drawable/ic_arrow_right_white"/>
+
+            </LinearLayout>
+
+            <!-- 常见问题按钮 -->
+            <LinearLayout
+                android:id="@+id/btn_faq"
+                style="@style/FunctionButton"
+                android:background="@drawable/function_button_faq_background"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    style="@style/FunctionButtonIcon"
+                    android:src="@drawable/ic_faq_white"/>
+
+                <TextView
+                    style="@style/FunctionButtonText"
+                    android:text="@string/title_faq"/>
+
+                <ImageView
+                    style="@style/FunctionButtonArrow"
+                    android:src="@drawable/ic_arrow_right_white"/>
+
+            </LinearLayout>
+
+            <!-- 关于按钮 -->
+            <LinearLayout
+                android:id="@+id/btn_about"
+                style="@style/FunctionButton"
+                android:background="@drawable/function_button_about_background"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    style="@style/FunctionButtonIcon"
+                    android:src="@drawable/ic_about_white"/>
+
+                <TextView
+                    style="@style/FunctionButtonText"
+                    android:text="@string/title_about"/>
+
+                <ImageView
+                    style="@style/FunctionButtonArrow"
+                    android:src="@drawable/ic_arrow_right_white"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

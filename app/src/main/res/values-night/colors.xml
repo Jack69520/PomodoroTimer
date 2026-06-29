@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Timer gradient (dark) -->
+    <color name="timer_bg_start">#12243A</color>
+    <color name="timer_bg_center">#103027</color>
+    <color name="timer_bg_end">#0D1E33</color>
+    <color name="red_600">#EF5350</color>
+    <color name="blue_600">#42A5F5</color>
+    <color name="gray_700">#607D8B</color>
+    <!-- 深色模式下的基础颜色 -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    
+    <!-- 深色模式下的文字颜色 -->
+    <color name="black">#FFFFFFFF</color>  <!-- 深色模式下黑色文字变为白色 -->
+    <color name="white">#FF000000</color>   <!-- 深色模式下白色文字变为黑色 -->
+    <color name="gray">#FFAAAAAA</color>    <!-- 深色模式下灰色文字保持浅灰色 -->
+    <color name="transparent">#00000000</color>
+    
+    <!-- 主题色保持不变 -->
+    <color name="skyblue">#FF51CDFF</color>
+    <color name="lilac">#BA86CF</color>
+    <color name="default_theme">#41CD9D</color>
+    <color name="default_theme_dark">#014971</color>
+    <color name="dark_background">#121212</color>
+    <color name="dark_text">#FFFFFF</color>
+    
+    <!-- 自适应背景颜色（夜间模式） -->
+    <color name="adaptive_background_light">#1A3D1A</color>  <!-- 墨绿色 -->
+    <color name="adaptive_background_dark">#1A3D1A</color>   <!-- 墨绿色 -->
+
+    <!-- 深色模式下的语义化颜色 -->
+    <color name="text_primary">#FFFFFFFF</color>      <!-- 主要文字颜色：白色 -->
+    <color name="text_secondary">#FFAAAAAA</color>    <!-- 次要文字颜色：浅灰色 -->
+    <color name="text_hint">#FF666666</color>        <!-- 提示文字颜色：深灰色 -->
+    <color name="background_card">#FF1E1E1E</color>   <!-- 卡片背景：深灰色 -->
+    <color name="background_surface">#FF121212</color> <!-- 表面背景：深色 -->
+    <color name="background_primary">#FF121212</color> <!-- 主要背景：深色 -->
+    <color name="background_secondary">#FF2D2D2D</color> <!-- 次要背景：深灰色 -->
+    <color name="todo_item_background">#FF2D2D2D</color> <!-- 待办卡片：统一浅色不透明（相对深色背景） -->
+    <color name="todo_item_border">#FF404040</color>      <!-- 待办卡片边框 -->
+    <color name="bottom_nav_ripple">#14FFFFFF</color> <!-- 底部导航点击涟漪：深色模式 -->
+    <color name="divider">#FF404040</color>           <!-- 分割线颜色：深灰色 -->
+    <color name="border_light">#FF404040</color>      <!-- 深色边框 -->
+    <color name="primary">#FF41CD9D</color>           <!-- 主色调：绿色 -->
+    <color name="consent_bg_start">#12243A</color>
+    <color name="consent_bg_end">#0D1E33</color>
+    <color name="consent_card_stroke">#3341CD9D</color>
+    
+    <!-- 账户相关颜色（深色模式） -->
+    <color name="account_section_bg">#FF2D2D2D</color>      <!-- 账户区域背景：深灰色 -->
+    <color name="account_section_border">#FF404040</color>  <!-- 账户区域边框：深灰色 -->
+    <color name="avatar_background">#FF404040</color>       <!-- 头像背景：深灰色 -->
+    <color name="avatar_border">#FF555555</color>          <!-- 头像边框：深灰色 -->
+    <color name="avatar_icon">#FFAAAAAA</color>            <!-- 头像图标颜色：浅灰色 -->
+    
+    <!-- AlertActivity按钮颜色（深色模式） -->
+    <color name="theme_orange">#FFFF9800</color>      <!-- 橙色：延长按钮 -->
+    <color name="theme_green">#FF4CAF50</color>       <!-- 绿色：休息按钮 -->
+    <color name="theme_blue">#FF2196F3</color>        <!-- 蓝色：完成按钮 -->
+
+    <!-- 10种柔和主题色 -->
+    <color name="theme1">#FFCCCF</color>
+    <color name="theme2">#FFD4B2</color>
+    <color name="theme3">#FFDAC1</color>
+    <color name="theme4">#E2F0CB</color>
+    <color name="theme5">#B5EAD7</color>
+    <color name="theme6">#C7CEEA</color>
+    <color name="theme7">#F8B195</color>
+    <color name="theme8">#F67280</color>
+    <color name="theme9">#C06C84</color>
+    <color name="theme10">#6C5B7B</color>
+    <!-- 10种中国美学主题色 -->
+    <color name="theme11">#1D5D45</color>
+    <color name="theme12">#7A8D9C</color>
+    <color name="theme13">#BB5C45</color>
+    <color name="theme14">#E8F1F5</color>
+    <color name="theme15">#F0D3A7</color>
+    <color name="theme16">#B7D7A2</color>
+    <color name="theme17">#EA9DB4</color>
+    <color name="theme18">#D8A868</color>
+    <color name="theme19">#CF5C48</color>
+    <color name="theme20">#E0CDCF</color>
+</resources>

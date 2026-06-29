@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingHorizontal="6dp">
+
+    <!-- 日期显示 (右上角) -->
+    <TextView
+        android:id="@+id/date_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"/>
+
+    <!-- 计时器显示 (屏幕中央) -->
+    <TextView
+        android:id="@+id/timer_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="@string/layout_placeholder_timer"
+        android:textColor="@color/text_primary"
+        android:textSize="120sp"
+        android:textStyle="bold"
+        android:shadowColor="@color/black"
+        android:shadowDx="3"
+        android:shadowDy="3"
+        android:shadowRadius="6"/>
+
+    <!-- 主要控制按钮 (底部) -->
+    <LinearLayout
+        android:id="@+id/main_button_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/control_button"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:textSize="22sp"
+            android:text="@string/start_button"
+            android:background="@drawable/button_green_background"
+            android:textColor="@color/text_primary"
+            android:elevation="6dp"/>
+
+        <Button
+            android:id="@+id/reset_button"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:text="@string/reset_button"
+            android:textSize="22sp"
+            android:background="@drawable/button_orange_background"
+            android:textColor="@color/text_primary"
+            android:elevation="6dp"/>
+    </LinearLayout>
+</RelativeLayout>

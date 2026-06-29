@@ -1,0 +1,989 @@
+<resources>
+
+    <!-- App & Navigation -->
+    <string name="app_name">番茄计时器</string>
+    <string name="nav_title_home">主页</string>
+    <string name="nav_title_statistics">统计</string>
+    <string name="nav_title_calendar">日历</string>
+    <string name="nav_title_profile">我的</string>
+    <string name="title_session_detail">记录详情</string>
+    <string name="title_dev_lab">开发实验室</string>
+    <string name="title_faq">常见问题</string>
+    <string name="title_about">关于</string>
+    <string name="title_privacy_policy">隐私政策</string>
+    <string name="title_user_agreement">用户服务协议</string>
+    <string name="title_open_source_licenses">第三方开源组件</string>
+    <string name="open_source_column_name">组件名称</string>
+    <string name="open_source_column_license">开源协议</string>
+    <string name="open_source_apache_license_title">Apache License 2.0</string>
+    <string name="open_source_license_load_failed">开源协议加载失败</string>
+    <string name="legal_document_load_failed">文档加载失败</string>
+
+    <!-- 首次启动隐私同意 -->
+    <string name="privacy_consent_title">欢迎使用番茄计时器</string>
+    <string name="privacy_consent_subtitle">完全离线运行，数据仅保存在您的设备上</string>
+    <string name="privacy_consent_summary">在开始使用前，请阅读并同意我们的隐私政策与用户服务协议。\n\n我们如何处理您的信息：\n· 本应用不联网，不会上传或共享任何数据\n· 计时、待办与统计等数据均存储在设备本地\n· 仅在您主动授权时使用通知、相机等系统权限\n· 应用屏蔽功能仅在您开启时读取已安装应用列表\n\n您可随时在“我的 → 关于”中查阅完整政策文本。</string>
+    <string name="privacy_consent_link_separator">·</string>
+    <string name="privacy_consent_accept">同意并继续</string>
+    <string name="privacy_consent_decline">不同意并退出</string>
+    <string name="dev_lab_log_empty">暂无应用日志，相关操作后将在此显示</string>
+    <string name="attribution_timer_alarm">番茄计时结束提示音</string>
+    <string name="attribution_tag_empty"></string>
+
+    <!-- Common (shared buttons, yes/no, confirm, cancel, delete, hint, permission) -->
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="got_it">我知道了</string>
+    <string name="start_button">开始</string>
+    <string name="pause_button">暂停</string>
+    <string name="resume_button">继续</string>
+    <string name="stop_button">停止</string>
+    <string name="reset_button">重置</string>
+    <string name="add_todo">添加</string>
+    <string name="add_todo_menu">添加待办</string>
+    <string name="input_error_title">输入错误</string>
+    <string name="common_label_delete">删除</string>
+    <string name="common_dialog_hint_title">提示</string>
+    <string name="common_dialog_permission_title">需要权限</string>
+    <string name="common_toast_notification_permission_denied">通知权限被拒绝，计时完成时将无法提醒</string>
+    <string name="common_toast_audio_permission_denied">音频权限被拒绝，无法选择自定义铃声</string>
+    <string name="common_filter_all">全部</string>
+    <string name="common_btn_clear">清除</string>
+
+    <!-- Timer (toast, dialog, notification, pause reasons) -->
+    <string name="exact_alarm_dialog_title">精确提醒</string>
+    <string name="exact_alarm_dialog_message">为确保计时到点准确提醒，建议开启“闹钟与提醒”权限。暂不开启也可正常使用，但提醒可能略有延迟。</string>
+    <string name="exact_alarm_dialog_later">暂不开启</string>
+    <string name="exact_alarm_dialog_enable">去开启</string>
+    <string name="recovery_dialog_title">检测到未完成的番茄钟</string>
+    <string name="recovery_dialog_title_finished">番茄钟已到时间</string>
+    <string name="recovery_session_study">类型：学习</string>
+    <string name="recovery_session_break">类型：休息</string>
+    <string name="recovery_task">任务：%1$s</string>
+    <string name="recovery_time_remaining">剩余：%1$s</string>
+    <string name="recovery_time_elapsed">已进行：%1$s</string>
+    <string name="recovery_time_finished">计时已结束</string>
+    <string name="recovery_continue">继续计时</string>
+    <string name="recovery_end">结束计时</string>
+    <string name="recovery_end_save">结束并保存</string>
+    <string name="recovery_end_discard">结束并丢弃</string>
+    <string name="recovery_save_hint">有效学习已满 5 分钟，结束时可选择保存到统计。</string>
+    <string name="recovery_discard_hint">有效学习不足 5 分钟，结束将不会保存记录。</string>
+    <string name="recovery_toast_continued">已恢复计时</string>
+    <string name="recovery_toast_saved">学习记录已保存</string>
+    <string name="recovery_toast_discarded">已结束，未保存记录</string>
+    <string name="focus_block_overlay_title">专注模式</string>
+    <string name="focus_block_overlay_message">专注期间请返回番茄计时器，保持专注。</string>
+    <string name="focus_block_overlay_message_with_app">专注期间无法使用 %1$s，请返回番茄计时器。</string>
+    <string name="focus_block_return">返回计时</string>
+    <string name="focus_block_notification_title">应用已被限制</string>
+    <string name="focus_block_notification_message">专注期间无法使用 %1$s</string>
+    <string name="focus_mode_running_title">专注模式运行中</string>
+    <string name="focus_mode_running_message">正在限制娱乐应用，请保持专注</string>
+    <string name="timer_current_task">当前任务：%1$s</string>
+    <string name="timer_post_break_hint">休息结束！请选择是否开始新一轮番茄</string>
+    <string name="timer_break_running_hint">休息中，请放松身心</string>
+    <string name="timer_long_break_hint">长休息中，请充分放松</string>
+    <string name="timer_start_next_pomodoro">开始新一轮番茄</string>
+    <string name="timer_end_session">结束</string>
+    <string name="timer_end_break">结束休息</string>
+    <string name="timer_toast_activity_ended">活动结束！</string>
+    <string name="timer_toast_max_pause_reached">已达到最大暂停次数限制</string>
+    <string name="timer_toast_break_ended">休息已结束</string>
+    <string name="timer_toast_timer_ended">计时结束！</string>
+    <string name="timer_dialog_exit_title">确认退出</string>
+    <string name="timer_dialog_exit_message">当前正在计时，确认要退出计时活动并返回主页吗？</string>
+    <string name="timer_dialog_exit_confirm">退出计时活动</string>
+    <string name="timer_dialog_exit_continue">继续计时</string>
+    <string name="timer_dialog_pause_reason_title">为什么暂停？</string>
+    <string name="timer_pause_reason_timeout">暂停超时</string>
+    <string name="timer_category_default">默认</string>
+    <string name="timer_notification_ready">准备就绪</string>
+    <string name="timer_notification_recovery_prompt">检测到未完成的番茄钟，请返回应用确认</string>
+    <string name="timer_channel_ongoing_name">番茄计时进行中</string>
+    <string name="timer_channel_ongoing_description">显示当前计时状态，不发出声音</string>
+    <string name="timer_channel_alert_name">番茄计时提醒</string>
+    <string name="timer_channel_alert_description">番茄钟或休息到点提醒</string>
+    <string name="timer_notification_title_study">专注学习</string>
+    <string name="timer_notification_title_long_break">长休息中</string>
+    <string name="timer_notification_title_break">休息中</string>
+    <string name="timer_notification_remaining">剩余 %1$s</string>
+    <string name="timer_notification_paused_remaining">已暂停 · 剩余 %1$s</string>
+    <string name="timer_notification_study_time">学习时间: %1$s</string>
+    <string name="timer_notification_break_time">休息时间: %1$s</string>
+    <string name="timer_notification_fail_title">番茄钟已结束</string>
+    <string name="timer_notification_fail_message">由于暂停超过5分钟，本次番茄钟判定失败，注意劳逸结合哦</string>
+    <string name="timer_notification_study_complete_long_break_title">学习完成，长休息已开始</string>
+    <string name="timer_notification_study_complete_break_title">学习完成，休息已开始</string>
+    <string name="timer_notification_long_break_text">好好放松，长休息计时中</string>
+    <string name="timer_notification_short_break_text">该休息了！短休息计时中</string>
+    <string name="timer_notification_break_end_title">休息结束</string>
+    <string name="timer_notification_break_end_message">请选择开始新一轮番茄或结束</string>
+    <string name="timer_notification_action_start_next">开始新一轮</string>
+    <string name="timer_notification_break_end_auto">已自动开始新一轮番茄计时</string>
+    <string name="blocking_channel_focus_mode_name">专注模式</string>
+    <string name="blocking_channel_focus_mode_description">学习计时期间限制娱乐应用</string>
+
+    <!-- Task (categories, priorities, filters, errors) -->
+    <string name="task_estimated_pomodoros">预估番茄数</string>
+    <string name="task_pomodoro_progress">🍅 %1$d/%2$d</string>
+    <string name="task_subtasks_title">子任务</string>
+    <string name="task_subtask_hint">输入子任务标题</string>
+    <string name="task_add_subtask">添加</string>
+    <string name="task_type_simple">普通待办</string>
+    <string name="task_type_collection">待办集</string>
+    <string name="task_edit_simple">编辑待办</string>
+    <string name="task_edit_collection">编辑待办集</string>
+    <string name="task_create_simple">新建待办</string>
+    <string name="task_create_collection">新建待办集</string>
+    <string name="task_save">保存</string>
+    <string name="task_saved">任务已保存</string>
+    <string name="task_collection_subtask_hint">每个子任务可单独设置预估番茄数</string>
+    <string name="task_subtask_progress">子任务 %1$d/%2$d</string>
+    <string name="add_todo_simple">添加待办</string>
+    <string name="add_todo_collection">添加待办集</string>
+    <string name="task_select_subtask_timer">选择要计时的子任务</string>
+    <string name="task_no_subtask_for_timer">请先添加子任务</string>
+    <string name="task_collection_no_timer">待办集请对子任务开始计时</string>
+    <string name="task_recurring_title">重复创建</string>
+    <string name="task_recurring_hint">到期后自动生成相同待办</string>
+    <string name="recurrence_daily">每日</string>
+    <string name="recurrence_weekly">每周</string>
+    <string name="recurrence_monthly">每月</string>
+    <string name="task_category_work">工作</string>
+    <string name="task_category_study">学习</string>
+    <string name="task_category_life">生活</string>
+    <string name="task_category_sports">运动</string>
+    <string name="task_category_entertainment">娱乐</string>
+    <string name="task_category_other">其他</string>
+    <string name="task_priority_low">低</string>
+    <string name="task_priority_medium">中</string>
+    <string name="task_priority_high">高</string>
+    <string name="task_priority_urgent">紧急</string>
+    <string name="task_error_not_found">任务不存在</string>
+    <string name="task_error_title_required">请输入任务标题</string>
+    <string name="task_error_save_failed">保存失败</string>
+    <string name="task_toast_unpinned">已取消置顶</string>
+    <string name="task_toast_pinned">已置顶</string>
+    <string name="task_toast_pin_limit">最多只能置顶3个待办</string>
+    <string name="task_label_overdue">已过期 %1$s</string>
+    <string name="task_filter_today">今天</string>
+    <string name="task_filter_tomorrow">明天</string>
+    <string name="task_filter_this_week">本周</string>
+    <string name="task_filter_next_week">下周</string>
+    <string name="task_filter_this_month">本月</string>
+    <string name="task_filter_overdue">已过期</string>
+    <string name="task_label_title">任务标题</string>
+    <string name="task_hint_title">输入待办任务标题</string>
+    <string name="task_label_description">任务描述</string>
+    <string name="task_hint_description">输入任务描述（可选）</string>
+    <string name="task_label_category">分类</string>
+    <string name="task_label_priority">优先级</string>
+    <string name="task_label_tags">标签</string>
+    <string name="task_hint_tags">输入标签，用逗号分隔</string>
+    <string name="task_label_due_date">截止日期</string>
+    <string name="task_hint_due_date">选择截止日期（可选）</string>
+    <string name="task_label_collection_title">待办集标题</string>
+    <string name="task_hint_collection_title">输入待办集标题</string>
+    <string name="task_label_collection_description">待办集描述</string>
+    <string name="task_hint_collection_description">输入描述（可选）</string>
+    <string name="task_pomodoro_emoji">🍅</string>
+    <string name="task_a11y_start_timer">开始计时</string>
+
+    <!-- Home -->
+    <string name="home_study_duration_hint">长按上方计时数字可修改学习时长</string>
+    <string name="completed_count">已完成: %d次</string>
+    <string name="reset_to_default_minutes">已重置为25分钟</string>
+    <string name="study_duration_current">当前：%1$s</string>
+    <string name="study_duration_change">修改</string>
+    <string name="study_duration_updated">学习时长已更新</string>
+    <string name="study_duration_zero_error">请输入大于0的时长</string>
+    <string name="study_duration_too_long_title">时间过长</string>
+    <string name="study_duration_too_long_message">番茄钟时长不能超过三小时（180分钟）。\n建议劳逸结合，注意眼部放松，合理安排休息哦！</string>
+    <string name="home_toast_stop_timer_first">请先停止计时器</string>
+    <string name="home_toast_stop_current_timer">请先停止当前计时</string>
+    <string name="home_dialog_start_timer_title">为待办开始计时 (小时:分钟)</string>
+    <string name="home_toast_reset_while_running">请在计时器页面停止后再重置</string>
+    <string name="home_dialog_delete_message">确定要删除吗？</string>
+    <string name="home_filter_title">筛选器</string>
+    <string name="home_filter_clear">清除</string>
+    <string name="home_quick_duration_title">常用时长</string>
+    <string name="home_quick_duration_45min">45分钟</string>
+    <string name="home_quick_duration_60min">60分钟</string>
+    <string name="home_quick_duration_90min">90分钟</string>
+    <string name="home_quick_duration_120min">120分钟</string>
+    <string name="home_quick_duration_150min">150分钟</string>
+    <string name="home_quick_duration_180min">180分钟</string>
+    <string name="home_duration_unit_hour">小时</string>
+    <string name="home_duration_unit_minute">分钟</string>
+    <string name="timer_dialog_pause_reason_prompt">请选择暂停原因：</string>
+    <string name="timer_resume_timer">继续计时</string>
+
+    <!-- Calendar -->
+    <string name="calendar_prev_month">上个月</string>
+    <string name="calendar_next_month">下个月</string>
+    <string name="session_detail_basic_info">基本信息</string>
+    <string name="session_detail_pause_info">暂停信息</string>
+    <string name="session_detail_start_time">开始时间</string>
+    <string name="session_detail_end_time">结束时间</string>
+    <string name="session_detail_duration">时长</string>
+    <string name="session_detail_duration_minutes">%d 分钟</string>
+    <string name="session_detail_category">分类</string>
+    <string name="session_detail_uncategorized">未分类</string>
+    <string name="session_detail_completion_status">完成状态</string>
+    <string name="session_detail_completed">已完成</string>
+    <string name="session_detail_incomplete">未完成</string>
+    <string name="session_detail_has_pause">是否有暂停</string>
+    <string name="session_detail_pause_count">暂停次数</string>
+    <string name="session_detail_pause_reasons_label">各次暂停原因</string>
+    <string name="session_detail_early_end">是否提前结束</string>
+    <string name="session_detail_notes_title">计时心得</string>
+    <string name="session_detail_notes_hint">记录本次专注的收获、问题或改进点（200字以内）</string>
+    <string name="session_detail_notes_too_long">计时心得不能超过200个字符</string>
+    <string name="session_detail_save_notes">保存心得</string>
+    <string name="session_detail_notes_saved">心得已保存</string>
+    <string name="session_detail_not_found">未找到该记录</string>
+    <string name="session_detail_none">无</string>
+    <string name="calendar_a11y_day_suffix">%1$d日</string>
+    <string name="calendar_a11y_has_records">，有专注记录</string>
+    <string name="calendar_label_sessions_count">专注次数: %d</string>
+    <string name="calendar_label_total_duration_hours">总时长: %1$d小时%2$d分钟</string>
+    <string name="calendar_label_total_duration_minutes">总时长: %d分钟</string>
+
+    <!-- strings_calendar.xml -->
+    <string name="calendar_day_suffix">%1$d日</string>
+    <string name="calendar_a11y_today">，今天</string>
+    <string name="calendar_a11y_has_record">，有专注记录</string>
+    <string name="calendar_a11y_selected">，已选中</string>
+    <string name="calendar_sessions_count">专注次数: %1$d</string>
+    <string name="calendar_total_duration_hours">总时长: %1$d小时%2$d分钟</string>
+    <string name="calendar_total_duration_minutes">总时长: %1$d分钟</string>
+    <string name="calendar_empty_today_title">今天还没有专注记录</string>
+    <string name="calendar_empty_yesterday_title">昨天没有专注记录</string>
+    <string name="calendar_empty_yesterday_message">昨天可能比较忙碌，今天要加油哦！\n每一个新的开始都是进步的机会 💪</string>
+    <string name="calendar_empty_past_title">这一天没有专注记录</string>
+    <string name="calendar_empty_past_message">过去的时光无法重来，但我们可以把握现在！\n从今天开始，让每一天都有意义 ✨</string>
+    <string name="calendar_empty_future_title">未来还没有专注记录</string>
+    <string name="calendar_empty_future_message">这是未来的日期，无法查看记录\n选择今天或过去的日期来查看您的专注历程 📅</string>
+    <string name="calendar_empty_action_focus">🚀 去专注</string>
+    <string name="calendar_empty_action_pick_date">📅 选择日期</string>
+    <string name="calendar_empty_first_pomodoro">开始你的第一个番茄钟吧！\n专注25分钟，收获满满成就感 ✨</string>
+    <string name="calendar_empty_start_today">今天就从专注25分钟开始吧！ 🌟</string>
+    <string name="calendar_empty_time_precious">时间是最宝贵的资源\n让我们用番茄钟来好好利用它！ ⏰</string>
+    <string name="calendar_empty_late_night">健康作息很重要\n建议早点休息，早睡早起身体好 🌙</string>
+    <string name="calendar_label_today">今天</string>
+    <string name="calendar_label_daily_records">当日专注记录</string>
+    <string name="calendar_empty_action_login">🔐 去登录</string>
+
+    <!-- strings_statistics.xml -->
+    <string name="statistics_today_sessions">今日专注: %1$d次</string>
+    <string name="statistics_week_sessions">本周专注: %1$d次</string>
+    <string name="statistics_month_sessions">本月专注: %1$d次</string>
+    <string name="statistics_chart_label_minutes">专注时间(分钟)</string>
+    <string name="statistics_hourly_empty">⏰ 本月还没有专注数据哦~\n开始你的第一次专注吧！(◕‿◕)</string>
+    <string name="statistics_category_no_records">暂无记录</string>
+    <string name="statistics_session_completed">✅ 已完成</string>
+    <string name="statistics_session_paused">⏸️ 已暂停</string>
+    <string name="statistics_label_today">今天</string>
+
+    <!-- strings_common.xml -->
+    <string name="common_unavailable">无法获取</string>
+    <string name="format_hour_label">%1$d点</string>
+    <string name="format_day_label">%1$d日</string>
+
+    <!-- strings_category_defaults.xml -->
+    <string name="category_default">默认</string>
+    <string name="category_work">工作</string>
+    <string name="category_study">学习</string>
+    <string name="category_life">生活</string>
+    <string name="category_sports">运动</string>
+    <string name="category_entertainment">娱乐</string>
+    <string name="category_other">其他</string>
+
+    <!-- Statistics -->
+    <string name="statistics_category_chart_title">本月分类占比</string>
+    <string name="statistics_category_empty">暂无分类统计数据</string>
+    <string name="statistics_category_drilldown_title">%1$s · 本月记录</string>
+    <string name="statistics_category_drilldown_summary">共 %1$d 次 · %2$s</string>
+    <string name="statistics_label_today_sessions">今日专注: %d次</string>
+    <string name="statistics_label_week_sessions">本周专注: %d次</string>
+    <string name="statistics_label_month_sessions">本月专注: %d次</string>
+    <string name="statistics_chart_focus_minutes">专注时间(分钟)</string>
+    <string name="statistics_empty_hourly">⏰ 本月还没有专注数据哦~\n开始你的第一次专注吧！(◕‿◕)</string>
+    <string name="statistics_empty_no_records">暂无记录</string>
+    <string name="statistics_label_hour">%d点</string>
+    <string name="statistics_label_day">%d日</string>
+    <string name="statistics_status_completed">✅ 已完成</string>
+    <string name="statistics_status_paused">⏸️ 已暂停</string>
+    <string name="statistics_section_today">今日统计</string>
+    <string name="statistics_section_week">本周统计</string>
+    <string name="statistics_section_month">本月统计</string>
+    <string name="statistics_chart_last_7_days">最近7天专注时间</string>
+    <string name="statistics_empty_week_chart">📈 还没有专注数据哦~\n开始你的第一次专注吧！(◕‿◕)</string>
+    <string name="statistics_a11y_empty_illustration">空状态插图</string>
+    <string name="statistics_action_login">去登录</string>
+    <string name="statistics_chart_month_duration">本月专注时间</string>
+    <string name="statistics_empty_month_chart">📊 本月还没有专注数据哦~\n开始你的第一次专注吧！(◕‿◕)</string>
+    <string name="statistics_category_drilldown_hint">点击饼块可查看该分类的详细记录</string>
+    <string name="statistics_chart_hourly_distribution">本月专注时段分布</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_break_duration">休息时长</string>
+    <string name="settings_study_duration">学习时长</string>
+    <string name="settings_study_duration_hint">与首页长按计时数字修改等效，两处修改会互相同步</string>
+    <string name="settings_permissions_title">权限与提醒</string>
+    <string name="settings_exact_alarm_label">精确闹钟（计时到点提醒）</string>
+    <string name="settings_exact_alarm_open">前往系统设置授权</string>
+    <string name="exact_alarm_status_granted">已授权：计时到点将准时提醒</string>
+    <string name="exact_alarm_status_denied">未授权：计时到点提醒可能延迟，建议开启</string>
+    <string name="exact_alarm_status_not_required">当前系统版本无需此权限</string>
+    <string name="settings_auto_start_after_break">休息结束后自动开始下一轮番茄</string>
+    <string name="settings_auto_start_after_break_hint">开启后，短/长休息结束将自动进入下一轮专注计时</string>
+    <string name="settings_dnd_during_focus">专注期间启用勿扰</string>
+    <string name="settings_dnd_during_focus_hint">学习计时开始后自动开启系统勿扰，结束后恢复（需授予勿扰访问权限）</string>
+    <string name="settings_dnd_permission_title">需要勿扰权限</string>
+    <string name="settings_dnd_permission_message">请在系统设置中允许本应用访问“勿扰”权限，以便专注期间自动静音通知。</string>
+    <string name="shortcut_focus_25_short">专注25分钟</string>
+    <string name="shortcut_focus_25_long">开始25分钟专注计时</string>
+    <string name="shortcut_statistics_short">查看统计</string>
+    <string name="shortcut_statistics_long">打开统计页面</string>
+    <string name="shortcut_blocking_short">屏蔽模式</string>
+    <string name="shortcut_blocking_long">启用应用屏蔽模式</string>
+    <string name="statistics_pause_reason_chart_title">本月暂停原因分布</string>
+    <string name="statistics_pause_reason_chart_label">暂停次数</string>
+    <string name="statistics_pause_reason_empty">本月还没有暂停记录</string>
+    <string name="settings_long_break_enabled">每 N 个番茄钟后长休息</string>
+    <string name="settings_long_break_enabled_hint">开启后，完成指定数量番茄钟后将进入 10~15 分钟长休息</string>
+    <string name="settings_pomodoros_before_long_break">长休息间隔（N 个番茄钟）</string>
+    <string name="settings_long_break_duration">长休息时长</string>
+    <string name="select_theme">选择主题</string>
+    <string name="select_ringtone">选择提示音</string>
+    <string name="settings_toast_theme_applied">主题已应用</string>
+    <string name="settings_toast_theme_failed">主题应用失败</string>
+    <string name="settings_dialog_storage_permission_message">需要存储权限才能选择自定义铃声</string>
+    <string name="settings_toast_storage_permission_denied">权限被拒绝，无法选择自定义铃声</string>
+    <string name="settings_toast_ringtone_picker_failed">无法打开铃声选择器</string>
+    <string name="settings_toast_custom_ringtone_success">自定义铃声设置成功</string>
+    <string name="settings_section_pomodoro_task">番茄钟和待办设置</string>
+    <string name="settings_max_pause_count">一次番茄钟最大暂停次数</string>
+    <string name="settings_auto_delete_completed">自动删除已完成任务</string>
+    <string name="settings_auto_delete_completed_hint">开启后，系统将自动删除3天前标记完成的待办任务</string>
+    <string name="settings_theme_prefix_standard">标准色 - %1$s</string>
+    <string name="settings_theme_prefix_chinese">中国色 - %1$s</string>
+    <string name="settings_theme_prefix_gradient">国风渐变 - %1$s</string>
+    <string name="settings_theme_prefix_morandi">莫兰迪 - %1$s</string>
+    <string name="faq_intro">点击问题查看答案，或使用右上角搜索快速定位</string>
+    <string name="faq_search_hint">搜索问题或答案</string>
+    <string name="faq_section_count">%d 个问题</string>
+    <string name="faq_section_timer">番茄钟 · 计时</string>
+    <string name="faq_timer_q_how_to_start">如何开始一次番茄钟？</string>
+    <string name="faq_timer_a_how_to_start">安装后即可使用：在首页点击“开始”进入计时页；也可点击任务右侧计时按钮为指定任务启动（待办集需先选择子任务）。学习阶段可暂停/继续；完成后自动记入统计与日历，关联任务的记录会归属该任务。</string>
+    <string name="faq_timer_q_need_login">需要登录才能使用吗？</string>
+    <string name="faq_timer_a_need_login">不需要。首次启动会自动创建本地档案，可立即开始计时、管理待办并查看统计。如需密码保护或多账户切换，可在“我的 > 账户”中将本地档案升级为注册账户，或登录已有注册账户。</string>
+    <string name="faq_timer_q_duration">学习时长如何设置？默认是多少？</string>
+    <string name="faq_timer_a_duration">默认学习25分钟、休息5分钟。学习时长可在“我的 > 设置”中修改，也可在首页长按计时数字修改，两处操作等效且互相同步（1分钟～3小时）；休息时长在设置中调节（1～30分钟）。默认学习时长≥1小时时，首页以HH:MM:SS显示。</string>
+    <string name="faq_timer_q_quick_duration">如何快速选择常用时长？</string>
+    <string name="faq_timer_a_quick_duration">时长设置弹窗提供45/60/90/120/150/180分钟快捷按钮，点击即可填入并确认；也可通过小时/分钟滚轮精确调整。计时进行中无法修改时长。</string>
+    <string name="faq_timer_q_pause_rules">暂停有哪些规则？</string>
+    <string name="faq_timer_a_pause_rules">仅学习阶段可暂停。暂停时会弹出原因选择（临时有事、被打断等），原因会记入统计。每轮最多暂停次数可在设置中调节（1～5次，默认2次），达上限后无法继续暂停但计时仍会继续。单次暂停超过5分钟将判定失败并结束本轮，同时发送通知。</string>
+    <string name="faq_timer_q_after_study">学习结束后可以做什么？</string>
+    <string name="faq_timer_a_after_study">学习计时结束后会自动进入休息：默认使用设置的短休息时长；若开启了“每 N 个番茄钟后长休息”，达到轮数后将进入 10～15 分钟长休息。休息进行中可在计时页点击“结束休息”提前结束。休息自然结束后：若开启了“休息结束后自动开始下一轮”，将自动进入下一轮学习；否则可选择“开始新一轮番茄”或“结束活动”。</string>
+    <string name="faq_timer_q_long_break">长休息是什么？如何设置？</string>
+    <string name="faq_timer_a_long_break">长休息为可选功能，默认关闭。在“我的 > 设置”中开启“每 N 个番茄钟后长休息”后，可设置间隔（2～8 个番茄钟，默认 4）与时长（10～15 分钟，默认 15）。完成指定数量的学习番茄钟后，系统会自动进入长休息而非短休息；长休息结束后同样遵循“休息结束后自动开始下一轮”开关的逻辑。</string>
+    <string name="faq_timer_q_leave_page">计时进行中离开页面会怎样？</string>
+    <string name="faq_timer_a_leave_page">计时以后台前台服务继续运行，通知栏可查看进度。从计时页返回时，若学习阶段仍在计时，会提示确认是否结束活动；学习阶段暂停时可直接返回，计时保持暂停；休息阶段返回不会打断休息计时。</string>
+    <string name="faq_timer_q_settings_options">设置里有哪些计时相关选项？</string>
+    <string name="faq_timer_a_settings_options">可设置学习时长、休息时长（1～30分钟）、最大暂停次数（1～5次，默认2次）、长休息（默认关闭，含间隔2～8个番茄钟与10～15分钟时长）、休息结束后自动开始下一轮、自动删除已完成任务（开启后3天自动清理）、主题色（标准色/中国色/国风渐变/莫兰迪）及提示音（系统默认/静音/自定义，Android 13+选自定义铃声需授予音频读取权限）。</string>
+    <string name="faq_section_task">任务 · 待办</string>
+    <string name="faq_task_q_crud">如何新增、编辑和删除任务？</string>
+    <string name="faq_task_a_crud">点击首页工具栏“添加待办”可创建普通待办或待办集；点击列表中的任务进入编辑页，可修改标题、描述、分类、优先级、标签、预估番茄数、截止日期等（待办集还可管理子任务，普通待办可设置重复规则）。左滑删除（需确认）；点击置顶按钮置顶；勾选复选框标记完成。</string>
+    <string name="faq_task_q_subtasks">子任务如何使用？</string>
+    <string name="faq_task_a_subtasks">子任务仅适用于待办集。在待办集编辑页可添加子任务并设置预估番茄数；勾选完成子任务，全部完成后父任务会自动标记完成。长按子任务可删除。为待办集启动计时时，需先选择要专注的子任务。</string>
+    <string name="faq_task_q_recurring">重复任务如何工作？</string>
+    <string name="faq_task_a_recurring">仅普通待办支持重复。编辑时开启“重复创建”并选择每日/每周/每月，保存后系统会在到期时自动生成相同待办（可配合截止日期）。应用启动时会立即检查一次，并每6小时后台检查。</string>
+    <string name="faq_task_q_pomodoro_progress">预估番茄数和进度是什么？</string>
+    <string name="faq_task_a_pomodoro_progress">普通待办在编辑页设置预估番茄数；待办集的进度为各子任务番茄数合计。每次完成关联该任务（或子任务）的番茄钟后，已完成番茄数会自动增加，并在列表显示如“🍅 2/4”。</string>
+    <string name="faq_task_q_features">任务有哪些辅助功能？</string>
+    <string name="faq_task_a_features">支持普通待办与待办集两种类型；置顶（最多3个）、按优先级/截止日期/分类筛选，以及任务右侧一键启动计时。分类包括工作、学习、生活、运动、娱乐、其他。</string>
+    <string name="faq_task_q_overdue">“已过期”是如何判定的？</string>
+    <string name="faq_task_a_overdue">以当天零点为界：截止日期早于今天的任务显示“已过期”；截止日期为今天的任务不算过期。</string>
+    <string name="faq_task_q_auto_delete">“自动删除已完成任务”是什么？</string>
+    <string name="faq_task_a_auto_delete">在设置中开启后，标记完成超过3天的任务会自动从列表中清除，帮助保持待办整洁。默认关闭。</string>
+    <string name="faq_section_statistics">统计 · 日历</string>
+    <string name="faq_statistics_q_view">如何查看专注统计？</string>
+    <string name="faq_statistics_a_view">在“统计”页查看今日、本周、本月的专注次数与时长图表，以及本月分类占比饼图。点击饼块可钻取该分类的详细记录。本地档案与注册账户的数据按档案分别统计。</string>
+    <string name="faq_statistics_q_calendar">日历页有什么功能？</string>
+    <string name="faq_statistics_a_calendar">按日期查看当天的专注记录列表、总时长和次数。有记录的日期以细圆环标注，选中日期为实心圆，今天仅文字高亮；点击日期即可浏览历史。</string>
+    <string name="faq_statistics_q_total_count">“累计专注次数”在哪里看？</string>
+    <string name="faq_statistics_a_total_count">显示在“我的”页账户信息下方，格式为“累计专注: N次”，统计当前活跃档案的数据。</string>
+    <string name="faq_statistics_q_empty_buttons">日历空状态的两个按钮做什么？</string>
+    <string name="faq_statistics_a_empty_buttons">当选中日期没有专注记录时，列表区域显示空状态及两个按钮：“去专注”跳转首页开始计时；“选择日期”用于在日历中切换查看其他日期的记录。</string>
+    <string name="faq_section_blocking">应用屏蔽</string>
+    <string name="faq_blocking_q_purpose">应用屏蔽有什么作用？</string>
+    <string name="faq_blocking_a_purpose">学习计时期间自动拦截分心应用（社交、娱乐、购物等），帮助保持专注。需在“我的 > 应用屏蔽”开启并授予使用情况访问、悬浮窗、查询所有应用三项权限；仅在学习计时进行中生效，单次屏蔽服务最多持续5小时后自动停止。</string>
+    <string name="faq_blocking_q_manage">如何管理屏蔽与白名单？</string>
+    <string name="faq_blocking_a_manage">在“我的 > 应用屏蔽”开启功能后，可点击“管理屏蔽应用”进入管理页：支持搜索、类别筛选，切换“所有应用/白名单”视图；点击“扫描应用”刷新已安装应用列表。屏蔽与白名单互斥——开启屏蔽即移出白名单，关闭屏蔽即加入白名单（系统强制白名单除外）。</string>
+    <string name="faq_blocking_q_default_whitelist">哪些应用默认不可屏蔽？</string>
+    <string name="faq_blocking_a_default_whitelist">系统关键服务（SystemUI、设置、权限控制器、电话底层服务等）为强制白名单，无法屏蔽。时钟、拨号、联系人、相机、信息、相册及品牌健康/Wellbeing 类应用等默认为白名单但可手动调整；未在白名单内的应用默认按屏蔽规则处理，浏览器通常也在可屏蔽范围内，需要时可手动加入白名单。</string>
+    <string name="faq_blocking_q_troubleshoot">权限被回收或屏蔽不生效怎么办？</string>
+    <string name="faq_blocking_a_troubleshoot">若系统回收权限，应用会自动关闭屏蔽开关并在页面提示重新授权。屏蔽无效时请：1) 确认“我的 > 应用屏蔽”开关已开启；2) 确认使用情况访问、悬浮窗、查询所有应用三项权限均已授予；3) 点击“扫描应用”按钮更新列表；4) 确认当前处于学习计时进行中。</string>
+    <string name="faq_section_account">账户 · 界面 · 通知</string>
+    <string name="faq_account_q_local_vs_registered">本地档案与注册账户有什么区别？</string>
+    <string name="faq_account_a_local_vs_registered">本地档案：首次启动自动创建，免密即可使用，数据保存在本机。注册账户：在本地档案基础上设置密码（沿用同一ID与全部数据），便于在多档案间切换并防止他人查看。应用屏蔽为设备级设置，与档案无关。</string>
+    <string name="faq_account_q_auth">如何注册、登录和退出？</string>
+    <string name="faq_account_a_auth">在“我的 > 账户”可将当前本地档案升级为注册账户（沿用原 ID 与全部数据），或登录已有注册账户。注册账户退出后将新建本地档案，原注册账户数据仍保留在本机，下次登录同一 ID 可恢复。忘记密码可通过找回入口凭账户 ID 与昵称验证后重设。</string>
+    <string name="faq_account_q_profile">头像和密码可以自定义吗？</string>
+    <string name="faq_account_a_profile">可以。本地与注册账户均可在账户页修改昵称、签名与头像；注册账户还可设置/修改密码。密码经加密存储。</string>
+    <string name="faq_account_q_landscape">横屏模式有什么不同？</string>
+    <string name="faq_account_a_landscape">首页横屏时提供精简计时界面，仅保留计时显示与控制按钮，隐藏待办列表与筛选，适合专注使用。竖屏保留完整的待办与筛选功能。</string>
+    <string name="faq_account_q_notifications">应用支持哪些通知？</string>
+    <string name="faq_account_a_notifications">包括计时前台进度、学习完成/休息开始、长休息、休息结束待选择、暂停超时失败、应用屏蔽拦截等通知。可在系统设置中管理通知权限与样式。</string>
+    <string name="faq_section_dev_lab">开发实验室</string>
+    <string name="faq_dev_lab_q_purpose">开发实验室有什么用？</string>
+    <string name="faq_dev_lab_a_purpose">用于查看应用版本、设备信息、存储与内存占用，并支持日志查看与筛选。默认关闭自动刷新，可在页面开关中开启每5秒刷新存储和内存信息。</string>
+
+    <!-- Account -->
+    <string name="title_account">账户</string>
+    <string name="title_login">登录</string>
+    <string name="title_register">注册</string>
+    <string name="title_change_password">修改密码</string>
+    <string name="title_account_recovery">账户找回</string>
+    <string name="title_set_new_password">设置新密码</string>
+    <string name="account_tap_change_avatar">点击更换头像</string>
+    <string name="account_label_nickname">昵称</string>
+    <string name="account_placeholder_nickname">用户昵称</string>
+    <string name="account_label_signature">签名</string>
+    <string name="account_placeholder_signature">这人很懒，什么都没有留下</string>
+    <string name="account_btn_change_password_label">修改密码</string>
+    <string name="account_btn_logout">退出登录</string>
+    <string name="account_btn_delete_account">注销账户</string>
+    <string name="account_btn_register_short">注册</string>
+    <string name="account_label_user_id">账户ID</string>
+    <string name="account_label_password">密码</string>
+    <string name="account_label_old_password">原密码</string>
+    <string name="account_label_new_password">新密码</string>
+    <string name="account_label_confirm_password">确认密码</string>
+    <string name="account_label_confirm_new_password">确认新密码</string>
+    <string name="account_hint_password_format">6-12位，含大小写与数字，可含@#_</string>
+    <string name="account_hint_password_requirements">密码要求：6-12位，包含大小写字母、数字，支持@、#、_等特殊字符</string>
+    <string name="account_label_signature_optional">个性化签名（可选）</string>
+    <string name="account_hint_signature">请输入个性化签名</string>
+    <string name="account_hint_reenter_password">请再次输入密码</string>
+    <string name="account_prompt_no_account">没有账号？</string>
+    <string name="account_action_go_register">去注册</string>
+    <string name="account_prompt_forgot_password">忘记密码？</string>
+    <string name="account_action_go_recover">去找回</string>
+    <string name="account_prompt_has_account">已有账号？</string>
+    <string name="account_action_go_login">去登录</string>
+    <string name="account_label_account_name">账户名称</string>
+    <string name="account_label_account_nickname">账户昵称</string>
+    <string name="account_recovery_force_password_message">验证成功后将强制要求设置新密码</string>
+    <string name="account_local_profile_label">本地档案（免密）</string>
+    <string name="account_id_format">ID: %1$s</string>
+    <string name="account_default_signature">这个人很懒，什么都没有留下</string>
+    <string name="account_upgrade_to_registered">升级为注册账户</string>
+    <string name="account_upgrade_success">升级成功！您的账户ID是：%1$s（数据已保留）</string>
+    <string name="account_logout_success">已退出，已切换到新的本地档案</string>
+    <string name="account_registered_only">此操作需要注册账户</string>
+    <string name="account_delete_success_title">注销成功</string>
+    <string name="account_delete_success_message">注册账户已注销，已为您创建新的本地档案。原账户数据已从本机删除。</string>
+    <string name="account_login_existing">登录已有账户</string>
+
+    <!-- Account (buttons, dialogs, validation, errors) -->
+    <string name="account_default_nickname">本地用户</string>
+    <string name="account_btn_login">登录</string>
+    <string name="account_btn_logging_in">登录中…</string>
+    <string name="account_btn_register">注册账户</string>
+    <string name="account_btn_registering">注册中…</string>
+    <string name="account_btn_change_password">确定修改</string>
+    <string name="account_btn_set_password">去设置新密码</string>
+    <string name="account_btn_confirm">确定</string>
+    <string name="account_btn_submitting">提交中…</string>
+    <string name="account_btn_verifying">验证中…</string>
+    <string name="account_toast_login_success">登录成功</string>
+    <string name="account_toast_update_success">更新成功</string>
+    <string name="account_toast_password_changed">密码修改成功</string>
+    <string name="account_toast_password_set">密码设置成功</string>
+    <string name="account_toast_recovery_verified">验证成功，请设置新密码</string>
+    <string name="account_toast_no_avatar">暂无头像</string>
+    <string name="account_toast_camera_unavailable">无法启动相机</string>
+    <string name="account_toast_image_failed">图片处理失败</string>
+    <string name="account_dialog_avatar_title">头像</string>
+    <string name="account_dialog_view_original">查看原图</string>
+    <string name="account_dialog_change_avatar">更换头像</string>
+    <string name="account_dialog_delete_title">注销账户</string>
+    <string name="account_dialog_delete_message">注销账户会删除该账户所有数据，包括账户资料、任务和番茄钟记录。该操作不可逆，请谨慎确认。</string>
+    <string name="account_dialog_delete_confirm">我已知晓，确认注销</string>
+    <string name="account_dialog_pick_avatar_title">选择头像</string>
+    <string name="account_dialog_pick_from_gallery">从相册选择</string>
+    <string name="account_dialog_take_photo">拍照</string>
+    <string name="account_dialog_edit_nickname_title">修改昵称</string>
+    <string name="account_dialog_edit_signature_title">修改签名</string>
+    <string name="account_dialog_force_password_message">为了保障账号安全，通过找回方式登录后需要立即重设密码。若现在返回，将强制退出账号，需要下次重新验证后才能继续使用。</string>
+    <string name="account_dialog_force_password_continue">继续设置</string>
+    <string name="account_dialog_force_password_exit">继续返回并退出</string>
+    <string name="account_error_user_id_required">请输入账户ID</string>
+    <string name="account_error_user_id_length">账户ID必须是10位数字</string>
+    <string name="account_error_user_id_10_digits">请输入10位账户ID</string>
+    <string name="account_error_password_required">请输入密码</string>
+    <string name="account_error_nickname_required">请输入账户昵称</string>
+    <string name="account_error_nickname_length">昵称长度应在2-20个字符之间</string>
+    <string name="account_error_account_name_required">请输入账户名称</string>
+    <string name="account_error_confirm_password_required">请确认密码</string>
+    <string name="account_error_old_password_required">请输入原密码</string>
+    <string name="account_error_new_password_required">请输入新密码</string>
+    <string name="account_error_confirm_new_password_required">请再次输入新密码</string>
+    <string name="account_error_password_mismatch">两次输入的新密码不一致</string>
+    <string name="account_error_old_password_wrong">原密码错误，请检查</string>
+    <string name="account_error_login_invalid">账号ID或密码错误</string>
+    <string name="account_error_login_failed">登录失败：%1$s</string>
+    <string name="account_error_recovery_mismatch">账户ID或名称不匹配</string>
+    <string name="account_error_recovery_failed">找回失败：%1$s</string>
+    <string name="account_error_upgrade_not_local">当前档案无法升级，请使用登录切换已有账户</string>
+    <string name="account_error_password_invalid">密码不符合要求：至少6-12位，包含大小写字母、数字，支持@、#、_等特殊字符</string>
+    <string name="account_error_password_confirm_mismatch">两次输入的密码不一致</string>
+    <string name="account_error_profile_not_found">档案不存在</string>
+    <string name="account_error_upgrade_failed">升级失败：%1$s</string>
+    <string name="account_error_already_registered">当前已是注册账户</string>
+    <string name="account_error_profile_not_initialized">请先初始化本地档案</string>
+    <string name="account_error_local_no_logout">本地档案无需退出登录</string>
+    <string name="account_error_logout_failed">退出失败：%1$s</string>
+    <string name="account_error_delete_registered_only">仅注册账户可注销</string>
+    <string name="account_error_delete_failed_retry">注销失败，请稍后重试</string>
+    <string name="account_error_delete_failed">注销失败：%1$s</string>
+    <string name="account_error_login_required">请先登录注册账户</string>
+    <string name="account_error_wrong_old_password">原密码错误</string>
+    <string name="account_error_new_password_invalid">新密码不符合要求：%1$s</string>
+    <string name="account_error_password_update_failed">密码更新失败：%1$s</string>
+    <string name="account_error_profile_not_ready">档案未就绪</string>
+    <string name="account_error_profile_update_failed">资料更新失败：%1$s</string>
+    <string name="account_password_empty">不能为空</string>
+    <string name="account_password_length">长度需为6-12位</string>
+    <string name="account_password_no_chinese">不能包含中文</string>
+    <string name="account_password_need_uppercase">需包含大写字母</string>
+    <string name="account_password_need_lowercase">需包含小写字母</string>
+    <string name="account_password_need_digit">需包含数字</string>
+
+    <!-- Profile & App Blocking -->
+    <string name="profile_login_prompt">请登录</string>
+    <string name="profile_tap_to_view">点击查看</string>
+    <string name="profile_today_completed_pomodoros">今日完成番茄钟</string>
+    <string name="profile_app_blocking">应用屏蔽</string>
+    <string name="profile_app_blocking_description">在番茄钟期间自动屏蔽娱乐、社交和购物应用，帮助保持专注</string>
+    <string name="profile_label_total_focus">累计专注: %d次</string>
+    <string name="blocking_description_enabled">应用屏蔽已启用，在番茄钟期间将自动屏蔽娱乐、社交和购物应用（最长5小时）</string>
+    <string name="blocking_description_need_permission">需要授权相关权限才能启用应用屏蔽功能</string>
+    <string name="blocking_description_default">在番茄钟期间自动屏蔽娱乐、社交和购物应用，帮助保持专注（最长5小时）</string>
+    <string name="blocking_dialog_permission_message">应用屏蔽功能需要以下权限：\n\n%1$s\n点击确定前往设置页面授权。</string>
+    <string name="blocking_toast_enabled">应用屏蔽功能已启用</string>
+    <string name="blocking_toast_permission_failed">权限授权失败，应用屏蔽功能无法启用</string>
+    <string name="blocking_dialog_dev_lab_message">开发实验室包含应用信息、设备信息和运行日志等调试信息。\n\n确定要进入开发实验室吗？</string>
+    <string name="blocking_title_manage_apps">管理屏蔽应用</string>
+    <string name="blocking_toast_scan_hint">点击\"扫描应用\"按钮可扫描新安装的应用</string>
+    <string name="blocking_toast_scan_no_change">扫描完成，无变化</string>
+    <string name="blocking_toast_scan_complete">扫描完成</string>
+    <string name="blocking_toast_scan_new_apps">，新增 %1$d 个应用</string>
+    <string name="blocking_toast_scan_updated_categories">，更新 %1$d 个分类</string>
+    <string name="blocking_toast_scan_failed">扫描失败，请重试</string>
+    <string name="blocking_label_total_apps">总应用数：%1$d</string>
+    <string name="blocking_label_whitelist_only">白名单：%1$d</string>
+    <string name="blocking_label_blocked_summary">已屏蔽：%1$d | 白名单：%2$d</string>
+    <string name="blocking_toast_blocked_removed_whitelist">已屏蔽 %1$s，自动移出白名单</string>
+    <string name="blocking_toast_unblocked_added_whitelist">已取消屏蔽 %1$s，自动加入白名单</string>
+    <string name="blocking_toast_whitelist_added">%1$s 已加入白名单，自动取消屏蔽</string>
+    <string name="blocking_toast_whitelist_removed">%1$s 已移出白名单，自动加入屏蔽</string>
+    <string name="blocking_toast_update_failed">更新失败，请重试</string>
+    <string name="blocking_category_edit_title">修改应用分类</string>
+    <string name="blocking_toast_invalid_app">无效的应用</string>
+    <string name="blocking_toast_app_not_found">应用不存在</string>
+    <string name="blocking_toast_load_failed">加载失败</string>
+    <string name="blocking_toast_category_saved">分类已保存</string>
+    <string name="blocking_toast_save_failed">保存失败，请重试</string>
+    <string name="blocking_toast_auto_category_restored">已恢复自动分类</string>
+    <string name="blocking_toast_restore_failed">恢复失败，请重试</string>
+    <string name="blocking_label_manual_suffix"> · 手动</string>
+    <string name="blocking_app_type_normal">普通应用</string>
+    <string name="blocking_permission_usage_stats">• 应用使用统计权限：用于监控当前运行的应用\n</string>
+    <string name="blocking_permission_overlay">• 悬浮窗权限：用于显示屏蔽提示\n</string>
+    <string name="blocking_permission_query_apps">• 查询所有应用权限：用于获取应用列表\n</string>
+    <string name="blocking_hint_search_apps">搜索应用...</string>
+    <string name="blocking_btn_search">搜索</string>
+    <string name="blocking_filter_category">分类筛选：</string>
+    <string name="blocking_btn_all_apps">所有应用</string>
+    <string name="blocking_btn_whitelist">白名单</string>
+    <string name="blocking_btn_scan">扫描应用</string>
+    <string name="blocking_empty_icon">📱</string>
+    <string name="blocking_empty_no_apps">没有找到应用</string>
+    <string name="blocking_empty_search_hint">请尝试其他搜索关键词或分类</string>
+    <string name="blocking_label_current_category">当前分类</string>
+    <string name="blocking_label_select_new_category">选择新分类</string>
+    <string name="blocking_manual_category_hint">手动设置后，复扫应用时将保留您的分类选择。</string>
+    <string name="blocking_btn_save_category">保存分类</string>
+    <string name="blocking_btn_restore_auto_category">恢复自动分类</string>
+    <string name="blocking_placeholder_app_name">应用名称</string>
+    <string name="blocking_placeholder_package">com.example.app</string>
+    <string name="blocking_toggle_whitelist">白名单</string>
+    <string name="blocking_toggle_block">屏蔽</string>
+
+    <!-- Dev Lab -->
+    <string name="dev_lab_section_app_info">应用信息</string>
+    <string name="dev_lab_section_device_info">设备信息</string>
+    <string name="dev_lab_section_storage">存储信息</string>
+    <string name="dev_lab_btn_refresh">刷新</string>
+    <string name="dev_lab_auto_update_label">自动更新</string>
+    <string name="dev_lab_auto_update_hint">每5秒自动刷新存储和内存信息</string>
+    <string name="dev_lab_section_memory">内存信息</string>
+    <string name="dev_lab_section_logs">应用运行日志</string>
+    <string name="dev_lab_btn_clear">清空</string>
+    <string name="dev_lab_filter_label">筛选:</string>
+    <string name="dev_lab_error_app_info">无法获取应用信息</string>
+    <string name="dev_lab_error_storage_info">无法获取存储信息</string>
+    <string name="dev_lab_error_memory_info">无法获取内存信息</string>
+    <string name="dev_lab_format_app_info">应用名称: %1$s\n应用版本: %2$s\n版本代码: %3$d</string>
+    <string name="dev_lab_format_device_info">设备名称: %1$s\n设备型号: %2$s\n所属品牌: %3$s\n语言: %4$s\nAndroid版本: %5$s\n完整API级别: %6$s</string>
+    <string name="dev_lab_format_storage_info">应用占用存储: %1$s\n设备总存储: %2$s\n已用存储: %3$s (%4$s)</string>
+    <string name="dev_lab_format_memory_info">应用占用内存: %1$s\n设备总内存: %2$s\n已用内存: %3$s (%4$s)</string>
+    <string name="dev_lab_log_auto_update_enabled">自动更新已启用</string>
+    <string name="dev_lab_log_auto_update_disabled">自动更新已禁用</string>
+    <string name="dev_lab_log_storage_updated">存储信息已更新</string>
+    <string name="dev_lab_log_storage_failed">获取存储信息失败: %1$s</string>
+    <string name="dev_lab_log_memory_updated">内存信息已更新</string>
+    <string name="dev_lab_log_memory_failed">获取内存信息失败: %1$s</string>
+    <string name="dev_lab_log_app_start">开发实验室已就绪</string>
+    <string name="dev_lab_log_system">系统日志</string>
+    <string name="dev_lab_log_read_failed">无法读取系统日志: %1$s</string>
+    <string name="dev_lab_log_auto_refresh">系统信息已自动刷新</string>
+    <string name="dev_lab_log_level_error">错误</string>
+    <string name="dev_lab_log_level_warning">警告</string>
+    <string name="dev_lab_log_level_info">信息</string>
+    <string name="dev_lab_log_level_debug">调试</string>
+    <string name="dev_lab_log_category_auto_update">自动更新</string>
+    <string name="dev_lab_log_category_storage">存储检测</string>
+    <string name="dev_lab_log_category_memory">内存检测</string>
+    <string name="dev_lab_log_category_app_start">应用启动</string>
+    <string name="dev_lab_log_category_permission">权限检查</string>
+    <string name="dev_lab_log_category_data_load">数据加载</string>
+    <string name="dev_lab_log_category_memory_usage">内存使用</string>
+    <string name="dev_lab_log_category_log_read">日志读取</string>
+    <string name="dev_lab_toast_logs_cleared">日志已清空</string>
+    <string name="dev_lab_error_directory_missing">目录不存在</string>
+    <string name="dev_lab_error_permission_denied">权限不足</string>
+    <string name="dev_lab_error_unavailable">无法获取</string>
+    <string name="dev_lab_error_storage_unmounted">存储未挂载</string>
+    <string name="dev_lab_error_data_abnormal">数据异常</string>
+    <string name="dev_lab_label_storage_section">存储信息:\n</string>
+    <string name="dev_lab_label_memory_section">内存信息:\n</string>
+    <string name="dev_lab_label_app_storage">• 应用占用: %1$s\n</string>
+    <string name="dev_lab_label_total_storage">• 总存储: %1$s\n</string>
+    <string name="dev_lab_label_used_storage">• 已用存储: %1$s (%2$s)\n\n</string>
+    <string name="dev_lab_label_app_memory">• 应用占用: %1$s\n</string>
+    <string name="dev_lab_label_total_memory">• 总内存: %1$s\n</string>
+    <string name="dev_lab_label_used_memory">• 已用内存: %1$s (%2$s)</string>
+
+    <!-- App Categories (blocking) -->
+    <string name="app_category_health">运动健康</string>
+    <string name="app_category_education">教育学习</string>
+    <string name="app_category_finance">金融政务</string>
+    <string name="app_category_travel">出行旅游</string>
+    <string name="app_category_job">求职招聘</string>
+    <string name="app_category_office">办公软件</string>
+    <string name="app_category_social">社交通讯</string>
+    <string name="app_category_entertainment">娱乐影音</string>
+    <string name="app_category_shopping">购物生活</string>
+    <string name="app_category_tool">实用工具</string>
+    <string name="app_category_news">新闻资讯</string>
+    <string name="app_category_system">系统应用</string>
+    <string name="app_category_other">其他</string>
+    <string name="app_type_system_critical">系统关键</string>
+    <string name="app_type_dialer">拨号应用</string>
+    <string name="app_type_contacts">通讯录/联系人</string>
+    <string name="app_type_camera_messaging">相机/信息/相册</string>
+    <string name="app_type_browser">浏览器</string>
+    <string name="app_type_system">系统应用</string>
+    <string name="app_type_normal">普通应用</string>
+
+    <!-- About -->
+    <string name="about_link_separator"> · </string>
+    <string name="about_copyright_en">Copyright © 2025-2026 开发者. All Rights Reserved.</string>
+    <string name="about_copyright_zh">版权所有 侵权必究</string>
+
+    <!-- Layout placeholders (design-time defaults, replaced at runtime) -->
+    <string name="layout_placeholder_timer">25:00</string>
+    <string name="layout_placeholder_date_full">2024年01月01日 星期一</string>
+    <string name="layout_placeholder_sessions_count">专注次数: 0</string>
+    <string name="layout_placeholder_duration_zero">0分钟</string>
+    <string name="layout_placeholder_pomodoro_count">1</string>
+    <string name="layout_placeholder_today_sessions">今日专注: 0次</string>
+    <string name="layout_placeholder_week_sessions">本周专注: 0次</string>
+    <string name="layout_placeholder_month_sessions">本月专注: 0次</string>
+    <string name="layout_placeholder_time">14:30</string>
+    <string name="layout_placeholder_duration">25分钟</string>
+    <string name="layout_placeholder_category_study">学习</string>
+    <string name="layout_placeholder_datetime">2024-01-01 12:00:00</string>
+    <string name="layout_placeholder_tag">标签</string>
+    <string name="layout_placeholder_log_message">日志消息内容</string>
+    <string name="layout_placeholder_total_apps">总应用数：0</string>
+    <string name="layout_placeholder_blocked_count">已屏蔽：0</string>
+    <string name="layout_placeholder_account_id">ID: 1234567890</string>
+    <string name="layout_placeholder_category_entertainment">娱乐</string>
+
+    <!-- Format strings (duration, date) -->
+    <string name="format_duration_hours_minutes">%1$d小时%2$d分钟</string>
+    <string name="format_duration_hours">%1$d小时</string>
+    <string name="format_duration_minutes">%1$d分钟</string>
+    <string name="format_duration_minutes_float">%.0f分钟</string>
+    <string name="format_date_year_month">yyyy年MM月</string>
+    <string name="format_date_full">yyyy年MM月dd日 EEEE</string>
+
+    <!-- Arrays -->
+    <string-array name="standard_theme_names">
+        <item>默认主题</item>
+        <item>柔粉</item>
+        <item>淡橙</item>
+        <item>米黄</item>
+        <item>薄荷</item>
+        <item>海蓝</item>
+        <item>薰衣草</item>
+        <item>珊瑚</item>
+        <item>玫瑰</item>
+        <item>紫罗兰</item>
+        <item>深紫</item>
+    </string-array>
+
+    <string-array name="chinese_theme_names">
+        <item>青绿山水·千里江山</item>
+        <item>烟雨黛黑·江南水墨</item>
+        <item>丹霞赭红·赤壁烈焰</item>
+        <item>血风冷月·冰川之境</item>
+        <item>稻浪金穗·梯田晨光</item>
+        <item>碧螺春茶·龙井新芽</item>
+        <item>九寨碧蓝·瑶池幻色</item>
+        <item>敦煌流沙·大漠夕照</item>
+        <item>朱樱点绛·故宫春深</item>
+        <item>藕荷浅雾·西湖残雪</item>
+    </string-array>
+
+    <string-array name="gradient_theme_names">
+        <item>宫廷织锦渐变</item>
+        <item>二十四桥月色渐变</item>
+        <item>寿山石纹渐变</item>
+        <item>缂丝金线渐变</item>
+        <item>茶汤氤氲渐变</item>
+        <item>玉璧流光渐变</item>
+        <item>晚霞归舟渐变</item>
+        <item>竹影斑驳渐变</item>
+        <item>霁月清辉渐变</item>
+        <item>敦煌飞天渐变</item>
+    </string-array>
+
+    <string-array name="morandi_theme_names">
+        <item>莫兰迪米色</item>
+        <item>莫兰迪灰褐</item>
+        <item>莫兰迪暖灰</item>
+        <item>莫兰迪灰绿</item>
+        <item>莫兰迪灰蓝绿</item>
+        <item>莫兰迪灰蓝</item>
+        <item>莫兰迪灰紫</item>
+        <item>莫兰迪灰粉</item>
+        <item>莫兰迪暖米</item>
+        <item>莫兰迪浅米</item>
+        <item>莫兰迪橄榄绿</item>
+        <item>莫兰迪薄荷绿</item>
+        <item>莫兰迪雾蓝</item>
+        <item>莫兰迪薰衣草</item>
+        <item>莫兰迪玫瑰灰</item>
+    </string-array>
+
+    <string-array name="theme_category_names">
+        <item>标准色</item>
+        <item>中国色</item>
+        <item>国风渐变色</item>
+        <item>莫兰迪色系</item>
+    </string-array>
+
+    <string-array name="ringtones">
+        <item>系统默认</item>
+        <item>静音</item>
+        <item>自定义铃声</item>
+    </string-array>
+
+    <string-array name="break_duration_options">
+        <item>1分钟</item>
+        <item>2分钟</item>
+        <item>3分钟</item>
+        <item>4分钟</item>
+        <item>5分钟</item>
+        <item>6分钟</item>
+        <item>7分钟</item>
+        <item>8分钟</item>
+        <item>9分钟</item>
+        <item>10分钟</item>
+        <item>11分钟</item>
+        <item>12分钟</item>
+        <item>13分钟</item>
+        <item>14分钟</item>
+        <item>15分钟</item>
+        <item>16分钟</item>
+        <item>17分钟</item>
+        <item>18分钟</item>
+        <item>19分钟</item>
+        <item>20分钟</item>
+        <item>21分钟</item>
+        <item>22分钟</item>
+        <item>23分钟</item>
+        <item>24分钟</item>
+        <item>25分钟</item>
+        <item>26分钟</item>
+        <item>27分钟</item>
+        <item>28分钟</item>
+        <item>29分钟</item>
+        <item>30分钟</item>
+    </string-array>
+
+    <string-array name="long_break_duration_options">
+        <item>10分钟</item>
+        <item>11分钟</item>
+        <item>12分钟</item>
+        <item>13分钟</item>
+        <item>14分钟</item>
+        <item>15分钟</item>
+    </string-array>
+
+    <string-array name="pomodoros_before_long_break_options">
+        <item>2个</item>
+        <item>3个</item>
+        <item>4个</item>
+        <item>5个</item>
+        <item>6个</item>
+        <item>7个</item>
+        <item>8个</item>
+    </string-array>
+
+    <string-array name="task_categories">
+        <item>@string/task_category_work</item>
+        <item>@string/task_category_study</item>
+        <item>@string/task_category_life</item>
+        <item>@string/task_category_sports</item>
+        <item>@string/task_category_entertainment</item>
+        <item>@string/task_category_other</item>
+    </string-array>
+
+    <string-array name="task_priorities">
+        <item>@string/task_priority_low</item>
+        <item>@string/task_priority_medium</item>
+        <item>@string/task_priority_high</item>
+        <item>@string/task_priority_urgent</item>
+    </string-array>
+
+    <string-array name="pause_reasons">
+        <item>临时有事</item>
+        <item>被打断</item>
+        <item>灵感来了</item>
+        <item>需要休息</item>
+        <item>技术问题</item>
+        <item>其他</item>
+    </string-array>
+
+    <string-array name="week_day_short_labels">
+        <item>一</item>
+        <item>二</item>
+        <item>三</item>
+        <item>四</item>
+        <item>五</item>
+        <item>六</item>
+        <item>日</item>
+    </string-array>
+
+    <string-array name="filter_priority_options">
+        <item>@string/common_filter_all</item>
+        <item>@string/task_priority_low</item>
+        <item>@string/task_priority_medium</item>
+        <item>@string/task_priority_high</item>
+        <item>@string/task_priority_urgent</item>
+    </string-array>
+
+    <string-array name="filter_due_date_options">
+        <item>@string/common_filter_all</item>
+        <item>@string/task_filter_today</item>
+        <item>@string/task_filter_tomorrow</item>
+        <item>@string/task_filter_this_week</item>
+        <item>@string/task_filter_next_week</item>
+        <item>@string/task_filter_this_month</item>
+        <item>@string/task_filter_overdue</item>
+    </string-array>
+
+    <string-array name="filter_category_options">
+        <item>@string/common_filter_all</item>
+        <item>@string/task_category_work</item>
+        <item>@string/task_category_study</item>
+        <item>@string/task_category_life</item>
+        <item>@string/task_category_sports</item>
+        <item>@string/task_category_entertainment</item>
+        <item>@string/task_category_other</item>
+    </string-array>
+
+    <string-array name="settings_pause_count_options">
+        <item>1次</item>
+        <item>2次</item>
+        <item>3次</item>
+        <item>4次</item>
+        <item>5次</item>
+    </string-array>
+
+    <string-array name="dev_lab_log_levels">
+        <item>@string/common_filter_all</item>
+        <item>@string/dev_lab_log_level_error</item>
+        <item>@string/dev_lab_log_level_warning</item>
+        <item>@string/dev_lab_log_level_info</item>
+        <item>@string/dev_lab_log_level_debug</item>
+    </string-array>
+
+    <string-array name="app_category_names">
+        <item>@string/common_filter_all</item>
+        <item>@string/app_category_health</item>
+        <item>@string/app_category_education</item>
+        <item>@string/app_category_finance</item>
+        <item>@string/app_category_travel</item>
+        <item>@string/app_category_job</item>
+        <item>@string/app_category_office</item>
+        <item>@string/app_category_social</item>
+        <item>@string/app_category_entertainment</item>
+        <item>@string/app_category_shopping</item>
+        <item>@string/app_category_tool</item>
+        <item>@string/app_category_news</item>
+        <item>@string/app_category_system</item>
+        <item>@string/app_category_other</item>
+    </string-array>
+
+    <string-array name="app_categories">
+        <item>@string/app_category_health</item>
+        <item>@string/app_category_education</item>
+        <item>@string/app_category_finance</item>
+        <item>@string/app_category_travel</item>
+        <item>@string/app_category_job</item>
+        <item>@string/app_category_office</item>
+        <item>@string/app_category_social</item>
+        <item>@string/app_category_entertainment</item>
+        <item>@string/app_category_shopping</item>
+        <item>@string/app_category_tool</item>
+        <item>@string/app_category_news</item>
+        <item>@string/app_category_system</item>
+        <item>@string/app_category_other</item>
+    </string-array>
+
+    <string-array name="account_avatar_options">
+        <item>@string/account_dialog_view_original</item>
+        <item>@string/account_dialog_change_avatar</item>
+        <item>@string/cancel</item>
+    </string-array>
+
+    <string-array name="account_pick_avatar_options">
+        <item>@string/account_dialog_pick_from_gallery</item>
+        <item>@string/account_dialog_take_photo</item>
+        <item>@string/cancel</item>
+    </string-array>
+
+</resources>

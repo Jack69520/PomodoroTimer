@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 背景 -->
+    <path
+        android:fillColor="@color/shortcut_brand_primary"
+        android:pathData="M3,3h18c1.1,0 2,0.9 2,2v14c0,1.1 -0.9,2 -2,2H3c-1.1,0 -2,-0.9 -2,-2V5c0,-1.1 0.9,-2 2,-2z" />
+    <!-- 柱状图 -->
+    <path
+        android:fillColor="@color/shortcut_brand_dark"
+        android:pathData="M6,14h3v6H6z" />
+    <path
+        android:fillColor="@color/shortcut_brand_mid"
+        android:pathData="M10.5,10h3v10h-3z" />
+    <path
+        android:fillColor="@color/shortcut_brand_dark"
+        android:pathData="M15,12h3v8h-3z" />
+    <!-- 白色分隔线 -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M5,6.5h14v1.2H5z M5,9.2h14v1.2H5z" />
+</vector>

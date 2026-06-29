@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 背景圆 -->
+    <path
+        android:fillColor="@color/shortcut_brand_primary"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" />
+    <!-- 下半部阴影 -->
+    <path
+        android:fillColor="@color/shortcut_brand_dark"
+        android:pathData="M2,12 A10,10 0 0,0 22,12 L22,22 A10,10 0 0,1 2,22 Z" />
+    <!-- 表盘 -->
+    <path
+        android:fillColor="@color/shortcut_brand_mid"
+        android:pathData="M12,5.5c-3.59,0 -6.5,2.91 -6.5,6.5s2.91,6.5 6.5,6.5 6.5,-2.91 6.5,-6.5 -2.91,-6.5 -6.5,-6.5z" />
+    <!-- 时针分针 -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M12.5,8H11v5.2l4.1,2.45 0.75,-1.23 -3.35,-2v-4.42z" />
+    <!-- 中心点 -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M12,11.25m-1.1,0a1.1,1.1 0 1,1 2.2,0a1.1,1.1 0 1,1 -2.2,0z" />
+</vector>

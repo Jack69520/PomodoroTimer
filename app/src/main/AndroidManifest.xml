@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"
+        tools:targetApi="34" />
+    <!-- Android 12+ 精确闹钟：计时到点与暂停超时兜底 -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:targetApi="31" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- 应用屏蔽功能权限 -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:targetApi="30" />
+
+    <attribution
+        android:label="@string/attribution_timer_alarm"
+        android:tag="@string/attribution_tag_empty" />
+    <attribution
+        android:tag="timerAlarm" />
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PomodoroTimer"
+        tools:targetApi="36"
+        android:enableOnBackInvokedCallback="true">
+        <activity
+            android:name=".ui.consent.PrivacyConsentActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="uiMode|screenLayout|orientation|screenSize"
+            android:exported="true"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <service
+            android:name=".service.TimerService"
+            android:attributionTags="timerAlarm"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ForegroundServicePermission">
+            <!-- specialUse 用途说明，供 Play 审核与系统校验 -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="pomodoro_focus_timer" />
+        </service>
+
+        <service
+            android:name=".service.AppBlockingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="focus_app_blocking" />
+        </service>
+
+        <receiver
+            android:name=".service.TimerAlarmReceiver"
+            android:exported="false" />
+
+        <!-- 计时器专属页面，允许横屏；其它页面默认竖屏（MainActivity上已锁定） -->
+        <activity
+            android:name=".ui.home.TimerActivity"
+            android:exported="false"
+            android:screenOrientation="fullSensor"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar" />
+
+        <activity
+            android:name=".ui.home.SimpleTodoEditActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.home.CollectionTodoEditActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.AboutActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <!-- 禁用底部导航栏 -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.LegalDocumentActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.profile.AboutActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.OpenSourceLicensesActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.profile.AboutActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.AppBlockingManagementActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.AppCategoryEditActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.profile.AppBlockingManagementActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.DevLabActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.SettingsActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
+            android:name=".ui.profile.FAQActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false" />
+
+        <!-- 账户相关Activity -->
+        <activity
+            android:name=".ui.account.AccountActivity"
+            android:theme="@style/Theme.PomodoroTimer"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.LoginActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.ChangePasswordActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.AccountRecoveryActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.LoginActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.SetNewPasswordActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountRecoveryActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.profile.ImagePreviewActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.account.RegisterActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountActivity" />
+        </activity>
+
+        <!-- FileProvider for camera and gallery access -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

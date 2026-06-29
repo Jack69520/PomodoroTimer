@@ -1,0 +1,37 @@
+# ── 签名与密钥（切勿提交）──
+*.jks
+*.keystore
+keystore.properties
+
+# ── 本机环境 ──
+local.properties
+
+# ── Gradle / 构建产物 ──
+.gradle/
+build/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# ── 安装包与发布输出 ──
+*.apk
+*.aab
+app/release/
+
+# ── Android Studio / IntelliJ ──
+*.iml
+.idea/
+!.idea/.gitignore
+
+# ── 操作系统 ──
+.DS_Store
+Thumbs.db
+
+# ── 日志与调试 ──
+*.log
+*.hprof
+
+# ── 可选：若将来接入 Firebase / Google 服务，取消下行注释 ──
+# google-services.json

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 盾牌外轮廓 -->
+    <path
+        android:fillColor="@color/shortcut_brand_primary"
+        android:pathData="M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z" />
+    <!-- 盾牌内层 -->
+    <path
+        android:fillColor="@color/shortcut_brand_mid"
+        android:pathData="M12,3.4L5.2,6.6v4.7c0,4.45 3.08,8.65 6.8,9.75 3.72,-1.1 6.8,-5.3 6.8,-9.75V6.6L12,3.4z" />
+    <!-- 屏蔽符号 -->
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M11,9.5h2v6h-2z M9,11.5h6v2H9z" />
+</vector>

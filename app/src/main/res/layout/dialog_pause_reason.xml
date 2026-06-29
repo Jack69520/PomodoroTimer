@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/timer_dialog_pause_reason_prompt"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"
+        android:gravity="center" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_1"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="16dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_2"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_3"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_4"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_5"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reason_6"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/divider" />
+
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_resume"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/timer_resume_timer"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/teal_700"
+        app:cornerRadius="16dp" />
+
+</LinearLayout>
