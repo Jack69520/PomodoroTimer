@@ -25,6 +25,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.app.ActivityManager;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -54,7 +57,16 @@ public class TimerService extends Service {
     private static final String TAG = "TimerService";
     private static final String CHANNEL_ID = "TimerChannelOngoing";
     private static final String CHANNEL_ID_ALERTS = "TimerAlertChannel";
-    private static final int NOTIFICATION_ID = 1;
+    /** 前台进行中计时通知（静默，仅展示进度）。 */
+    private static final int NOTIFICATION_ID_ONGOING = 1;
+    /** 阶段切换提醒通知 ID，彼此独立避免覆盖。 */
+    private static final int NOTIFICATION_ID_ALERT_BREAK_STARTED = 2;
+    private static final int NOTIFICATION_ID_ALERT_STUDY_STARTED = 3;
+    private static final int NOTIFICATION_ID_ALERT_BREAK_ENDED = 4;
+    private static final int NOTIFICATION_ID_ALERT_STUDY_AUTO_STARTED = 5;
+    private static final int NOTIFICATION_ID_ALERT_FAILED = 6;
+    /** 连续提醒之间的间隔，避免通知与铃声互相覆盖。 */
+    private static final long ALERT_SEQUENCE_GAP_MS = 800L;
     private static final long TICK_INTERVAL_MS = 1000L;
     /** 暂停超过此时长判定失败。 */
     private static final long PAUSE_TIMEOUT = 5 * 60 * 1000L;
@@ -125,6 +137,16 @@ public class TimerService extends Service {
     private boolean restoredFromCheckpoint;
     /** 防止 Alarm 恢复与 handleSessionCompleteAlarm 重复触发完成逻辑。 */
     private boolean isCompletingSession;
+    /** 上次已同步到提醒渠道的铃声 URI，避免重复写渠道。 */
+    private String syncedAlertRingtoneUri = "";
+
+    /** 需要响铃提醒的计时阶段切换节点。 */
+    private enum SessionAlert {
+        STUDY_STARTED,
+        BREAK_STARTED,
+        BREAK_ENDED,
+        SESSION_FAILED
+    }
 
     public class LocalBinder extends Binder {
         public TimerService getService() {
@@ -151,6 +173,7 @@ public class TimerService extends Service {
         pomodoroSettingsRepository.warmCache();
         timeLeftInMillis = timerSettingsRepository.getDefaultStudyTimeMs();
         settingsManager = container.getSettingsManager();
+        syncAlertChannelSound();
         timerHandler = new Handler(Looper.getMainLooper());
         pauseTimeoutHandler = new Handler(Looper.getMainLooper());
         tickRunnable = this::onTick;
@@ -190,6 +213,7 @@ public class TimerService extends Service {
                     isLongBreak = false;
                     timeLeftInMillis = getBreakTimeMs();
                     beginNewSession();
+                    dispatchSessionAlert(SessionAlert.BREAK_STARTED);
                 } else {
                     sessionType = 0;
                     isLongBreak = false;
@@ -199,6 +223,7 @@ public class TimerService extends Service {
                         timeLeftInMillis = getDefaultStudyTimeMs();
                     }
                     beginNewSession();
+                    dispatchSessionAlert(SessionAlert.STUDY_STARTED, false);
                 }
             } else if (ACTION_END_BREAK.equals(action)) {
                 endBreakEarly();
@@ -511,7 +536,7 @@ public class TimerService extends Service {
         pomodoroSettingsRepository.saveSettings(settings);
 
         beginNewSession();
-        sendBreakStartedNotification();
+        dispatchSessionAlert(SessionAlert.BREAK_STARTED);
         openTimerForBreakSession();
     }
 
@@ -521,15 +546,19 @@ public class TimerService extends Service {
 
         UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
         if (settings.autoStartAfterBreak) {
+            dispatchSessionAlert(SessionAlert.BREAK_ENDED, true);
+
             awaitingPostBreakChoice = false;
             sessionType = 0;
             timeLeftInMillis = getDefaultStudyTimeMs();
             publishState();
             beginNewSession();
-            sendBreakEndedNotification();
-            sendNextPomodoroStartedNotification();
+
+            timerHandler.postDelayed(
+                    () -> dispatchSessionAlert(SessionAlert.STUDY_STARTED, true),
+                    ALERT_SEQUENCE_GAP_MS);
         } else {
-            sendBreakEndedNotification();
+            dispatchSessionAlert(SessionAlert.BREAK_ENDED, false);
             sessionType = 0;
             timeLeftInMillis = getDefaultStudyTimeMs();
             awaitingPostBreakChoice = true;
@@ -744,7 +773,7 @@ public class TimerService extends Service {
 
         notifyTimerFinish();
 
-        sendFailedNotification();
+        dispatchSessionAlert(SessionAlert.SESSION_FAILED);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
@@ -764,7 +793,7 @@ public class TimerService extends Service {
 
         notifyTimerFinish();
 
-        sendFailedNotification();
+        dispatchSessionAlert(SessionAlert.SESSION_FAILED);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
@@ -811,15 +840,15 @@ public class TimerService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(
-                        NOTIFICATION_ID,
+                        NOTIFICATION_ID_ONGOING,
                         notification,
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                 );
             } else {
-                startForeground(NOTIFICATION_ID, notification);
+                startForeground(NOTIFICATION_ID_ONGOING, notification);
             }
         } else {
-            startForeground(NOTIFICATION_ID, notification);
+            startForeground(NOTIFICATION_ID_ONGOING, notification);
         }
     }
 
@@ -931,15 +960,7 @@ public class TimerService extends Service {
 
     private void playAlarm() {
         try {
-            String ringtoneUri = settingsManager.getRingtoneUri();
-            if ("silent".equals(ringtoneUri)) {
-                return;
-            }
-
-            Uri uri = "default".equals(ringtoneUri)
-                    ? RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    : Uri.parse(ringtoneUri);
-
+            Uri uri = resolveRingtoneUri();
             if (uri == null) {
                 return;
             }
@@ -960,11 +981,217 @@ public class TimerService extends Service {
         }
     }
 
+    @Nullable
+    private Uri resolveRingtoneUri() {
+        String ringtoneUri = settingsManager.getRingtoneUri();
+        if ("silent".equals(ringtoneUri)) {
+            return null;
+        }
+        if ("default".equals(ringtoneUri)) {
+            return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        }
+        return Uri.parse(ringtoneUri);
+    }
+
     private Context getAudioAttributionContext() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return createAttributionContext("timerAlarm");
         }
         return this;
+    }
+
+    /**
+     * 阶段切换提醒的统一入口：同步渠道铃声 → 发送提醒通知 → MediaPlayer/振动兜底。
+     *
+     * @param autoStartContext 仅用于 STUDY_STARTED / BREAK_ENDED：
+     *                         休息结束后自动开始下一轮时为 true，文案与通知 ID 与手动路径区分。
+     */
+    private void dispatchSessionAlert(SessionAlert alert) {
+        dispatchSessionAlert(alert, false);
+    }
+
+    private void dispatchSessionAlert(SessionAlert alert, boolean autoStartContext) {
+        syncAlertChannelSound();
+
+        boolean silent = "silent".equals(settingsManager.getRingtoneUri());
+        NotificationCompat.Builder builder = buildSessionAlertNotification(alert, autoStartContext);
+        applyAlertPolicy(builder, silent);
+
+        boolean hasPermission = NotificationPermission.hasNotificationPermission(this);
+        boolean inForeground = isAppInForeground();
+        boolean useMediaPlayerFallback = !silent && (!hasPermission || inForeground);
+
+        if (useMediaPlayerFallback) {
+            builder.setSilent(true);
+        }
+
+        int notificationId = resolveAlertNotificationId(alert, autoStartContext);
+        if (hasPermission) {
+            NotificationManagerCompat.from(this).notify(notificationId, builder.build());
+        }
+
+        if (silent) {
+            return;
+        }
+
+        if (useMediaPlayerFallback) {
+            playAlarm();
+            VibrationHelper.vibrateAlert(this);
+        }
+    }
+
+    /** 将用户设置的铃声同步到提醒通知渠道（Android 8+ 由渠道控制声音）。 */
+    private void syncAlertChannelSound() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return;
+        }
+
+        String ringtonePref = settingsManager.getRingtoneUri();
+        if (ringtonePref.equals(syncedAlertRingtoneUri)) {
+            return;
+        }
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager == null) {
+            return;
+        }
+
+        NotificationChannel channel = manager.getNotificationChannel(CHANNEL_ID_ALERTS);
+        if (channel == null) {
+            createNotificationChannel();
+            channel = manager.getNotificationChannel(CHANNEL_ID_ALERTS);
+            if (channel == null) {
+                return;
+            }
+        }
+
+        if ("silent".equals(ringtonePref)) {
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+        } else {
+            Uri uri = resolveRingtoneUri();
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            channel.setSound(uri, attrs);
+            channel.enableVibration(true);
+        }
+        manager.createNotificationChannel(channel);
+        syncedAlertRingtoneUri = ringtonePref;
+    }
+
+    private void applyAlertPolicy(NotificationCompat.Builder builder, boolean silent) {
+        builder.setOnlyAlertOnce(false);
+        if (silent) {
+            builder.setSilent(true);
+        }
+    }
+
+    private int resolveAlertNotificationId(SessionAlert alert, boolean autoStartContext) {
+        switch (alert) {
+            case BREAK_STARTED:
+                return NOTIFICATION_ID_ALERT_BREAK_STARTED;
+            case STUDY_STARTED:
+                return autoStartContext
+                        ? NOTIFICATION_ID_ALERT_STUDY_AUTO_STARTED
+                        : NOTIFICATION_ID_ALERT_STUDY_STARTED;
+            case BREAK_ENDED:
+                return NOTIFICATION_ID_ALERT_BREAK_ENDED;
+            case SESSION_FAILED:
+            default:
+                return NOTIFICATION_ID_ALERT_FAILED;
+        }
+    }
+
+    private NotificationCompat.Builder buildSessionAlertNotification(
+            SessionAlert alert, boolean autoStartContext) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ALERTS)
+                .setSmallIcon(R.drawable.ic_timer)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+
+        switch (alert) {
+            case STUDY_STARTED:
+                builder.setContentTitle(autoStartContext
+                        ? getString(R.string.timer_notification_study_auto_started_title)
+                        : getString(R.string.timer_notification_study_started_title));
+                builder.setContentText(autoStartContext
+                        ? getString(R.string.timer_notification_break_end_auto)
+                        : getString(R.string.timer_notification_study_started_message));
+                builder.setCategory(NotificationCompat.CATEGORY_ALARM);
+                builder.setContentIntent(buildTimerActivityPendingIntent(false));
+                break;
+            case BREAK_STARTED:
+                builder.setContentTitle(isLongBreak
+                        ? getString(R.string.timer_notification_study_complete_long_break_title)
+                        : getString(R.string.timer_notification_study_complete_break_title));
+                builder.setContentText(isLongBreak
+                        ? getString(R.string.timer_notification_long_break_text)
+                        : getString(R.string.timer_notification_short_break_text));
+                builder.setCategory(NotificationCompat.CATEGORY_ALARM);
+                builder.setContentIntent(buildTimerActivityPendingIntent(false));
+                break;
+            case BREAK_ENDED:
+                builder.setContentTitle(getString(R.string.timer_notification_break_end_title));
+                builder.setContentText(autoStartContext
+                        ? getString(R.string.timer_notification_break_end_auto_lead)
+                        : getString(R.string.timer_notification_break_end_message));
+                builder.setCategory(NotificationCompat.CATEGORY_REMINDER);
+                builder.setContentIntent(buildTimerActivityPendingIntent(true));
+                if (!autoStartContext) {
+                    builder.addAction(
+                            R.drawable.ic_study,
+                            getString(R.string.timer_notification_action_start_next),
+                            buildServiceActionPendingIntent(ACTION_START, 12));
+                    builder.addAction(
+                            R.drawable.ic_stop,
+                            getString(R.string.timer_end_session),
+                            buildServiceActionPendingIntent(ACTION_RESET, 13));
+                }
+                break;
+            case SESSION_FAILED:
+                builder.setContentTitle(getString(R.string.timer_notification_fail_title));
+                builder.setContentText(getString(R.string.timer_notification_fail_message));
+                builder.setCategory(NotificationCompat.CATEGORY_REMINDER);
+                break;
+            default:
+                break;
+        }
+        return builder;
+    }
+
+    private PendingIntent buildTimerActivityPendingIntent(boolean postBreak) {
+        Intent openTimer = new Intent(this, TimerActivity.class);
+        openTimer.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (postBreak) {
+            openTimer.putExtra(EXTRA_POST_BREAK, true);
+        }
+        int openFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            openFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getActivity(this, postBreak ? 10 : 11, openTimer, openFlags);
+    }
+
+    private boolean isAppInForeground() {
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (activityManager == null) {
+            return false;
+        }
+        List<ActivityManager.RunningAppProcessInfo> processes = activityManager.getRunningAppProcesses();
+        if (processes == null) {
+            return false;
+        }
+        String packageName = getPackageName();
+        for (ActivityManager.RunningAppProcessInfo info : processes) {
+            if (packageName.equals(info.processName)
+                    && info.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void createNotificationChannel() {
@@ -996,6 +1223,7 @@ public class TimerService extends Service {
             alertChannel.setShowBadge(true);
             alertChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             manager.createNotificationChannel(alertChannel);
+            syncedAlertRingtoneUri = "";
         }
     }
 
@@ -1070,121 +1298,7 @@ public class TimerService extends Service {
         NotificationManagerCompat manager = NotificationManagerCompat.from(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 == PackageManager.PERMISSION_GRANTED) {
-            manager.notify(NOTIFICATION_ID, notification);
-        }
-    }
-
-    private void sendFailedNotification() {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ALERTS)
-                .setContentTitle(getString(R.string.timer_notification_fail_title))
-                .setContentText(getString(R.string.timer_notification_fail_message))
-                .setSmallIcon(R.drawable.ic_timer)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_REMINDER)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-
-        NotificationManagerCompat manager = NotificationManagerCompat.from(this);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                == PackageManager.PERMISSION_GRANTED) {
-            manager.notify(NOTIFICATION_ID + 2, builder.build());
-        }
-    }
-
-    private void notifyOrVibrate(NotificationCompat.Builder builder, int notificationId) {
-        applyCompletionAlertPolicy(builder);
-        if (NotificationPermission.hasNotificationPermission(this)) {
-            NotificationManagerCompat.from(this).notify(notificationId, builder.build());
-        } else {
-            playAlarm();
-            VibrationHelper.vibrateAlert(this);
-        }
-    }
-
-    /**
-     * 到点提醒策略：有通知权限时由通知渠道负责声音/振动；
-     * 无权限时由 {@link #notifyOrVibrate} 走铃声 + 震动，避免重复提醒被系统判为 noisy 而静音。
-     */
-    private void applyCompletionAlertPolicy(NotificationCompat.Builder builder) {
-        builder.setOnlyAlertOnce(true);
-        if ("silent".equals(settingsManager.getRingtoneUri())) {
-            builder.setSilent(true);
-        }
-    }
-
-    private void sendBreakStartedNotification() {
-        String title = isLongBreak
-                ? getString(R.string.timer_notification_study_complete_long_break_title)
-                : getString(R.string.timer_notification_study_complete_break_title);
-        String text = isLongBreak
-                ? getString(R.string.timer_notification_long_break_text)
-                : getString(R.string.timer_notification_short_break_text);
-
-        Intent openTimer = new Intent(this, TimerActivity.class);
-        openTimer.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        int openFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            openFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openTimer, openFlags);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ALERTS)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setSmallIcon(R.drawable.ic_timer)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentIntent(contentIntent);
-
-        notifyOrVibrate(builder, NOTIFICATION_ID + 1);
-    }
-
-    private NotificationCompat.Builder buildAlertNotificationBuilder() {
-        return new NotificationCompat.Builder(this, CHANNEL_ID_ALERTS)
-                .setSmallIcon(R.drawable.ic_timer)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-    }
-
-    private void sendBreakEndedNotification() {
-        Intent openTimer = new Intent(this, TimerActivity.class);
-        openTimer.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        openTimer.putExtra(EXTRA_POST_BREAK, true);
-        int openFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            openFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openTimer, openFlags);
-        PendingIntent startPendingIntent = buildServiceActionPendingIntent(ACTION_START, 12);
-        PendingIntent resetPendingIntent = buildServiceActionPendingIntent(ACTION_RESET, 13);
-
-        NotificationCompat.Builder builder = buildAlertNotificationBuilder()
-                .setContentTitle(getString(R.string.timer_notification_break_end_title))
-                .setContentText(getString(R.string.timer_notification_break_end_message))
-                .setCategory(NotificationCompat.CATEGORY_REMINDER)
-                .setAutoCancel(true)
-                .setContentIntent(contentIntent)
-                .addAction(R.drawable.ic_study, getString(R.string.timer_notification_action_start_next), startPendingIntent)
-                .addAction(R.drawable.ic_stop, getString(R.string.timer_end_session), resetPendingIntent);
-
-        notifyOrVibrate(builder, NOTIFICATION_ID + 3);
-    }
-
-    private void sendNextPomodoroStartedNotification() {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle(getString(R.string.timer_notification_break_end_title))
-                .setContentText(getString(R.string.timer_notification_break_end_auto))
-                .setSmallIcon(R.drawable.ic_timer)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setCategory(NotificationCompat.CATEGORY_STATUS)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setSilent(true);
-
-        if (NotificationPermission.hasNotificationPermission(this)) {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID + 3, builder.build());
+            manager.notify(NOTIFICATION_ID_ONGOING, notification);
         }
     }
 
@@ -1210,6 +1324,14 @@ public class TimerService extends Service {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
+    private void cancelAllAlertNotifications(NotificationManagerCompat manager) {
+        manager.cancel(NOTIFICATION_ID_ALERT_BREAK_STARTED);
+        manager.cancel(NOTIFICATION_ID_ALERT_STUDY_STARTED);
+        manager.cancel(NOTIFICATION_ID_ALERT_BREAK_ENDED);
+        manager.cancel(NOTIFICATION_ID_ALERT_STUDY_AUTO_STARTED);
+        manager.cancel(NOTIFICATION_ID_ALERT_FAILED);
+    }
+
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         // 用户划掉最近任务时落盘，便于下次启动恢复
@@ -1229,8 +1351,8 @@ public class TimerService extends Service {
         // 进行中会话保留通知，便于用户返回
         if (!isRunning && !isPaused) {
             NotificationManagerCompat manager = NotificationManagerCompat.from(this);
-            manager.cancel(NOTIFICATION_ID);
-            manager.cancel(NOTIFICATION_ID + 1);
+            manager.cancel(NOTIFICATION_ID_ONGOING);
+            cancelAllAlertNotifications(manager);
         }
         super.onDestroy();
     }

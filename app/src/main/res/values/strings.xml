@@ -122,6 +122,10 @@
     <string name="timer_notification_break_end_message">请选择开始新一轮番茄或结束</string>
     <string name="timer_notification_action_start_next">开始新一轮</string>
     <string name="timer_notification_break_end_auto">已自动开始新一轮番茄计时</string>
+    <string name="timer_notification_study_started_title">番茄计时已开始</string>
+    <string name="timer_notification_study_started_message">专注计时中，加油！</string>
+    <string name="timer_notification_study_auto_started_title">新一轮番茄已开始</string>
+    <string name="timer_notification_break_end_auto_lead">休息结束，即将开始新一轮专注</string>
     <string name="blocking_channel_focus_mode_name">专注模式</string>
     <string name="blocking_channel_focus_mode_description">学习计时期间限制娱乐应用</string>
 
@@ -706,7 +710,7 @@
 
     <!-- About -->
     <string name="about_link_separator"> · </string>
-    <string name="about_copyright_en">Copyright © 2025-2026 开发者. All Rights Reserved.</string>
+    <string name="about_copyright_en">Copyright © 2025-2026 吴宇兴. All Rights Reserved.</string>
     <string name="about_copyright_zh">版权所有 侵权必究</string>
 
     <!-- Layout placeholders (design-time defaults, replaced at runtime) -->
