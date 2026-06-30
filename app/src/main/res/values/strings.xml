@@ -28,7 +28,6 @@
     <string name="privacy_consent_decline">不同意并退出</string>
     <string name="dev_lab_log_empty">暂无应用日志，相关操作后将在此显示</string>
     <string name="attribution_timer_alarm">番茄计时结束提示音</string>
-    <string name="attribution_tag_empty"></string>
 
     <!-- Common (shared buttons, yes/no, confirm, cancel, delete, hint, permission) -->
     <string name="yes">是</string>

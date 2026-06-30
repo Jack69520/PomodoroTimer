@@ -35,8 +35,6 @@
 
     <attribution
         android:label="@string/attribution_timer_alarm"
-        android:tag="@string/attribution_tag_empty" />
-    <attribution
         android:tag="timerAlarm" />
 
     <application
