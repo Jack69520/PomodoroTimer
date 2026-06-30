@@ -710,7 +710,7 @@
 
     <!-- About -->
     <string name="about_link_separator"> · </string>
-    <string name="about_copyright_en">Copyright © 2025-2026 吴宇兴. All Rights Reserved.</string>
+    <string name="about_copyright_en">Copyright © 2025-2026 开发者. All Rights Reserved.</string>
     <string name="about_copyright_zh">版权所有 侵权必究</string>
 
     <!-- Layout placeholders (design-time defaults, replaced at runtime) -->
