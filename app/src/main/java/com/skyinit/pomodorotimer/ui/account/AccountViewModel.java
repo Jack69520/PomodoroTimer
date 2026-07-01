@@ -12,6 +12,7 @@ import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.data.model.AccountUiState;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
+import com.skyinit.pomodorotimer.data.repository.AccountOperationGuard;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 
@@ -21,17 +22,22 @@ import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 public class AccountViewModel extends AndroidViewModel {
 
     private final UserSessionRepository sessionRepository;
+    private final AccountOperationGuard accountOperationGuard;
+    private PendingAccountOperation pendingOperation;
     private final MutableLiveData<AccountUiState> uiState = new MutableLiveData<>();
     private final SingleLiveEvent<String> toastMessage = new SingleLiveEvent<>();
     private final SingleLiveEvent<Void> deleteSuccessDialog = new SingleLiveEvent<>();
+    private final SingleLiveEvent<AccountOperationGuard.GuardState> guardPrompt = new SingleLiveEvent<>();
     private boolean actionInProgress;
 
     private final Observer<User> activeUserObserver = this::onActiveUserChanged;
 
     public AccountViewModel(@NonNull Application application,
-                            UserSessionRepository sessionRepository) {
+                            UserSessionRepository sessionRepository,
+                            AccountOperationGuard accountOperationGuard) {
         super(application);
         this.sessionRepository = sessionRepository;
+        this.accountOperationGuard = accountOperationGuard;
         sessionRepository.getActiveUser().observeForever(activeUserObserver);
         User current = sessionRepository.getCurrentUser();
         if (current != null) {
@@ -51,6 +57,10 @@ public class AccountViewModel extends AndroidViewModel {
         return deleteSuccessDialog;
     }
 
+    public LiveData<AccountOperationGuard.GuardState> getGuardPrompt() {
+        return guardPrompt;
+    }
+
     public void logout() {
         if (actionInProgress) {
             return;
@@ -59,40 +69,22 @@ public class AccountViewModel extends AndroidViewModel {
             toastMessage.setValue(getApplication().getString(R.string.account_registered_only));
             return;
         }
-        setActionInProgress(true);
-        sessionRepository.logout(new AccountManager.LogoutCallback() {
-            @Override
-            public void onSuccess() {
-                setActionInProgress(false);
-                toastMessage.setValue(getApplication().getString(R.string.account_logout_success));
-            }
-
-            @Override
-            public void onError(String message) {
-                setActionInProgress(false);
-                toastMessage.setValue(message);
-            }
-        });
+        pendingOperation = PendingAccountOperation.LOGOUT;
+        if (!ensureAccountOperationAllowed()) {
+            return;
+        }
+        executePendingOperation(false);
     }
 
     public void deleteAccount() {
         if (actionInProgress) {
             return;
         }
-        setActionInProgress(true);
-        sessionRepository.deleteCurrentAccount(new AccountManager.AccountDeletionCallback() {
-            @Override
-            public void onSuccess() {
-                setActionInProgress(false);
-                deleteSuccessDialog.call();
-            }
-
-            @Override
-            public void onError(String message) {
-                setActionInProgress(false);
-                toastMessage.setValue(message);
-            }
-        });
+        pendingOperation = PendingAccountOperation.DELETE_ACCOUNT;
+        if (!ensureAccountOperationAllowed()) {
+            return;
+        }
+        executePendingOperation(false);
     }
 
     public void updateProfile(String nickname, String avatarPath, String signature) {
@@ -105,6 +97,75 @@ public class AccountViewModel extends AndroidViewModel {
             public void onSuccess() {
                 setActionInProgress(false);
                 toastMessage.setValue(getApplication().getString(R.string.account_toast_update_success));
+            }
+
+            @Override
+            public void onError(String message) {
+                setActionInProgress(false);
+                toastMessage.setValue(message);
+            }
+        });
+    }
+
+    public void continueAfterDisablingBlocking() {
+        executePendingOperation(true);
+    }
+
+    private boolean ensureAccountOperationAllowed() {
+        AccountOperationGuard.GuardState guardState = accountOperationGuard.evaluate();
+        if (guardState.timerActive) {
+            toastMessage.setValue(getApplication().getString(R.string.account_guard_timer_active));
+            return false;
+        }
+        if (guardState.blockingEnabled) {
+            guardPrompt.setValue(guardState);
+            return false;
+        }
+        return true;
+    }
+
+    private void executePendingOperation(boolean disableBlocking) {
+        if (pendingOperation == null || actionInProgress) {
+            return;
+        }
+        if (disableBlocking) {
+            accountOperationGuard.disableBlockingSideEffects();
+        }
+        if (pendingOperation == PendingAccountOperation.LOGOUT) {
+            executeLogout();
+        } else if (pendingOperation == PendingAccountOperation.DELETE_ACCOUNT) {
+            executeDeleteAccount();
+        }
+    }
+
+    private void executeLogout() {
+        setActionInProgress(true);
+        sessionRepository.logout(new AccountManager.LogoutCallback() {
+            @Override
+            public void onSuccess() {
+                pendingOperation = null;
+                accountOperationGuard.clearTimerSideEffects();
+                setActionInProgress(false);
+                toastMessage.setValue(getApplication().getString(R.string.account_logout_success));
+            }
+
+            @Override
+            public void onError(String message) {
+                setActionInProgress(false);
+                toastMessage.setValue(message);
+            }
+        });
+    }
+
+    private void executeDeleteAccount() {
+        setActionInProgress(true);
+        sessionRepository.deleteCurrentAccount(new AccountManager.AccountDeletionCallback() {
+            @Override
+            public void onSuccess() {
+                pendingOperation = null;
+                accountOperationGuard.clearTimerSideEffects();
+                setActionInProgress(false);
+                deleteSuccessDialog.call();
             }
 
             @Override
@@ -147,6 +208,11 @@ public class AccountViewModel extends AndroidViewModel {
         if (current != null) {
             uiState.setValue(current.withActionInProgress(inProgress));
         }
+    }
+
+    private enum PendingAccountOperation {
+        LOGOUT,
+        DELETE_ACCOUNT
     }
 
     @Override

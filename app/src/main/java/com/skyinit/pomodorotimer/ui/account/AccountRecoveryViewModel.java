@@ -11,6 +11,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
+import com.skyinit.pomodorotimer.data.repository.AccountOperationGuard;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 
@@ -20,15 +21,20 @@ import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 public class AccountRecoveryViewModel extends AndroidViewModel {
 
     private final UserSessionRepository sessionRepository;
+    private final AccountOperationGuard accountOperationGuard;
+    private PendingRecovery pendingRecovery;
     private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
     private final SingleLiveEvent<String> toastMessage = new SingleLiveEvent<>();
     private final SingleLiveEvent<Void> recoverySuccess = new SingleLiveEvent<>();
     private final SingleLiveEvent<FormFieldError> fieldError = new SingleLiveEvent<>();
+    private final SingleLiveEvent<AccountOperationGuard.GuardState> guardPrompt = new SingleLiveEvent<>();
 
     public AccountRecoveryViewModel(@NonNull Application application,
-                                    UserSessionRepository sessionRepository) {
+                                    UserSessionRepository sessionRepository,
+                                    AccountOperationGuard accountOperationGuard) {
         super(application);
         this.sessionRepository = sessionRepository;
+        this.accountOperationGuard = accountOperationGuard;
     }
 
     public LiveData<Boolean> isLoading() {
@@ -45,6 +51,10 @@ public class AccountRecoveryViewModel extends AndroidViewModel {
 
     public LiveData<FormFieldError> getFieldError() {
         return fieldError;
+    }
+
+    public LiveData<AccountOperationGuard.GuardState> getGuardPrompt() {
+        return guardPrompt;
     }
 
     public void recover(String userId, String nickname) {
@@ -66,10 +76,36 @@ public class AccountRecoveryViewModel extends AndroidViewModel {
             return;
         }
 
+        pendingRecovery = new PendingRecovery(trimmedId, trimmedNickname);
+        AccountOperationGuard.GuardState guardState = accountOperationGuard.evaluate();
+        if (guardState.timerActive) {
+            toastMessage.setValue(getApplication().getString(R.string.account_guard_timer_active));
+            return;
+        }
+        if (guardState.blockingEnabled) {
+            guardPrompt.setValue(guardState);
+            return;
+        }
+        executePendingRecovery(false);
+    }
+
+    public void continueAfterDisablingBlocking() {
+        executePendingRecovery(true);
+    }
+
+    private void executePendingRecovery(boolean disableBlocking) {
+        PendingRecovery request = pendingRecovery;
+        if (request == null) {
+            return;
+        }
+        if (disableBlocking) {
+            accountOperationGuard.disableBlockingSideEffects();
+        }
         loading.setValue(true);
-        sessionRepository.recoverLogin(trimmedId, trimmedNickname, new AccountManager.LoginCallback() {
+        sessionRepository.recoverLogin(request.userId, request.nickname, new AccountManager.LoginCallback() {
             @Override
             public void onSuccess(com.skyinit.pomodorotimer.data.entity.User user) {
+                pendingRecovery = null;
                 loading.setValue(false);
                 toastMessage.setValue(getApplication().getString(
                         R.string.account_toast_recovery_verified));
@@ -82,5 +118,15 @@ public class AccountRecoveryViewModel extends AndroidViewModel {
                 toastMessage.setValue(message);
             }
         });
+    }
+
+    private static final class PendingRecovery {
+        final String userId;
+        final String nickname;
+
+        PendingRecovery(String userId, String nickname) {
+            this.userId = userId;
+            this.nickname = nickname;
+        }
     }
 }

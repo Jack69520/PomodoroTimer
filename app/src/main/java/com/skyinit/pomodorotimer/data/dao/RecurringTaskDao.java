@@ -36,4 +36,7 @@ public interface RecurringTaskDao {
 
     @Query("UPDATE recurring_tasks SET nextDueDate = :nextDueDate WHERE id = :id")
     void updateNextDueDate(int id, long nextDueDate);
+
+    @Query("DELETE FROM recurring_tasks WHERE userId = :userId")
+    void deleteByUserId(String userId);
 }

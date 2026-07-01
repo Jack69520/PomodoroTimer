@@ -3,6 +3,7 @@ package com.skyinit.pomodorotimer.service;
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.dao.BlockedAppDao;
 import com.skyinit.pomodorotimer.data.entity.BlockedApp;
+import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.util.AppScanner;
@@ -62,6 +63,8 @@ public class AppBlockingService extends Service {
     private long lastCacheRefreshMs;
 
     private boolean isBlockingEnabled;
+    /** 本次屏蔽服务固定绑定的账户，避免账户切换后继续使用其他账户规则。 */
+    private String blockingUserId;
     private long serviceStartTime;
     private int blockingCount;
     private String lastBlockedApp;
@@ -143,10 +146,18 @@ public class AppBlockingService extends Service {
             return;
         }
 
+        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        if (activeUserId == null || activeUserId.isEmpty()) {
+            AppLog.w(TAG, "Cannot start blocking without active user");
+            isBlockingEnabled = false;
+            return;
+        }
+
         if (isBlockingEnabled) {
             stopMonitoringInternal();
         }
 
+        blockingUserId = activeUserId;
         isBlockingEnabled = true;
         serviceStartTime = System.currentTimeMillis();
         startBlockingForeground();
@@ -182,6 +193,7 @@ public class AppBlockingService extends Service {
 
     private void stopMonitoringInternal() {
         isBlockingEnabled = false;
+        blockingUserId = null;
         if (monitorHandler != null && monitorRunnable != null) {
             monitorHandler.removeCallbacks(monitorRunnable);
         }
@@ -224,7 +236,11 @@ public class AppBlockingService extends Service {
         }
         AppExecutors.getInstance().diskIo(() -> {
             try {
-                List<BlockedApp> all = blockedAppDao.getAllAppsSync();
+                String userId = blockingUserId;
+                if (userId == null || userId.isEmpty()) {
+                    return;
+                }
+                List<BlockedApp> all = blockedAppDao.getAllAppsSync(userId);
                 Set<String> enabled = new HashSet<>();
                 Set<String> whitelisted = new HashSet<>();
                 if (all != null) {
@@ -350,9 +366,15 @@ public class AppBlockingService extends Service {
         if (shouldBlock) {
             AppExecutors.getInstance().diskIo(() -> {
                 try {
-                    BlockedApp existing = blockedAppDao.getBlockedAppByPackage(packageName);
+                    String userId = blockingUserId;
+                    if (userId == null || userId.isEmpty()) {
+                        return;
+                    }
+                    BlockedApp existing = blockedAppDao.getBlockedAppByPackage(userId, packageName);
                     if (existing == null) {
-                        blockedAppDao.insert(AppScanner.buildBlockedApp(this, packageName));
+                        BlockedApp blockedApp = AppScanner.buildBlockedApp(this, packageName);
+                        blockedApp.userId = userId;
+                        blockedAppDao.insert(blockedApp);
                     }
                     enabledBlockPackages.add(packageName);
                 } catch (Exception e) {

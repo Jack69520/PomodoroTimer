@@ -85,11 +85,17 @@ public class ViewModelFactory implements ViewModelProvider.Factory {
         }
         if (modelClass.isAssignableFrom(AccountViewModel.class)) {
             Application application = (Application) container.getAppContext();
-            return (T) new AccountViewModel(application, container.getUserSessionRepository());
+            return (T) new AccountViewModel(
+                    application,
+                    container.getUserSessionRepository(),
+                    container.getAccountOperationGuard());
         }
         if (modelClass.isAssignableFrom(LoginViewModel.class)) {
             Application application = (Application) container.getAppContext();
-            return (T) new LoginViewModel(application, container.getUserSessionRepository());
+            return (T) new LoginViewModel(
+                    application,
+                    container.getUserSessionRepository(),
+                    container.getAccountOperationGuard());
         }
         if (modelClass.isAssignableFrom(RegisterViewModel.class)) {
             Application application = (Application) container.getAppContext();
@@ -101,7 +107,10 @@ public class ViewModelFactory implements ViewModelProvider.Factory {
         }
         if (modelClass.isAssignableFrom(AccountRecoveryViewModel.class)) {
             Application application = (Application) container.getAppContext();
-            return (T) new AccountRecoveryViewModel(application, container.getUserSessionRepository());
+            return (T) new AccountRecoveryViewModel(
+                    application,
+                    container.getUserSessionRepository(),
+                    container.getAccountOperationGuard());
         }
         if (modelClass.isAssignableFrom(SetNewPasswordViewModel.class)) {
             Application application = (Application) container.getAppContext();

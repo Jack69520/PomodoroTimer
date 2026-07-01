@@ -10,6 +10,8 @@ public class BlockedApp {
     @PrimaryKey(autoGenerate = true)
     public int id;
 
+    /** 应用屏蔽配置属于账户级数据，账户切换后不得复用其他账户的规则。 */
+    public String userId;
     public String packageName;
     public String appName;
     public String category;

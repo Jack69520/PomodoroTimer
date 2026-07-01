@@ -4,6 +4,7 @@ import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.dao.BlockedAppDao;
 import com.skyinit.pomodorotimer.data.entity.BlockedApp;
+import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.util.AppCategory;
 import com.skyinit.pomodorotimer.util.AppCategoryRulesLoader;
 import com.skyinit.pomodorotimer.util.AppExecutors;
@@ -54,6 +55,7 @@ public class AppBlockingManagementActivity extends BaseActivity {
     
     private AppDatabase database;
     private BlockedAppDao blockedAppDao;
+    private String activeUserId;
     private BlockedAppAdapter adapter;
     private List<BlockedApp> allApps = new ArrayList<>();
     private List<BlockedApp> filteredApps = new ArrayList<>();
@@ -109,6 +111,7 @@ public class AppBlockingManagementActivity extends BaseActivity {
     private void initData() {
         database = AppDatabase.getDatabase(this);
         blockedAppDao = database.blockedAppDao();
+        activeUserId = AccountManager.getInstance(this).requireActiveUserId();
     }
     
     private void setupRecyclerView() {
@@ -199,7 +202,7 @@ public class AppBlockingManagementActivity extends BaseActivity {
     private void checkAndScanAppsIfNeeded() {
         AppExecutors.getInstance().diskIo(() -> {
             try {
-                int appCount = blockedAppDao.getAppCount();
+                int appCount = blockedAppDao.getAppCount(activeUserId);
                 if (appCount == 0) {
                     // 数据库为空，自动扫描应用
                     runOnUiThread(() -> scanInstalledApps());
@@ -239,12 +242,13 @@ public class AppBlockingManagementActivity extends BaseActivity {
                 List<BlockedApp> newApps = new ArrayList<>();
                 int updatedCount = 0;
                 for (BlockedApp scannedApp : scannedApps) {
-                    if (!blockedAppDao.appExists(scannedApp.packageName)) {
+                    scannedApp.userId = activeUserId;
+                    if (!blockedAppDao.appExists(activeUserId, scannedApp.packageName)) {
                         newApps.add(scannedApp);
                         continue;
                     }
 
-                    BlockedApp existing = blockedAppDao.getBlockedAppByPackage(scannedApp.packageName);
+                    BlockedApp existing = blockedAppDao.getBlockedAppByPackage(activeUserId, scannedApp.packageName);
                     if (existing == null) {
                         continue;
                     }
@@ -320,7 +324,7 @@ public class AppBlockingManagementActivity extends BaseActivity {
             }
             
             // 获取数据库中的所有应用
-            List<BlockedApp> allDbApps = blockedAppDao.getAllAppsSync();
+            List<BlockedApp> allDbApps = blockedAppDao.getAllAppsSync(activeUserId);
             
             // 删除数据库中不在设备上的应用
             List<BlockedApp> appsToDelete = new ArrayList<>();
@@ -355,7 +359,7 @@ public class AppBlockingManagementActivity extends BaseActivity {
     
     private void loadApps() {
         // 从数据库加载已配置的应用
-        blockedAppDao.getAllBlockedApps().observe(this, new Observer<List<BlockedApp>>() {
+        blockedAppDao.getAllBlockedApps(activeUserId).observe(this, new Observer<List<BlockedApp>>() {
             @Override
             public void onChanged(List<BlockedApp> apps) {
                 allApps.clear();

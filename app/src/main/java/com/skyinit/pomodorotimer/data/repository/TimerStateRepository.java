@@ -44,6 +44,14 @@ public class TimerStateRepository {
 
 
 
+    public TimerUiState getCurrentState() {
+
+        return state.getValue();
+
+    }
+
+
+
     public void publish(long timeLeftMillis, boolean running, boolean paused, int sessionType,
 
                         boolean awaitingPostBreakChoice, boolean longBreak) {

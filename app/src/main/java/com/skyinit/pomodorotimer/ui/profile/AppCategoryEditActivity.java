@@ -5,6 +5,7 @@ import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.dao.BlockedAppDao;
 import com.skyinit.pomodorotimer.data.entity.BlockedApp;
+import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.util.AppCategory;
 import com.skyinit.pomodorotimer.util.AppCategoryClassifier;
 import com.skyinit.pomodorotimer.util.AppExecutors;
@@ -40,6 +41,7 @@ public class AppCategoryEditActivity extends BaseActivity {
     private Button btnResetAuto;
 
     private BlockedAppDao blockedAppDao;
+    private String activeUserId;
     private String packageName;
     private BlockedApp blockedApp;
 
@@ -58,6 +60,7 @@ public class AppCategoryEditActivity extends BaseActivity {
         setupToolbar();
         initViews();
         blockedAppDao = AppDatabase.getDatabase(this).blockedAppDao();
+        activeUserId = AccountManager.getInstance(this).requireActiveUserId();
         loadApp();
     }
 
@@ -90,7 +93,7 @@ public class AppCategoryEditActivity extends BaseActivity {
     private void loadApp() {
         AppExecutors.getInstance().diskIo(() -> {
             try {
-                blockedApp = blockedAppDao.getBlockedAppByPackage(packageName);
+                blockedApp = blockedAppDao.getBlockedAppByPackage(activeUserId, packageName);
                 if (blockedApp == null) {
                     runOnUiThread(() -> {
                         Toast.makeText(this, R.string.blocking_toast_app_not_found, Toast.LENGTH_SHORT).show();
@@ -154,7 +157,7 @@ public class AppCategoryEditActivity extends BaseActivity {
 
         AppExecutors.getInstance().diskIo(() -> {
             try {
-                blockedAppDao.updateCategory(packageName, newCategory, true);
+                blockedAppDao.updateCategory(activeUserId, packageName, newCategory, true);
                 runOnUiThread(() -> {
                     Toast.makeText(this, R.string.blocking_toast_category_saved, Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK);
@@ -176,7 +179,7 @@ public class AppCategoryEditActivity extends BaseActivity {
                 String appName = pm.getApplicationLabel(appInfo).toString();
                 String autoCategory = AppCategoryClassifier.classify(packageName, appName, appInfo);
 
-                blockedAppDao.updateCategory(packageName, autoCategory, false);
+                blockedAppDao.updateCategory(activeUserId, packageName, autoCategory, false);
 
                 runOnUiThread(() -> {
                     Toast.makeText(this, R.string.blocking_toast_auto_category_restored, Toast.LENGTH_SHORT).show();

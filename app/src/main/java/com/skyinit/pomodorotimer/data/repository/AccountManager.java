@@ -37,6 +37,7 @@ public class AccountManager {
     private final UserDao userDao;
     private final SharedPreferences prefs;
     private final PasswordRepository passwordRepository;
+    private final AccountTimerStateGuard timerStateGuard;
     private final AppExecutors appExecutors = AppExecutors.getInstance();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -57,6 +58,7 @@ public class AccountManager {
         this.userDao = database.userDao();
         this.prefs = this.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         this.passwordRepository = PasswordRepository.getInstance();
+        this.timerStateGuard = new AccountTimerStateGuard(this.context);
     }
 
     public static synchronized AccountManager getInstance(Context context) {
@@ -156,6 +158,10 @@ public class AccountManager {
     public void login(String userId, String password, LoginCallback callback) {
         appExecutors.diskIo(() -> {
             try {
+                if (hasActiveTimerSession()) {
+                    mainHandler.post(() -> callback.onError(getActiveTimerSessionMessage()));
+                    return;
+                }
                 User user = userDao.getUserById(userId);
                 if (user == null || !user.isRegistered()) {
                     callback.onError(context.getString(R.string.account_error_login_invalid));
@@ -183,6 +189,10 @@ public class AccountManager {
     public void recoverLogin(String userId, String nickname, LoginCallback callback) {
         appExecutors.diskIo(() -> {
             try {
+                if (hasActiveTimerSession()) {
+                    mainHandler.post(() -> callback.onError(getActiveTimerSessionMessage()));
+                    return;
+                }
                 User user = userDao.getUserByIdAndNickname(userId, nickname);
                 if (user == null || !user.isRegistered()) {
                     mainHandler.post(() -> callback.onError(
@@ -288,6 +298,10 @@ public class AccountManager {
                             context.getString(R.string.account_error_local_no_logout)));
                     return;
                 }
+                if (hasActiveTimerSession()) {
+                    mainHandler.post(() -> callback.onError(getActiveTimerSessionMessage()));
+                    return;
+                }
                 User newLocal = createLocalUser();
                 userDao.insert(newLocal);
                 activateUserOnDisk(newLocal);
@@ -306,6 +320,10 @@ public class AccountManager {
             callback.onError(context.getString(R.string.account_error_delete_registered_only));
             return;
         }
+        if (hasActiveTimerSession()) {
+            callback.onError(getActiveTimerSessionMessage());
+            return;
+        }
 
         String userId = currentUser.userId;
         appExecutors.diskIo(() -> {
@@ -314,6 +332,9 @@ public class AccountManager {
                     database.subTaskDao().deleteSubtasksByUserId(userId);
                     database.todoDao().deleteTodosByUserId(userId);
                     database.pomodoroSessionDao().deleteSessionsByUserId(userId);
+                    database.userPomodoroSettingsDao().deleteByUserId(userId);
+                    database.blockedAppDao().deleteByUserId(userId);
+                    database.recurringTaskDao().deleteByUserId(userId);
                     userDao.deleteUserById(userId);
                 });
 
@@ -424,6 +445,14 @@ public class AccountManager {
             userId = LOCAL_USER_ID_PREFIX + suffix;
         } while (userDao.checkUserIdExists(userId) > 0);
         return userId;
+    }
+
+    private boolean hasActiveTimerSession() {
+        return timerStateGuard.hasActiveTimerState();
+    }
+
+    private String getActiveTimerSessionMessage() {
+        return timerStateGuard.getBlockedMessage();
     }
 
     private void activateUserOnDisk(User user) {

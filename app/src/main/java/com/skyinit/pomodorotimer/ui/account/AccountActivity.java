@@ -91,6 +91,7 @@ public class AccountActivity extends BaseActivity {
                         .setMessage(R.string.account_delete_success_message)
                         .setPositiveButton(R.string.confirm, null)
                         .show());
+        viewModel.getGuardPrompt().observe(this, state -> showBlockingGuardDialog());
     }
 
     private void bindUiState(AccountUiState state) {
@@ -181,6 +182,16 @@ public class AccountActivity extends BaseActivity {
 
         btnLogin.setOnClickListener(v ->
                 startActivity(new Intent(this, LoginActivity.class)));
+    }
+
+    private void showBlockingGuardDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.account_guard_blocking_title)
+                .setMessage(R.string.account_guard_blocking_message)
+                .setNegativeButton(R.string.account_guard_cancel_operation, null)
+                .setPositiveButton(R.string.account_guard_disable_blocking_continue,
+                        (dialog, which) -> viewModel.continueAfterDisablingBlocking())
+                .show();
     }
 
     private void showDeleteAccountConfirmDialog() {

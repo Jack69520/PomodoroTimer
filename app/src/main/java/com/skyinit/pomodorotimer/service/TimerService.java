@@ -37,6 +37,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 import com.skyinit.pomodorotimer.AppDatabase;
+import com.skyinit.pomodorotimer.data.entity.SubTask;
 import com.skyinit.pomodorotimer.data.entity.TodoItem;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
@@ -78,6 +79,7 @@ public class TimerService extends Service {
     public static final String ACTION_PAUSE = "PAUSE";
     public static final String ACTION_RESUME = "RESUME";
     public static final String ACTION_RESET = "RESET";
+    public static final String ACTION_ACCOUNT_SWITCH_RESET = "ACCOUNT_SWITCH_RESET";
     public static final String ACTION_PAUSE_WITH_REASON = "PAUSE_WITH_REASON";
     public static final String ACTION_PAUSE_TIMEOUT = "PAUSE_TIMEOUT";
     /** Alarm 触发的会话到点完成（进程被杀后的兜底入口）。 */
@@ -122,11 +124,27 @@ public class TimerService extends Service {
     private UserPomodoroSettingsRepository pomodoroSettingsRepository;
     private SettingsManager settingsManager;
     private long sessionStartTime;
+    /** 会话归属账户在开始/恢复时固定，统计写入不得使用切换后的当前账户。 */
+    private String sessionUserId = "";
     private int currentTaskId = -1;
     private int currentSubTaskId = -1;
     private String currentTaskTitle = "";
     private String currentCategory = CategoryDefaults.getDefault();
     private String currentTags = "";
+
+    private String getSessionUserIdOrActive() {
+        if (sessionUserId != null && !sessionUserId.isEmpty()) {
+            return sessionUserId;
+        }
+        sessionUserId = AccountManager.getInstance(this).requireActiveUserId();
+        return sessionUserId;
+    }
+
+    private boolean isActiveUserSessionOwner() {
+        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        String ownerId = getSessionUserIdOrActive();
+        return activeUserId.equals(ownerId);
+    }
 
     private int pauseCount;
     private final List<String> sessionPauseReasons = new ArrayList<>();
@@ -233,6 +251,8 @@ public class TimerService extends Service {
                 resumeTimer();
             } else if (ACTION_RESET.equals(action)) {
                 resetTimer();
+            } else if (ACTION_ACCOUNT_SWITCH_RESET.equals(action)) {
+                resetTimerForAccountSwitch();
             } else if (ACTION_PAUSE_WITH_REASON.equals(action)) {
                 pauseTimerWithReason(intent.getStringExtra("pause_reason"));
             } else if (ACTION_FORCE_FAIL.equals(action)) {
@@ -287,7 +307,16 @@ public class TimerService extends Service {
             return;
         }
 
+        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        if (!cp.belongsToUser(activeUserId)) {
+            AppLog.w(TAG, "Discarding checkpoint for inactive user: " + cp.userId);
+            clearCheckpoint();
+            resetTimerQuietly();
+            return;
+        }
+
         restoredFromCheckpoint = true;
+        sessionUserId = cp.userId;
         sessionType = cp.sessionType;
         isLongBreak = cp.isLongBreak;
         awaitingPostBreakChoice = cp.awaitingPostBreakChoice;
@@ -351,11 +380,18 @@ public class TimerService extends Service {
             return;
         }
 
+        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        if (!cp.belongsToUser(activeUserId)) {
+            AppLog.w(TAG, "Rejecting interrupted session for inactive user: " + cp.userId);
+            clearCheckpoint();
+            resetTimerQuietly();
+            return;
+        }
+
         long elapsed = ActiveSessionStore.computeElapsedMillis(cp);
         if (saveRecord && cp.sessionType == 0 && elapsed >= ActiveSessionStore.SAVE_ELIGIBLE_MS) {
-            String userId = AccountManager.getInstance(this).requireActiveUserId();
             statisticsRepository.recordSession(
-                    userId,
+                    cp.userId,
                     cp.sessionStartTime,
                     elapsed,
                     cp.taskId,
@@ -403,6 +439,9 @@ public class TimerService extends Service {
             return;
         }
 
+        if (sessionUserId == null || sessionUserId.isEmpty()) {
+            sessionUserId = AccountManager.getInstance(this).requireActiveUserId();
+        }
         cancelPauseTimeoutCheck();
         isRunning = true;
         isPaused = false;
@@ -493,13 +532,13 @@ public class TimerService extends Service {
 
             if (completedSessionType == 0) {
                 long duration = System.currentTimeMillis() - sessionStartTime;
-                String userId = AccountManager.getInstance(this).requireActiveUserId();
+                String userId = getSessionUserIdOrActive();
                 statisticsRepository.recordSession(
                         userId, sessionStartTime, duration, currentTaskId, currentSubTaskId,
                         currentCategory, currentTags,
                         pauseCount, new ArrayList<>(sessionPauseReasons), false, null);
                 if (currentTaskId >= 0) {
-                    incrementTaskCompletedPomodoros(currentTaskId);
+                    incrementTaskCompletedPomodoros(currentTaskId, userId);
                 }
 
                 prepareAndAutoStartBreak();
@@ -562,6 +601,7 @@ public class TimerService extends Service {
             sessionType = 0;
             timeLeftInMillis = getDefaultStudyTimeMs();
             awaitingPostBreakChoice = true;
+            saveCheckpoint();
             publishState();
             openTimerForPostBreakChoice();
         }
@@ -680,7 +720,7 @@ public class TimerService extends Service {
 
         if (recordReason && sessionType == 0) {
             long duration = System.currentTimeMillis() - sessionStartTime;
-            String userId = AccountManager.getInstance(this).requireActiveUserId();
+            String userId = getSessionUserIdOrActive();
             List<String> reasons = new ArrayList<>(sessionPauseReasons);
             if (reason != null && !reason.isEmpty()) {
                 reasons.add(reason);
@@ -760,7 +800,7 @@ public class TimerService extends Service {
 
         if (sessionType == 0) {
             long duration = System.currentTimeMillis() - sessionStartTime;
-            String userId = AccountManager.getInstance(this).requireActiveUserId();
+            String userId = getSessionUserIdOrActive();
             List<String> reasons = new ArrayList<>(sessionPauseReasons);
             String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
             reasons.add(pauseReasonTimeout);
@@ -799,11 +839,20 @@ public class TimerService extends Service {
     }
 
     public void resetTimer() {
+        resetTimerInternal(true, true);
+    }
+
+    private void resetTimerForAccountSwitch() {
+        resetTimerInternal(true, true);
+    }
+
+    private void resetTimerInternal(boolean notifyListeners, boolean stopServiceWhenDone) {
         cancelPauseTimeoutCheck();
         stopTimerLoop();
         boolean wasStudy = sessionType == 0;
         isRunning = false;
         isPaused = false;
+        sessionUserId = "";
         pauseCount = 0;
         sessionPauseReasons.clear();
         pauseStartElapsedRealtime = 0L;
@@ -820,13 +869,18 @@ public class TimerService extends Service {
             FocusDndHelper.restoreDnd(this);
         }
 
-        notifyTimerTick(timeLeftInMillis);
-        notifyTimerReset();
-        notifyStateChanged();
+        if (notifyListeners) {
+            notifyTimerTick(timeLeftInMillis);
+            notifyTimerReset();
+            notifyStateChanged();
+        } else {
+            publishState();
+        }
 
-        publishState();
         stopForeground(STOP_FOREGROUND_REMOVE);
-        stopSelf();
+        if (stopServiceWhenDone) {
+            stopSelf();
+        }
     }
 
     /**
@@ -890,12 +944,12 @@ public class TimerService extends Service {
 
     /** 将会话快照写入磁盘，供进程回收后恢复。 */
     private void saveCheckpoint() {
-        if (!isRunning && !isPaused) {
+        if (!isRunning && !isPaused && !awaitingPostBreakChoice) {
             return;
         }
         ActiveSessionStore.save(
                 this,
-                AccountManager.getInstance(this).requireActiveUserId(),
+                getSessionUserIdOrActive(),
                 timerEndElapsedRealtime,
                 getTimeLeft(),
                 isRunning,
@@ -1470,14 +1524,20 @@ public class TimerService extends Service {
         startService(intent);
     }
 
-    private void incrementTaskCompletedPomodoros(int taskId) {
+    private void incrementTaskCompletedPomodoros(int taskId, String ownerUserId) {
         AppExecutors.getInstance().diskIo(() -> {
             AppDatabase db = AppDatabase.getDatabase(this);
             if (currentSubTaskId >= 0) {
-                db.subTaskDao().incrementCompletedPomodoros(currentSubTaskId);
+                SubTask subTask = db.subTaskDao().getSubTaskByIdSync(currentSubTaskId);
+                TodoItem parent = subTask != null
+                        ? db.todoDao().getTodoByIdSync(subTask.parentTaskId)
+                        : null;
+                if (parent != null && ownerUserId.equals(parent.userId)) {
+                    db.subTaskDao().incrementCompletedPomodoros(currentSubTaskId);
+                }
             } else {
                 TodoItem task = db.todoDao().getTodoByIdSync(taskId);
-                if (task != null && task.isSimple()) {
+                if (task != null && ownerUserId.equals(task.userId) && task.isSimple()) {
                     db.todoDao().incrementCompletedPomodoros(taskId);
                 }
             }
