@@ -55,7 +55,7 @@
 | 语言 | Java 11 |
 | 最低 SDK | Android 9（API 28） |
 | 目标 SDK | API 36 |
-| 架构 | ViewModel + LiveData |
+| 架构 | ViewModel + LiveData + Repository + Room |
 | 本地数据库 | Room |
 | 导航 | AndroidX Navigation |
 | 后台任务 | WorkManager |

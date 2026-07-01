@@ -55,7 +55,7 @@ A fully offline Android Pomodoro app for managing focus sessions, todos, and stu
 | Language | Java 11 |
 | Min SDK | Android 9 (API 28) |
 | Target SDK | API 36 |
-| Architecture | ViewModel + LiveData |
+| Architecture | ViewModel + LiveData + Repository + Room |
 | Local DB | Room |
 | Navigation | AndroidX Navigation |
 | Background work | WorkManager |
