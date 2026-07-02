@@ -58,9 +58,11 @@ public class WhitelistManager {
 	    "com.unionpay.tsmservice", // 银联可信服务
 	
         // 桌面、账号、文件管理等基础服务
+        "com.google.android.document", //Google_Android文件管理
+        "com.google.android.marviin.talkback", //Android无障碍套件
         "com.hihonor.android.launcher", //荣耀桌面
         "com.hihonor.android.hwbase",
-        "com.hihonor.filemanager", //文件管理
+        "com.hihonor.filemanager", //荣耀文件管理
         "com.hihonor.id", //荣耀账号服务
         "com.hihonor.iconnect",
         "com.hihonor.printassistant", //荣耀打印助手

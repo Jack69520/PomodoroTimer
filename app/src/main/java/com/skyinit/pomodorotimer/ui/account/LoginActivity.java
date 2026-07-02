@@ -4,6 +4,7 @@ import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.R;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -74,6 +75,7 @@ public class LoginActivity extends BaseActivity {
             Toast.makeText(this, R.string.account_toast_login_success, Toast.LENGTH_SHORT).show();
             finish();
         });
+        viewModel.getGuardPrompt().observe(this, state -> showBlockingGuardDialog());
         viewModel.getFieldError().observe(this, this::applyFieldError);
     }
 
@@ -107,6 +109,16 @@ public class LoginActivity extends BaseActivity {
                 startActivity(new Intent(this, AccountRecoveryActivity.class)));
 
         ivPasswordToggle.setOnClickListener(v -> togglePasswordVisibility());
+    }
+
+    private void showBlockingGuardDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.account_guard_blocking_title)
+                .setMessage(R.string.account_guard_blocking_message)
+                .setNegativeButton(R.string.account_guard_cancel_operation, null)
+                .setPositiveButton(R.string.account_guard_disable_blocking_continue,
+                        (dialog, which) -> viewModel.continueAfterDisablingBlocking())
+                .show();
     }
 
     @Override

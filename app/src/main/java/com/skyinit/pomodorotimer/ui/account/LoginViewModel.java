@@ -11,6 +11,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
+import com.skyinit.pomodorotimer.data.repository.AccountOperationGuard;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 
@@ -20,15 +21,20 @@ import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 public class LoginViewModel extends AndroidViewModel {
 
     private final UserSessionRepository sessionRepository;
+    private final AccountOperationGuard accountOperationGuard;
+    private PendingLogin pendingLogin;
     private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
     private final SingleLiveEvent<String> toastMessage = new SingleLiveEvent<>();
     private final SingleLiveEvent<Void> loginSuccess = new SingleLiveEvent<>();
     private final SingleLiveEvent<FormFieldError> fieldError = new SingleLiveEvent<>();
+    private final SingleLiveEvent<AccountOperationGuard.GuardState> guardPrompt = new SingleLiveEvent<>();
 
     public LoginViewModel(@NonNull Application application,
-                          UserSessionRepository sessionRepository) {
+                          UserSessionRepository sessionRepository,
+                          AccountOperationGuard accountOperationGuard) {
         super(application);
         this.sessionRepository = sessionRepository;
+        this.accountOperationGuard = accountOperationGuard;
     }
 
     public LiveData<Boolean> isLoading() {
@@ -45,6 +51,10 @@ public class LoginViewModel extends AndroidViewModel {
 
     public LiveData<FormFieldError> getFieldError() {
         return fieldError;
+    }
+
+    public LiveData<AccountOperationGuard.GuardState> getGuardPrompt() {
+        return guardPrompt;
     }
 
     public void login(String userId, String password) {
@@ -71,10 +81,39 @@ public class LoginViewModel extends AndroidViewModel {
             return;
         }
 
+        pendingLogin = new PendingLogin(trimmedId, trimmedPassword);
+        AccountOperationGuard.GuardState guardState = accountOperationGuard.evaluate();
+        if (guardState.timerActive) {
+            toastMessage.setValue(getApplication().getString(R.string.account_guard_timer_active));
+            return;
+        }
+        if (guardState.blockingEnabled) {
+            guardPrompt.setValue(guardState);
+            return;
+        }
+        executePendingLogin(false);
+    }
+
+    public void continueAfterDisablingBlocking() {
+        if (pendingLogin == null) {
+            return;
+        }
+        executePendingLogin(true);
+    }
+
+    private void executePendingLogin(boolean disableBlocking) {
+        PendingLogin request = pendingLogin;
+        if (request == null) {
+            return;
+        }
+        if (disableBlocking) {
+            accountOperationGuard.disableBlockingSideEffects();
+        }
         loading.setValue(true);
-        sessionRepository.login(trimmedId, trimmedPassword, new AccountManager.LoginCallback() {
+        sessionRepository.login(request.userId, request.password, new AccountManager.LoginCallback() {
             @Override
             public void onSuccess(com.skyinit.pomodorotimer.data.entity.User user) {
+                pendingLogin = null;
                 loading.setValue(false);
                 loginSuccess.call();
             }
@@ -85,5 +124,15 @@ public class LoginViewModel extends AndroidViewModel {
                 toastMessage.setValue(message);
             }
         });
+    }
+
+    private static final class PendingLogin {
+        final String userId;
+        final String password;
+
+        PendingLogin(String userId, String password) {
+            this.userId = userId;
+            this.password = password;
+        }
     }
 }
