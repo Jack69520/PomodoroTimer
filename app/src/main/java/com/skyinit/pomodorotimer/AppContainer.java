@@ -3,6 +3,7 @@ package com.skyinit.pomodorotimer;
 import android.content.Context;
 
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
+import com.skyinit.pomodorotimer.data.repository.AccountOperationGuard;
 import com.skyinit.pomodorotimer.data.repository.DataBackupRepository;
 import com.skyinit.pomodorotimer.data.repository.DataBackupRepositoryImpl;
 import com.skyinit.pomodorotimer.data.repository.RecurringTaskManager;
@@ -33,6 +34,7 @@ public final class AppContainer {
     private final UserPomodoroSettingsRepository userPomodoroSettingsRepository;
     private final TimerSettingsRepository timerSettingsRepository;
     private final TimerStateRepository timerStateRepository;
+    private final AccountOperationGuard accountOperationGuard;
     private final StatisticsRepository statisticsRepository;
     private final SessionRepository sessionRepository;
     private final TodoFilterManager todoFilterManager;
@@ -51,6 +53,7 @@ public final class AppContainer {
         userSessionRepository = new UserSessionRepository(accountManager, userPomodoroSettingsRepository);
         timerSettingsRepository = new TimerSettingsRepository(userPomodoroSettingsRepository);
         timerStateRepository = new TimerStateRepository(timerSettingsRepository);
+        accountOperationGuard = new AccountOperationGuard(appContext, settingsManager, timerStateRepository);
         statisticsRepository = new StatisticsRepository(appContext, accountManager);
         sessionRepository = new SessionRepository(database.pomodoroSessionDao(), accountManager);
         todoFilterManager = new TodoFilterManager(appContext);
@@ -110,6 +113,10 @@ public final class AppContainer {
 
     public TimerStateRepository getTimerStateRepository() {
         return timerStateRepository;
+    }
+
+    public AccountOperationGuard getAccountOperationGuard() {
+        return accountOperationGuard;
     }
 
     public StatisticsRepository getStatisticsRepository() {
