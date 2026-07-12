@@ -1,0 +1,2988 @@
+{
+  "version": 1,
+  "_readme": {
+    "description": "应用屏蔽策略规则。标准JSON不支持注释，请使用 _readme、comment、note 字段审查。",
+    "policyPriority": [
+      "1. criticalApps — 强制放行，UI不可关闭屏蔽",
+      "2. defaultWhitelist — 默认放行，用户可改为屏蔽",
+      "3. whitelistMatchers — 动态白名单（运动健康/拨号/联系人等）",
+      "4. 其余已安装第三方应用 — 默认屏蔽",
+      "5. scanInclude — 决定系统应用是否出现在管理列表（与默认是否屏蔽独立）"
+    ],
+    "contradictionRules": [
+      "criticalApps 与 defaultWhitelist 冲突时，以 criticalApps 为准",
+      "同一包名不应同时意图“默认屏蔽”和“默认白名单”；娱乐类放 scanInclude，基础服务放 defaultWhitelist",
+      "模糊匹配 packageContains 可能误伤，新增规则请优先写 exactPackages"
+    ],
+    "hotUpdate": "将更高version的同名文件放入应用内部存储filesDir可覆盖assets规则"
+  },
+  "criticalApps": {
+    "_comment": "系统关键服务：强制白名单，用户不可移除屏蔽保护",
+    "sections": [
+      {
+        "comment": "核心系统界面与设置",
+        "packages": [
+          {
+            "id": "com.android.systemui",
+            "note": "系统用户界面"
+          },
+          {
+            "id": "com.android.settings",
+            "note": "设置"
+          },
+          {
+            "id": "com.google.android.gsf",
+            "note": "Google 服务框架"
+          },
+          {
+            "id": "com.android.permissioncontroller",
+            "note": "权限控制器"
+          }
+        ]
+      },
+      {
+        "comment": "通话与电话底层服务（非拨号器 UI）",
+        "packages": [
+          {
+            "id": "com.android.phone",
+            "note": "电话/调制解调器服务"
+          }
+        ]
+      },
+      {
+        "comment": "网络、连接与门户",
+        "packages": [
+          {
+            "id": "com.android.networkstack",
+            "note": "网络管理器"
+          },
+          {
+            "id": "com.android.networkstack.tethering",
+            "note": "网络共享"
+          },
+          {
+            "id": "com.android.networkstack.permissionconfig",
+            "note": "网络栈权限配置"
+          },
+          {
+            "id": "com.android.captiveportallogin",
+            "note": "强制门户登录"
+          },
+          {
+            "id": "com.android.wifi.resources",
+            "note": "系统 WLAN 资源"
+          },
+          {
+            "id": "com.android.ethernet",
+            "note": "以太网服务"
+          },
+          {
+            "id": "com.android.cellbroadcastreceiver",
+            "note": "紧急广播接收器"
+          }
+        ]
+      },
+      {
+        "comment": "基础硬件连接",
+        "packages": [
+          {
+            "id": "com.android.bluetooth",
+            "note": "蓝牙"
+          },
+          {
+            "id": "com.android.nfc",
+            "note": "NFC 服务"
+          }
+        ]
+      },
+      {
+        "comment": "应用分发（系统更新通道）",
+        "packages": [
+          {
+            "id": "com.android.vending",
+            "note": "Google Play 商店（系统更新通道）"
+          }
+        ]
+      }
+    ]
+  },
+  "defaultWhitelist": {
+    "_comment": "默认白名单：专注期间默认放行，用户可在管理页改为屏蔽",
+    "sections": [
+      {
+        "comment": "时钟与数字健康",
+        "packages": [
+          {
+            "id": "com.android.deskclock",
+            "note": "AOSP 时钟"
+          },
+          {
+            "id": "com.android.clock",
+            "note": "时钟"
+          },
+          {
+            "id": "com.google.android.deskclock",
+            "note": "Google 时钟"
+          },
+          {
+            "id": "com.android.wellbeing",
+            "note": "数字健康"
+          },
+          {
+            "id": "com.google.android.apps.wellbeing",
+            "note": "Google Digital Wellbeing"
+          }
+        ]
+      },
+      {
+        "comment": "华为 / 荣耀 — 账号、互联与基础服务",
+        "packages": [
+          {
+            "id": "com.huawei.hwid",
+            "note": "华为 HMS Core 账号"
+          },
+          {
+            "id": "com.huawei.hms",
+            "note": "华为移动服务"
+          },
+          {
+            "id": "com.huawei.android.hwouc",
+            "note": "华为系统更新"
+          },
+          {
+            "id": "com.huawei.hihealth",
+            "note": "华为健康底层服务"
+          },
+          {
+            "id": "com.huawei.health",
+            "note": "华为运动健康"
+          },
+          {
+            "id": "com.hihonor.health",
+            "note": "荣耀运动健康"
+          },
+          {
+            "id": "com.hihonor.android.honorhealth",
+            "note": "荣耀运动健康（旧包名）"
+          },
+          {
+            "id": "com.hihonor.android.clone",
+            "note": "荣耀换机克隆"
+          },
+          {
+            "id": "com.hihonor.android.hwbase",
+            "note": "荣耀基础服务"
+          },
+          {
+            "id": "com.hihonor.android.launcher",
+            "note": "荣耀桌面"
+          },
+          {
+            "id": "com.hihonor.android.instantshare",
+            "note": "荣耀分享"
+          },
+          {
+            "id": "com.hihonor.id",
+            "note": "荣耀账号"
+          },
+          {
+            "id": "com.hihonor.iconnect",
+            "note": "荣耀互联"
+          },
+          {
+            "id": "com.unionpay.tsmservice",
+            "note": "银联可信服务"
+          }
+        ]
+      },
+      {
+        "comment": "荣耀 — 桌面配套与系统工具",
+        "packages": [
+          {
+            "id": "com.hihonor.filemanager",
+            "note": "荣耀文件管理"
+          },
+          {
+            "id": "com.hihonor.calendar",
+            "note": "荣耀日历"
+          },
+          {
+            "id": "com.hihonor.parentcontrol",
+            "note": "荣耀健康使用手机"
+          },
+          {
+            "id": "com.hihonor.printassistant",
+            "note": "荣耀打印助手"
+          },
+          {
+            "id": "com.hihonor.search",
+            "note": "荣耀搜索"
+          },
+          {
+            "id": "com.baidu.input_hihonor",
+            "note": "百度输入法荣耀版"
+          },
+          {
+            "id": "com.hihonor.aod",
+            "note": "荣耀息屏显示"
+          },
+          {
+            "id": "com.hihonor.awareness",
+            "note": "荣耀情景感知"
+          },
+          {
+            "id": "com.hihonor.controlcenter",
+            "note": "荣耀信任环控制中心"
+          },
+          {
+            "id": "com.hihonor.handoff",
+            "note": "荣耀接力"
+          },
+          {
+            "id": "com.hihonor.magazine",
+            "note": "荣耀杂志锁屏"
+          },
+          {
+            "id": "com.hihonor.magicvoice",
+            "note": "荣耀魔法语音"
+          },
+          {
+            "id": "com.hihonor.nearby",
+            "note": "荣耀附近"
+          },
+          {
+            "id": "com.hihonor.pcassistant",
+            "note": "荣耀 PC 助手"
+          },
+          {
+            "id": "com.hihonor.koBackup",
+            "note": "荣耀备份"
+          },
+          {
+            "id": "com.hihonor.smartiot",
+            "note": "荣耀智慧互联"
+          },
+          {
+            "id": "com.hihonor.virtualinput",
+            "note": "荣耀虚拟输入"
+          },
+          {
+            "id": "com.hihonor.trustcircle",
+            "note": "荣耀信任环"
+          },
+          {
+            "id": "com.hihonor.crossdeviceserviceserviceshare",
+            "note": "荣耀跨设备分享"
+          },
+          {
+            "id": "com.hihonor.lens",
+            "note": "荣耀 YOYO 看见"
+          }
+        ]
+      },
+      {
+        "comment": "相机、短信、相册（各厂商）",
+        "packages": [
+          {
+            "id": "com.android.camera2",
+            "note": "AOSP 相机"
+          },
+          {
+            "id": "com.android.camera",
+            "note": "相机"
+          },
+          {
+            "id": "com.huawei.camera",
+            "note": "华为相机"
+          },
+          {
+            "id": "com.hihonor.camera",
+            "note": "荣耀相机"
+          },
+          {
+            "id": "com.android.mms",
+            "note": "AOSP 短信"
+          },
+          {
+            "id": "com.android.messaging",
+            "note": "AOSP 信息"
+          },
+          {
+            "id": "com.google.android.apps.messaging",
+            "note": "Google 信息（短信）"
+          },
+          {
+            "id": "com.huawei.mms",
+            "note": "华为短信"
+          },
+          {
+            "id": "com.hihonor.mms",
+            "note": "荣耀短信"
+          },
+          {
+            "id": "com.android.gallery3d",
+            "note": "AOSP 图库"
+          },
+          {
+            "id": "com.android.gallery",
+            "note": "相册"
+          },
+          {
+            "id": "com.huawei.photos",
+            "note": "华为图库"
+          },
+          {
+            "id": "com.hihonor.photos",
+            "note": "荣耀图库"
+          },
+          {
+            "id": "com.google.android.apps.photos",
+            "note": "Google 相册"
+          }
+        ]
+      },
+      {
+        "comment": "拨号器 UI",
+        "packages": [
+          {
+            "id": "com.android.dialer",
+            "note": "AOSP 拨号"
+          },
+          {
+            "id": "com.google.android.dialer",
+            "note": "Google 拨号"
+          },
+          {
+            "id": "com.huawei.dialer",
+            "note": "华为拨号"
+          },
+          {
+            "id": "com.hihonor.dialer",
+            "note": "荣耀拨号"
+          },
+          {
+            "id": "com.miui.dialer",
+            "note": "小米拨号"
+          },
+          {
+            "id": "com.xiaomi.dialer",
+            "note": "小米拨号"
+          },
+          {
+            "id": "com.vivo.dialer",
+            "note": "vivo 拨号"
+          },
+          {
+            "id": "com.oppo.dialer",
+            "note": "OPPO 拨号"
+          },
+          {
+            "id": "com.oneplus.dialer",
+            "note": "一加拨号"
+          },
+          {
+            "id": "com.samsung.dialer",
+            "note": "三星拨号"
+          },
+          {
+            "id": "com.sony.dialer",
+            "note": "索尼拨号"
+          },
+          {
+            "id": "com.lge.dialer",
+            "note": "LG 拨号"
+          }
+        ]
+      },
+      {
+        "comment": "通讯录 / 联系人",
+        "packages": [
+          {
+            "id": "com.android.contacts",
+            "note": "AOSP 联系人"
+          },
+          {
+            "id": "com.google.android.contacts",
+            "note": "Google 联系人"
+          },
+          {
+            "id": "com.huawei.contacts",
+            "note": "华为联系人"
+          },
+          {
+            "id": "com.hihonor.contacts",
+            "note": "荣耀联系人"
+          },
+          {
+            "id": "com.miui.contacts",
+            "note": "小米联系人"
+          },
+          {
+            "id": "com.xiaomi.contacts",
+            "note": "小米联系人"
+          },
+          {
+            "id": "com.vivo.contacts",
+            "note": "vivo 联系人"
+          },
+          {
+            "id": "com.oppo.contacts",
+            "note": "OPPO 联系人"
+          },
+          {
+            "id": "com.oneplus.contacts",
+            "note": "一加联系人"
+          },
+          {
+            "id": "com.samsung.contacts",
+            "note": "三星联系人"
+          },
+          {
+            "id": "com.sony.contacts",
+            "note": "索尼联系人"
+          },
+          {
+            "id": "com.lge.contacts",
+            "note": "LG 联系人"
+          }
+        ]
+      },
+      {
+        "comment": "小米 / MIUI — 系统基础服务（默认放行）",
+        "packages": [
+          {
+            "id": "com.miui.securitycenter",
+            "note": "安全中心"
+          },
+          {
+            "id": "com.miui.securitycore",
+            "note": "安全核心"
+          },
+          {
+            "id": "com.lbe.security.miui",
+            "note": "小米安全组件"
+          },
+          {
+            "id": "com.miui.home",
+            "note": "MIUI 桌面"
+          },
+          {
+            "id": "com.miui.powerkeeper",
+            "note": "电量与性能"
+          },
+          {
+            "id": "com.miui.daemon",
+            "note": "MIUI 守护"
+          },
+          {
+            "id": "com.miui.core",
+            "note": "MIUI 核心"
+          },
+          {
+            "id": "com.miui.system",
+            "note": "MIUI 系统服务"
+          },
+          {
+            "id": "com.miui.miservice",
+            "note": "MIUI 服务"
+          },
+          {
+            "id": "com.miui.tsmclient",
+            "note": "NFC 与交通卡"
+          },
+          {
+            "id": "com.miui.vpnsdkmanager",
+            "note": "VPN SDK"
+          },
+          {
+            "id": "android.miui.home.launcher.res",
+            "note": "MIUI 桌面资源"
+          },
+          {
+            "id": "com.miui.securityinputmethod",
+            "note": "MIUI 安全输入法"
+          },
+          {
+            "id": "com.sohu.inputmethod.sogou.xiaomi",
+            "note": "搜狗输入法小米版"
+          },
+          {
+            "id": "org.mipay.android.manager",
+            "note": "小米支付管理"
+          },
+          {
+            "id": "com.xiaomi.account",
+            "note": "小米账号"
+          },
+          {
+            "id": "com.xiaomi.finddevice",
+            "note": "查找设备"
+          },
+          {
+            "id": "com.xiaomi.bluetooth",
+            "note": "小米蓝牙"
+          },
+          {
+            "id": "com.xiaomi.gnss.polaris",
+            "note": "GNSS 定位"
+          },
+          {
+            "id": "com.xiaomi.aon",
+            "note": "息屏显示"
+          },
+          {
+            "id": "com.xiaomi.mi_connect_service",
+            "note": "小米互联"
+          },
+          {
+            "id": "com.xiaomi.aiasst.service",
+            "note": "AI 助手服务"
+          },
+          {
+            "id": "com.miui.accessibility",
+            "note": "无障碍"
+          },
+          {
+            "id": "com.miui.aod",
+            "note": "息屏"
+          },
+          {
+            "id": "com.miui.privacycomputing",
+            "note": "隐私计算"
+          },
+          {
+            "id": "com.miui.screenshot",
+            "note": "截屏"
+          },
+          {
+            "id": "com.miui.touchassistant",
+            "note": "悬浮球"
+          },
+          {
+            "id": "com.miui.wmsvc",
+            "note": "无线管理"
+          },
+          {
+            "id": "com.miui.yellowpage",
+            "note": "黄页"
+          },
+          {
+            "id": "com.miui.compass",
+            "note": "指南针"
+          },
+          {
+            "id": "com.miui.fileexplorer",
+            "note": "文件管理"
+          },
+          {
+            "id": "com.miui.miinput",
+            "note": "小米输入法"
+          },
+          {
+            "id": "com.xiaomi.cameratools",
+            "note": "相机工具"
+          },
+          {
+            "id": "com.miui.system.overlay",
+            "note": "系统 overlay"
+          },
+          {
+            "id": "com.android.provision",
+            "note": "开机配置"
+          },
+          {
+            "id": "com.android.printspooler",
+            "note": "打印后台"
+          },
+          {
+            "id": "com.android.quicksearchbox",
+            "note": "快速搜索"
+          },
+          {
+            "id": "com.android.storagemanager",
+            "note": "存储管理"
+          },
+          {
+            "id": "com.android.uwb.resources",
+            "note": "UWB 资源"
+          },
+          {
+            "id": "com.android.wifi.resources.xiaomi",
+            "note": "小米 Wi-Fi 资源"
+          },
+          {
+            "id": "com.qualcomm.qti.biometrics.fingerprint.service",
+            "note": "高通指纹"
+          },
+          {
+            "id": "com.qualcomm.qti.powersavemode",
+            "note": "高通省电"
+          }
+        ]
+      },
+      {
+        "comment": "vivo / iQOO — 系统基础服务",
+        "packages": [
+          {
+            "id": "com.bbk.launcher",
+            "note": "vivo 桌面"
+          },
+          {
+            "id": "com.bbk.launcher2",
+            "note": "vivo 桌面 2"
+          },
+          {
+            "id": "com.vivo.launcher",
+            "note": "vivo Launcher"
+          },
+          {
+            "id": "com.vivo.iotserver",
+            "note": "IoT 引擎"
+          },
+          {
+            "id": "com.bbk.account",
+            "note": "vivo 账号"
+          },
+          {
+            "id": "com.baidu.input_bbk.service",
+            "note": "百度输入法 vivo 版"
+          },
+          {
+            "id": "com.vivo.daemonService",
+            "note": "vivo 后台服务"
+          },
+          {
+            "id": "com.vivo.sdkplugin",
+            "note": "安全插件"
+          },
+          {
+            "id": "com.vivo.smartshot",
+            "note": "超级截屏"
+          },
+          {
+            "id": "com.iqoo.powersaving",
+            "note": "省电管理"
+          },
+          {
+            "id": "com.vivo.pem",
+            "note": "电量守护"
+          },
+          {
+            "id": "com.vivo.upslide",
+            "note": "控制中心"
+          },
+          {
+            "id": "com.bbk.calendar",
+            "note": "vivo 日历"
+          },
+          {
+            "id": "com.vivo.widget.calendar",
+            "note": "日历挂件"
+          },
+          {
+            "id": "com.vivo.compass",
+            "note": "指南针"
+          },
+          {
+            "id": "com.vivo.fingerprint",
+            "note": "指纹与密码"
+          },
+          {
+            "id": "com.vivo.abe",
+            "note": "智慧引擎"
+          },
+          {
+            "id": "com.vivo.abeui",
+            "note": "智慧引擎 UI"
+          },
+          {
+            "id": "com.vivo.motionrecognition",
+            "note": "智能体感"
+          },
+          {
+            "id": "com.vivo.nightpearl",
+            "note": "夜光屏"
+          }
+        ]
+      },
+      {
+        "comment": "OPPO / ColorOS / 一加 — 系统基础服务",
+        "packages": [
+          {
+            "id": "com.oppo.launcher",
+            "note": "OPPO 桌面"
+          },
+          {
+            "id": "com.coloros.launcher",
+            "note": "ColorOS 桌面"
+          },
+          {
+            "id": "com.oplus.launcher",
+            "note": "OPlus 桌面"
+          },
+          {
+            "id": "com.oneplus.launcher",
+            "note": "一加桌面"
+          },
+          {
+            "id": "net.oneplus.launcher",
+            "note": "一加桌面（Net）"
+          },
+          {
+            "id": "com.heytap.htms",
+            "note": "欢太移动服务"
+          },
+          {
+            "id": "com.baidu.input_oppo",
+            "note": "百度输入法 OPPO 版"
+          },
+          {
+            "id": "com.coloros.securitykeyboard",
+            "note": "安全键盘"
+          },
+          {
+            "id": "com.coloros.securepay",
+            "note": "支付保护"
+          },
+          {
+            "id": "com.coloros.ocrservice",
+            "note": "识屏服务"
+          },
+          {
+            "id": "com.coloros.childrenspace",
+            "note": "儿童空间"
+          },
+          {
+            "id": "com.coloros.translate.engine",
+            "note": "翻译引擎"
+          },
+          {
+            "id": "com.heytap.speechassist",
+            "note": "小布助手"
+          },
+          {
+            "id": "com.oplus.aod",
+            "note": "息屏显示"
+          },
+          {
+            "id": "com.coloros.sharescreen",
+            "note": "共享与协助"
+          },
+          {
+            "id": "com.coloros.oshare",
+            "note": "OPPO 互传"
+          },
+          {
+            "id": "com.android.dlna.service",
+            "note": "投屏服务"
+          },
+          {
+            "id": "com.oneplus.security",
+            "note": "一加安全"
+          }
+        ]
+      },
+      {
+        "comment": "三星 / Pixel / 红魔 — 桌面与通话 UI",
+        "packages": [
+          {
+            "id": "com.sec.android.app.launcher",
+            "note": "三星桌面"
+          },
+          {
+            "id": "com.samsung.android.app.telephonyui",
+            "note": "三星电话 UI"
+          },
+          {
+            "id": "com.samsung.android.incallui",
+            "note": "三星来电 UI"
+          },
+          {
+            "id": "com.google.android.apps.nexuslauncher",
+            "note": "Pixel 桌面"
+          },
+          {
+            "id": "cn.nubia.launcher",
+            "note": "红魔桌面"
+          },
+          {
+            "id": "cn.nubia.security",
+            "note": "红魔安全"
+          }
+        ]
+      },
+      {
+        "comment": "安装器、主题与 Google 基础",
+        "packages": [
+          {
+            "id": "com.android.packageinstaller",
+            "note": "AOSP 安装器"
+          },
+          {
+            "id": "com.google.android.packageinstaller",
+            "note": "Google 安装器"
+          },
+          {
+            "id": "com.google.android.document",
+            "note": "Google 文件"
+          },
+          {
+            "id": "com.google.android.marvin.talkback",
+            "note": "TalkBack 无障碍"
+          },
+          {
+            "id": "com.huawei.android.thememanager",
+            "note": "华为主题"
+          }
+        ]
+      },
+      {
+        "comment": "反诈与政务（预装，默认放行）",
+        "packages": [
+          {
+            "id": "com.hicorenational.antifraud",
+            "note": "国家反诈中心"
+          },
+          {
+            "id": "gov.picc.antifraud",
+            "note": "PICC 反诈"
+          }
+        ]
+      },
+      {
+        "comment": "计算器（常见预装，默认放行）",
+        "packages": [
+          {
+            "id": "com.android.calculator2",
+            "note": "AOSP 计算器"
+          },
+          {
+            "id": "com.miui.calculator",
+            "note": "小米计算器"
+          },
+          {
+            "id": "com.coloros.calculator",
+            "note": "OPPO 计算器"
+          },
+          {
+            "id": "com.sec.android.app.popupcalculator",
+            "note": "三星计算器"
+          }
+        ]
+      }
+    ]
+  },
+  "scanInclude": {
+    "_comment": "系统应用扫描可见性：命中则纳入屏蔽管理列表；默认是否屏蔽仍由 defaultWhitelist / whitelistMatchers 决定",
+    "sections": [
+      {
+        "comment": "小米 / MIUI — 默认可屏蔽的娱乐与工具",
+        "packages": [
+          {
+            "id": "com.miui.video",
+            "note": "小米视频"
+          },
+          {
+            "id": "com.miui.player",
+            "note": "小米音乐"
+          },
+          {
+            "id": "com.miui.music",
+            "note": "小米音乐"
+          },
+          {
+            "id": "com.miui.gallery",
+            "note": "MIUI 相册"
+          },
+          {
+            "id": "com.miui.weather2",
+            "note": "小米天气"
+          },
+          {
+            "id": "com.miui.notes",
+            "note": "小米笔记"
+          },
+          {
+            "id": "com.miui.thememanager",
+            "note": "主题"
+          },
+          {
+            "id": "com.miui.fm",
+            "note": "收音机"
+          },
+          {
+            "id": "com.miui.mediaviewer",
+            "note": "媒体查看器"
+          },
+          {
+            "id": "com.miui.carlink",
+            "note": "CarLink"
+          },
+          {
+            "id": "com.miui.voiceassist",
+            "note": "小爱同学"
+          },
+          {
+            "id": "com.miui.micloudsync",
+            "note": "云同步"
+          },
+          {
+            "id": "com.miuix.editor",
+            "note": "编辑器"
+          },
+          {
+            "id": "com.miui.personalassistant",
+            "note": "负一屏"
+          },
+          {
+            "id": "com.miui.guardprovider",
+            "note": "安全卫士"
+          },
+          {
+            "id": "com.miui.cloudbackup",
+            "note": "云备份"
+          },
+          {
+            "id": "com.miui.freeform",
+            "note": "自由窗口"
+          },
+          {
+            "id": "com.miui.miwallpaper",
+            "note": "壁纸"
+          },
+          {
+            "id": "com.miui.cloudservice",
+            "note": "云服务"
+          },
+          {
+            "id": "com.miui.usercenter",
+            "note": "我的小米"
+          },
+          {
+            "id": "com.miui.manual",
+            "note": "玩机技巧"
+          },
+          {
+            "id": "com.miui.translation.kingsoft",
+            "note": "金山翻译"
+          },
+          {
+            "id": "com.miui.translation.xmcloud",
+            "note": "云翻译"
+          },
+          {
+            "id": "com.xiaomi.market",
+            "note": "小米应用商店"
+          },
+          {
+            "id": "com.mi.globalbrowser",
+            "note": "小米浏览器"
+          },
+          {
+            "id": "com.xiaomi.mipicks",
+            "note": "小米海外商店"
+          },
+          {
+            "id": "com.xiaomi.shop",
+            "note": "小米商城"
+          },
+          {
+            "id": "com.xiaomi.smarthome",
+            "note": "米家"
+          },
+          {
+            "id": "com.xiaomi.gamecenter",
+            "note": "游戏中心"
+          },
+          {
+            "id": "com.xiaomi.joyose",
+            "note": "游戏服务"
+          },
+          {
+            "id": "com.mipay.wallet",
+            "note": "小米钱包"
+          },
+          {
+            "id": "com.duokan.phone.remotecontroller",
+            "note": "万能遥控"
+          },
+          {
+            "id": "com.xiaomi.xmsf",
+            "note": "推送框架"
+          },
+          {
+            "id": "com.xiaomi.misettings",
+            "note": "设置插件"
+          },
+          {
+            "id": "com.xiaomi.barrage",
+            "note": "弹幕"
+          },
+          {
+            "id": "com.xiaomi.mirror",
+            "note": "镜像"
+          },
+          {
+            "id": "com.xiaomi.migameservice",
+            "note": "游戏服务"
+          },
+          {
+            "id": "com.xiaomi.gamecenter.sdk.service",
+            "note": "游戏 SDK"
+          }
+        ]
+      },
+      {
+        "comment": "荣耀 / 华为 — 默认可屏蔽",
+        "packages": [
+          {
+            "id": "com.hihonor.android.hwintelligence",
+            "note": "智能检测"
+          },
+          {
+            "id": "com.hihonor.android.hncloud",
+            "note": "荣耀云"
+          },
+          {
+            "id": "com.hihonor.hncloud",
+            "note": "荣耀云（别名）"
+          },
+          {
+            "id": "com.hihonor.filemanager",
+            "note": "文件管理 — 若已在白名单则放行"
+          },
+          {
+            "id": "com.huawei.hidisk",
+            "note": "华为云盘"
+          },
+          {
+            "id": "com.huawei.hicloud",
+            "note": "华为云"
+          },
+          {
+            "id": "com.huawei.gamebox",
+            "note": "华为游戏"
+          },
+          {
+            "id": "com.hihonor.android.gamecenter",
+            "note": "荣耀游戏中心"
+          },
+          {
+            "id": "com.hihonor.gamecenter",
+            "note": "荣耀游戏"
+          },
+          {
+            "id": "com.hihonor.gameassistant",
+            "note": "游戏助手"
+          },
+          {
+            "id": "com.hihonor.quickengine",
+            "note": "快应用引擎"
+          },
+          {
+            "id": "com.huawei.music",
+            "note": "华为音乐"
+          },
+          {
+            "id": "com.huawei.himovie",
+            "note": "华为视频"
+          },
+          {
+            "id": "com.hihonor.youku.video",
+            "note": "荣耀视频"
+          },
+          {
+            "id": "com.hihonor.cloudmusic",
+            "note": "荣耀音乐"
+          },
+          {
+            "id": "com.hihonor.dz.reader",
+            "note": "荣耀阅读"
+          },
+          {
+            "id": "com.hihonor.hnoffice",
+            "note": "荣耀文档"
+          },
+          {
+            "id": "com.hihonor.notepad",
+            "note": "荣耀笔记"
+          },
+          {
+            "id": "com.hihonor.browser",
+            "note": "荣耀浏览器"
+          },
+          {
+            "id": "com.hihonor.hiboard",
+            "note": "负一屏"
+          },
+          {
+            "id": "com.hihonor.assistant",
+            "note": "YOYO 建议"
+          },
+          {
+            "id": "com.hihonor.wallet",
+            "note": "荣耀钱包"
+          },
+          {
+            "id": "com.huawei.wallet",
+            "note": "华为钱包"
+          },
+          {
+            "id": "com.hihonor.appmarket",
+            "note": "荣耀应用商店"
+          },
+          {
+            "id": "com.huawei.appmarket",
+            "note": "华为应用商店"
+          },
+          {
+            "id": "com.hihonor.phoneservice",
+            "note": "我的荣耀"
+          },
+          {
+            "id": "com.hihonor.vmall",
+            "note": "荣耀商城"
+          },
+          {
+            "id": "com.vmall.client",
+            "note": "华为商城"
+          },
+          {
+            "id": "com.huawei.browser",
+            "note": "华为浏览器"
+          },
+          {
+            "id": "com.hihonor.baidu.browser",
+            "note": "荣耀百度浏览器"
+          },
+          {
+            "id": "com.huawei.maps.app",
+            "note": "花瓣地图"
+          },
+          {
+            "id": "com.huawei.fastapp",
+            "note": "快应用中心"
+          },
+          {
+            "id": "com.hihonor.magichome",
+            "note": "智慧空间"
+          },
+          {
+            "id": "com.huawei.smartthome",
+            "note": "智慧生活"
+          },
+          {
+            "id": "com.hihonor.systemmanager",
+            "note": "系统管家"
+          },
+          {
+            "id": "com.hihonor.devicefinder",
+            "note": "查找设备"
+          },
+          {
+            "id": "com.hihonor.findmydevice",
+            "note": "查找设备服务"
+          },
+          {
+            "id": "cn.honor.qinxuan",
+            "note": "荣耀亲选"
+          }
+        ]
+      },
+      {
+        "comment": "vivo / iQOO",
+        "packages": [
+          {
+            "id": "com.vivo.browser",
+            "note": "浏览器"
+          },
+          {
+            "id": "com.vivo.appstore",
+            "note": "应用商店"
+          },
+          {
+            "id": "com.bbk.appstore",
+            "note": "应用商店"
+          },
+          {
+            "id": "com.vivo.video",
+            "note": "视频"
+          },
+          {
+            "id": "com.vivo.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.android.bbkmusic",
+            "note": "i 音乐"
+          },
+          {
+            "id": "com.vivo.gallery",
+            "note": "相册"
+          },
+          {
+            "id": "com.vivo.theme",
+            "note": "主题"
+          },
+          {
+            "id": "com.bbk.theme",
+            "note": "i 主题"
+          },
+          {
+            "id": "com.vivo.weather",
+            "note": "天气"
+          },
+          {
+            "id": "com.iqoo.secure",
+            "note": "i 管家"
+          },
+          {
+            "id": "com.bbk.VoiceAssistant",
+            "note": "Jovi 语音"
+          },
+          {
+            "id": "com.vivo.game",
+            "note": "游戏中心"
+          },
+          {
+            "id": "com.vivo.gamecenter",
+            "note": "游戏中心"
+          }
+        ]
+      },
+      {
+        "comment": "OPPO / ColorOS",
+        "packages": [
+          {
+            "id": "com.oppo.browser",
+            "note": "浏览器"
+          },
+          {
+            "id": "com.heytap.browser",
+            "note": "欢太浏览器"
+          },
+          {
+            "id": "com.heytap.market",
+            "note": "软件商店"
+          },
+          {
+            "id": "com.oppo.market",
+            "note": "软件商店"
+          },
+          {
+            "id": "com.coloros.gallery3d",
+            "note": "相册"
+          },
+          {
+            "id": "com.coloros.video",
+            "note": "视频"
+          },
+          {
+            "id": "com.coloros.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.heytap.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.coloros.gamespace",
+            "note": "游戏空间"
+          },
+          {
+            "id": "com.heytap.pictorial",
+            "note": "乐划锁屏"
+          },
+          {
+            "id": "com.coloros.assistantscreen",
+            "note": "Breeno 速览"
+          },
+          {
+            "id": "com.finshell.wallet",
+            "note": "钱包"
+          },
+          {
+            "id": "com.oppo.usercenter",
+            "note": "我的 OPPO"
+          }
+        ]
+      },
+      {
+        "comment": "浏览器",
+        "packages": [
+          {
+            "id": "com.android.browser",
+            "note": "AOSP 浏览器"
+          },
+          {
+            "id": "com.android.chrome",
+            "note": "Chrome"
+          },
+          {
+            "id": "com.chrome.beta",
+            "note": "Chrome Beta"
+          },
+          {
+            "id": "com.chrome.dev",
+            "note": "Chrome Dev"
+          },
+          {
+            "id": "com.google.android.apps.chrome",
+            "note": "Chrome"
+          },
+          {
+            "id": "com.microsoft.emmx",
+            "note": "Edge"
+          },
+          {
+            "id": "com.tencent.mtt",
+            "note": "QQ 浏览器"
+          },
+          {
+            "id": "com.UCMobile",
+            "note": "UC 浏览器"
+          },
+          {
+            "id": "com.quark.browser",
+            "note": "夸克"
+          },
+          {
+            "id": "com.sec.android.app.sbrowser",
+            "note": "三星浏览器"
+          }
+        ]
+      },
+      {
+        "comment": "应用商店",
+        "packages": [
+          {
+            "id": "com.sec.android.app.samsungapps",
+            "note": "三星商店"
+          },
+          {
+            "id": "com.samsung.android.app.galaxyfinder",
+            "note": "Galaxy Finder"
+          },
+          {
+            "id": "com.heytap.market",
+            "note": "欢太商店"
+          }
+        ]
+      },
+      {
+        "comment": "邮箱",
+        "packages": [
+          {
+            "id": "com.google.android.gm",
+            "note": "Gmail"
+          },
+          {
+            "id": "com.netease.mail",
+            "note": "网易邮箱"
+          },
+          {
+            "id": "com.tencent.android.qqmail",
+            "note": "QQ 邮箱"
+          },
+          {
+            "id": "com.qihoo.mail",
+            "note": "360 邮箱"
+          },
+          {
+            "id": "com.163.mail",
+            "note": "163 邮箱"
+          }
+        ]
+      },
+      {
+        "comment": "支付 / 办公 / 社交通讯（常见第三方，默认屏蔽但需纳入管理）",
+        "packages": [
+          {
+            "id": "com.eg.android.AlipayGphone",
+            "note": "支付宝"
+          },
+          {
+            "id": "com.tencent.mm",
+            "note": "微信"
+          },
+          {
+            "id": "com.tencent.wework",
+            "note": "企业微信"
+          },
+          {
+            "id": "com.tencent.meeting",
+            "note": "腾讯会议"
+          },
+          {
+            "id": "com.alibaba.android.rimet",
+            "note": "钉钉"
+          },
+          {
+            "id": "com.ss.android.lark",
+            "note": "飞书"
+          },
+          {
+            "id": "com.sina.weibo",
+            "note": "微博"
+          },
+          {
+            "id": "com.ss.android.ugc.aweme",
+            "note": "抖音"
+          },
+          {
+            "id": "com.ss.android.ugc.aweme.lite",
+            "note": "抖音极速版"
+          },
+          {
+            "id": "com.smile.gifmaker",
+            "note": "快手"
+          },
+          {
+            "id": "com.kuaishou.nebula",
+            "note": "快手极速版"
+          },
+          {
+            "id": "com.tencent.mobileqq",
+            "note": "QQ"
+          },
+          {
+            "id": "com.tencent.qqlive",
+            "note": "腾讯视频"
+          },
+          {
+            "id": "com.youku.phone",
+            "note": "优酷"
+          },
+          {
+            "id": "com.qiyi.video",
+            "note": "爱奇艺"
+          },
+          {
+            "id": "com.bilibili.app.in",
+            "note": "哔哩哔哩"
+          },
+          {
+            "id": "com.netease.cloudmusic",
+            "note": "网易云音乐"
+          },
+          {
+            "id": "com.tencent.qqmusic",
+            "note": "QQ 音乐"
+          },
+          {
+            "id": "com.jingdong.app.mall",
+            "note": "京东"
+          },
+          {
+            "id": "com.taobao.taobao",
+            "note": "淘宝"
+          },
+          {
+            "id": "com.xunmeng.pinduoduo",
+            "note": "拼多多"
+          },
+          {
+            "id": "com.autonavi.minimap",
+            "note": "高德地图"
+          },
+          {
+            "id": "com.baidu.BaiduMap",
+            "note": "百度地图"
+          },
+          {
+            "id": "com.immomo.momo",
+            "note": "陌陌"
+          },
+          {
+            "id": "com.zhihu.android",
+            "note": "知乎"
+          },
+          {
+            "id": "com.dianping.v1",
+            "note": "大众点评"
+          },
+          {
+            "id": "com.cubic.autohome",
+            "note": "汽车之家"
+          }
+        ]
+      },
+      {
+        "comment": "Google / 国际常见应用",
+        "packages": [
+          {
+            "id": "com.google.android.youtube",
+            "note": "YouTube"
+          },
+          {
+            "id": "com.google.android.apps.youtube.music",
+            "note": "YouTube Music"
+          },
+          {
+            "id": "com.google.android.apps.maps",
+            "note": "Google 地图"
+          },
+          {
+            "id": "com.google.android.apps.docs",
+            "note": "Google 文档"
+          },
+          {
+            "id": "com.google.android.apps.meetings",
+            "note": "Google Meet"
+          },
+          {
+            "id": "com.google.android.apps.walletnfcrel",
+            "note": "Google 钱包"
+          },
+          {
+            "id": "com.facebook.katana",
+            "note": "Facebook"
+          },
+          {
+            "id": "com.instagram.android",
+            "note": "Instagram"
+          },
+          {
+            "id": "org.telegram.messenger",
+            "note": "Telegram"
+          },
+          {
+            "id": "com.twitter.android",
+            "note": "X (Twitter)"
+          },
+          {
+            "id": "com.whatsapp",
+            "note": "WhatsApp"
+          },
+          {
+            "id": "com.spotify.music",
+            "note": "Spotify"
+          },
+          {
+            "id": "com.valvesoftware.android.steam.community",
+            "note": "Steam"
+          },
+          {
+            "id": "com.microsoft.xboxapp",
+            "note": "Xbox"
+          },
+          {
+            "id": "com.discord",
+            "note": "Discord"
+          },
+          {
+            "id": "com.reddit.frontpage",
+            "note": "Reddit"
+          }
+        ]
+      },
+      {
+        "comment": "红魔 / nubia 娱乐与工具",
+        "packages": [
+          {
+            "id": "cn.nubia.browser",
+            "note": "浏览器"
+          },
+          {
+            "id": "cn.nubia.gallery",
+            "note": "相册"
+          },
+          {
+            "id": "cn.nubia.music",
+            "note": "音乐"
+          },
+          {
+            "id": "cn.nubia.video",
+            "note": "视频"
+          },
+          {
+            "id": "cn.nubia.theme",
+            "note": "主题"
+          },
+          {
+            "id": "cn.nubia.filemanager",
+            "note": "文件管理"
+          },
+          {
+            "id": "cn.nubia.gamelauncher",
+            "note": "游戏启动器"
+          },
+          {
+            "id": "cn.nubia.neogamecenter",
+            "note": "游戏中心"
+          },
+          {
+            "id": "cn.nubia.redmagic.app",
+            "note": "红魔竞技"
+          }
+        ]
+      },
+      {
+        "comment": "Realme / 魅族 / Nothing（已知包名）",
+        "packages": [
+          {
+            "id": "com.realme.browser",
+            "note": "realme 浏览器"
+          },
+          {
+            "id": "com.realme.store",
+            "note": "realme 商店"
+          },
+          {
+            "id": "com.meizu.flyme.launcher",
+            "note": "魅族桌面"
+          },
+          {
+            "id": "com.meizu.media.gallery",
+            "note": "魅族图库"
+          },
+          {
+            "id": "com.meizu.media.music",
+            "note": "魅族音乐"
+          },
+          {
+            "id": "com.nothing.launcher",
+            "note": "Nothing 桌面"
+          },
+          {
+            "id": "com.nothing.hearth",
+            "note": "Nothing 健康"
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "comment": "厂商前缀 com.miui. + 关键词匹配",
+        "packagePrefixes": [
+          "com.miui."
+        ],
+        "packageContains": [
+          "theme",
+          "gallery",
+          "music",
+          "video",
+          "browser",
+          "market",
+          "notes",
+          "file",
+          "email",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "shop",
+          "personalassistant",
+          "voiceassist",
+          "smarthome"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.xiaomi. + 关键词匹配",
+        "packagePrefixes": [
+          "com.xiaomi."
+        ],
+        "packageContains": [
+          "theme",
+          "gallery",
+          "music",
+          "video",
+          "browser",
+          "market",
+          "notes",
+          "file",
+          "email",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "shop",
+          "personalassistant",
+          "voiceassist",
+          "smarthome"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.vivo. + 关键词匹配",
+        "packagePrefixes": [
+          "com.vivo."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "appstore",
+          "theme",
+          "file",
+          "email",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "voice",
+          "assistant",
+          "space",
+          "notes",
+          "karaoke"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.bbk. + 关键词匹配",
+        "packagePrefixes": [
+          "com.bbk."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "appstore",
+          "theme",
+          "file",
+          "email",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "voice",
+          "assistant",
+          "space",
+          "notes",
+          "karaoke"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.oppo. + 关键词匹配",
+        "packagePrefixes": [
+          "com.oppo."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "file",
+          "email",
+          "health",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "speech",
+          "assistant",
+          "pictorial",
+          "quicksearch",
+          "karaoke",
+          "cast"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.coloros. + 关键词匹配",
+        "packagePrefixes": [
+          "com.coloros."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "file",
+          "email",
+          "health",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "speech",
+          "assistant",
+          "pictorial",
+          "quicksearch",
+          "karaoke",
+          "cast"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.heytap. + 关键词匹配",
+        "packagePrefixes": [
+          "com.heytap."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "file",
+          "email",
+          "health",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "speech",
+          "assistant",
+          "pictorial",
+          "quicksearch",
+          "karaoke",
+          "cast"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.oplus. + 关键词匹配",
+        "packagePrefixes": [
+          "com.oplus."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "file",
+          "email",
+          "health",
+          "game",
+          "wallet",
+          "weather",
+          "reader",
+          "speech",
+          "assistant",
+          "pictorial",
+          "quicksearch",
+          "karaoke",
+          "cast"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.oneplus. + 关键词匹配",
+        "packagePrefixes": [
+          "com.oneplus."
+        ],
+        "packageContains": [
+          "gallery",
+          "music",
+          "video",
+          "theme",
+          "weather",
+          "file",
+          "notes",
+          "game"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.samsung. + 关键词匹配",
+        "packagePrefixes": [
+          "com.samsung."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "video",
+          "theme",
+          "music",
+          "game",
+          "weather",
+          "wallet",
+          "notes"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.sec.android. + 关键词匹配",
+        "packagePrefixes": [
+          "com.sec.android."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "video",
+          "theme",
+          "music",
+          "game",
+          "weather",
+          "wallet",
+          "notes"
+        ]
+      },
+      {
+        "comment": "厂商前缀 cn.nubia. + 关键词匹配",
+        "packagePrefixes": [
+          "cn.nubia."
+        ],
+        "packageContains": [
+          "launcher",
+          "gallery",
+          "music",
+          "browser",
+          "theme",
+          "game",
+          "file",
+          "security",
+          "video"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.redmagic. + 关键词匹配",
+        "packagePrefixes": [
+          "com.redmagic."
+        ],
+        "packageContains": [
+          "launcher",
+          "gallery",
+          "music",
+          "browser",
+          "theme",
+          "game",
+          "file",
+          "security",
+          "video"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.realme. + 关键词匹配",
+        "packagePrefixes": [
+          "com.realme."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "game"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.meizu. + 关键词匹配",
+        "packagePrefixes": [
+          "com.meizu."
+        ],
+        "packageContains": [
+          "browser",
+          "gallery",
+          "music",
+          "video",
+          "market",
+          "theme",
+          "flyme"
+        ]
+      },
+      {
+        "comment": "厂商前缀 com.nothing. + 关键词匹配",
+        "packagePrefixes": [
+          "com.nothing."
+        ],
+        "packageContains": [
+          "launcher",
+          "hearth",
+          "weather",
+          "camera"
+        ]
+      },
+      {
+        "comment": "浏览器模糊匹配",
+        "packageContains": [
+          "browser",
+          "chrome"
+        ]
+      },
+      {
+        "comment": "应用商店模糊匹配",
+        "packageContains": [
+          "market",
+          "store"
+        ]
+      },
+      {
+        "comment": "邮箱模糊匹配",
+        "packageContains": [
+          "mail"
+        ]
+      },
+      {
+        "comment": "支付模糊匹配（注意可能误匹配非支付类包名，优先使用 exactPackages）",
+        "packageContains": [
+          "pay"
+        ]
+      },
+      {
+        "comment": "Google 组件前缀",
+        "packagePrefixes": [
+          "com.google.android.apps.",
+          "com.google.android."
+        ]
+      }
+    ]
+  },
+  "whitelistMatchers": {
+    "_comment": "额外白名单匹配器：覆盖 exact 未收录的拨号/联系人/健康/相机短信等",
+    "rules": [
+      {
+        "comment": "各品牌运动健康（精确包名）",
+        "exactPackages": [
+          {
+            "id": "com.huawei.health",
+            "note": "华为运动健康"
+          },
+          {
+            "id": "com.hihonor.health",
+            "note": "荣耀运动健康"
+          },
+          {
+            "id": "com.hihonor.android.honorhealth",
+            "note": "荣耀运动健康旧包名"
+          },
+          {
+            "id": "com.xiaomi.hm.health",
+            "note": "小米运动健康（Zepp Life）"
+          },
+          {
+            "id": "com.mi.health",
+            "note": "小米运动健康"
+          },
+          {
+            "id": "com.vivo.health",
+            "note": "vivo 健康"
+          },
+          {
+            "id": "com.oppo.health",
+            "note": "OPPO 健康"
+          },
+          {
+            "id": "com.heytap.health",
+            "note": "欢太健康"
+          },
+          {
+            "id": "com.samsung.health",
+            "note": "三星健康"
+          },
+          {
+            "id": "com.samsung.shealth",
+            "note": "三星 S 健康"
+          },
+          {
+            "id": "com.garmin.android.apps.connectmobile",
+            "note": "Garmin Connect"
+          },
+          {
+            "id": "com.fitbit.FitbitMobile",
+            "note": "Fitbit"
+          }
+        ]
+      },
+      {
+        "comment": "相机 / 短信 / 相册（精确包名）",
+        "exactPackages": [
+          {
+            "id": "com.android.camera2"
+          },
+          {
+            "id": "com.android.camera"
+          },
+          {
+            "id": "com.huawei.camera"
+          },
+          {
+            "id": "com.hihonor.camera"
+          },
+          {
+            "id": "com.android.mms"
+          },
+          {
+            "id": "com.android.messaging"
+          },
+          {
+            "id": "com.google.android.apps.messaging"
+          },
+          {
+            "id": "com.huawei.mms"
+          },
+          {
+            "id": "com.hihonor.mms"
+          },
+          {
+            "id": "com.android.gallery3d"
+          },
+          {
+            "id": "com.android.gallery"
+          },
+          {
+            "id": "com.huawei.photos"
+          },
+          {
+            "id": "com.hihonor.photos"
+          },
+          {
+            "id": "com.google.android.apps.photos"
+          },
+          {
+            "id": "com.samsung.android.messaging"
+          },
+          {
+            "id": "com.samsung.android.app.contacts"
+          }
+        ]
+      },
+      {
+        "comment": "拨号器（精确 + 模糊 dialer）",
+        "exactPackages": [
+          {
+            "id": "com.android.dialer"
+          },
+          {
+            "id": "com.google.android.dialer"
+          },
+          {
+            "id": "com.huawei.dialer"
+          },
+          {
+            "id": "com.hihonor.dialer"
+          },
+          {
+            "id": "com.miui.dialer"
+          },
+          {
+            "id": "com.xiaomi.dialer"
+          },
+          {
+            "id": "com.vivo.dialer"
+          },
+          {
+            "id": "com.oppo.dialer"
+          },
+          {
+            "id": "com.oneplus.dialer"
+          },
+          {
+            "id": "com.samsung.dialer"
+          },
+          {
+            "id": "com.sony.dialer"
+          },
+          {
+            "id": "com.lge.dialer"
+          },
+          {
+            "id": "com.android.server.telecom"
+          }
+        ],
+        "packageContains": [
+          "dialer"
+        ]
+      },
+      {
+        "comment": "联系人（精确 + 模糊 contacts）",
+        "exactPackages": [
+          {
+            "id": "com.android.contacts"
+          },
+          {
+            "id": "com.google.android.contacts"
+          },
+          {
+            "id": "com.huawei.contacts"
+          },
+          {
+            "id": "com.hihonor.contacts"
+          },
+          {
+            "id": "com.miui.contacts"
+          },
+          {
+            "id": "com.xiaomi.contacts"
+          },
+          {
+            "id": "com.vivo.contacts"
+          },
+          {
+            "id": "com.oppo.contacts"
+          },
+          {
+            "id": "com.oneplus.contacts"
+          },
+          {
+            "id": "com.samsung.contacts"
+          },
+          {
+            "id": "com.sony.contacts"
+          },
+          {
+            "id": "com.lge.contacts"
+          }
+        ],
+        "packageContains": [
+          "contacts"
+        ]
+      }
+    ]
+  },
+  "appTypeRules": {
+    "_comment": "UI 类型标签，按顺序匹配，先命中先显示",
+    "rules": [
+      {
+        "comment": "系统关键",
+        "labelKey": "app_type_system_critical",
+        "exactPackages": [
+          {
+            "id": "com.android.bluetooth"
+          },
+          {
+            "id": "com.android.captiveportallogin"
+          },
+          {
+            "id": "com.android.cellbroadcastreceiver"
+          },
+          {
+            "id": "com.android.ethernet"
+          },
+          {
+            "id": "com.android.networkstack"
+          },
+          {
+            "id": "com.android.networkstack.permissionconfig"
+          },
+          {
+            "id": "com.android.networkstack.tethering"
+          },
+          {
+            "id": "com.android.nfc"
+          },
+          {
+            "id": "com.android.permissioncontroller"
+          },
+          {
+            "id": "com.android.phone"
+          },
+          {
+            "id": "com.android.settings"
+          },
+          {
+            "id": "com.android.systemui"
+          },
+          {
+            "id": "com.android.vending"
+          },
+          {
+            "id": "com.android.wifi.resources"
+          },
+          {
+            "id": "com.google.android.gsf"
+          }
+        ]
+      },
+      {
+        "comment": "运动健康",
+        "labelKey": "app_category_health",
+        "exactPackages": [
+          {
+            "id": "com.huawei.health",
+            "note": "华为运动健康"
+          },
+          {
+            "id": "com.hihonor.health",
+            "note": "荣耀运动健康"
+          },
+          {
+            "id": "com.hihonor.android.honorhealth",
+            "note": "荣耀运动健康旧包名"
+          },
+          {
+            "id": "com.xiaomi.hm.health",
+            "note": "小米运动健康（Zepp Life）"
+          },
+          {
+            "id": "com.mi.health",
+            "note": "小米运动健康"
+          },
+          {
+            "id": "com.vivo.health",
+            "note": "vivo 健康"
+          },
+          {
+            "id": "com.oppo.health",
+            "note": "OPPO 健康"
+          },
+          {
+            "id": "com.heytap.health",
+            "note": "欢太健康"
+          },
+          {
+            "id": "com.samsung.health",
+            "note": "三星健康"
+          },
+          {
+            "id": "com.samsung.shealth",
+            "note": "三星 S 健康"
+          },
+          {
+            "id": "com.garmin.android.apps.connectmobile",
+            "note": "Garmin Connect"
+          },
+          {
+            "id": "com.fitbit.FitbitMobile",
+            "note": "Fitbit"
+          }
+        ],
+        "packageContains": [
+          "health",
+          "fitness",
+          "sport",
+          "exercise",
+          "yoga",
+          "medical",
+          "wellness",
+          "workout",
+          "step",
+          "run",
+          "walk",
+          "gym"
+        ]
+      },
+      {
+        "comment": "拨号",
+        "labelKey": "app_type_dialer",
+        "exactPackages": [
+          {
+            "id": "com.android.dialer"
+          },
+          {
+            "id": "com.google.android.dialer"
+          },
+          {
+            "id": "com.huawei.dialer"
+          },
+          {
+            "id": "com.hihonor.dialer"
+          },
+          {
+            "id": "com.miui.dialer"
+          },
+          {
+            "id": "com.xiaomi.dialer"
+          },
+          {
+            "id": "com.vivo.dialer"
+          },
+          {
+            "id": "com.oppo.dialer"
+          },
+          {
+            "id": "com.oneplus.dialer"
+          },
+          {
+            "id": "com.samsung.dialer"
+          },
+          {
+            "id": "com.sony.dialer"
+          },
+          {
+            "id": "com.lge.dialer"
+          },
+          {
+            "id": "com.android.server.telecom"
+          }
+        ],
+        "packageContains": [
+          "dialer"
+        ]
+      },
+      {
+        "comment": "联系人",
+        "labelKey": "app_type_contacts",
+        "exactPackages": [
+          {
+            "id": "com.android.contacts"
+          },
+          {
+            "id": "com.google.android.contacts"
+          },
+          {
+            "id": "com.huawei.contacts"
+          },
+          {
+            "id": "com.hihonor.contacts"
+          },
+          {
+            "id": "com.miui.contacts"
+          },
+          {
+            "id": "com.xiaomi.contacts"
+          },
+          {
+            "id": "com.vivo.contacts"
+          },
+          {
+            "id": "com.oppo.contacts"
+          },
+          {
+            "id": "com.oneplus.contacts"
+          },
+          {
+            "id": "com.samsung.contacts"
+          },
+          {
+            "id": "com.sony.contacts"
+          },
+          {
+            "id": "com.lge.contacts"
+          }
+        ],
+        "packageContains": [
+          "contacts"
+        ]
+      },
+      {
+        "comment": "相机 / 短信 / 相册",
+        "labelKey": "app_type_camera_messaging",
+        "exactPackages": [
+          {
+            "id": "com.android.camera2"
+          },
+          {
+            "id": "com.android.camera"
+          },
+          {
+            "id": "com.huawei.camera"
+          },
+          {
+            "id": "com.hihonor.camera"
+          },
+          {
+            "id": "com.android.mms"
+          },
+          {
+            "id": "com.android.messaging"
+          },
+          {
+            "id": "com.google.android.apps.messaging"
+          },
+          {
+            "id": "com.huawei.mms"
+          },
+          {
+            "id": "com.hihonor.mms"
+          },
+          {
+            "id": "com.android.gallery3d"
+          },
+          {
+            "id": "com.android.gallery"
+          },
+          {
+            "id": "com.huawei.photos"
+          },
+          {
+            "id": "com.hihonor.photos"
+          },
+          {
+            "id": "com.google.android.apps.photos"
+          },
+          {
+            "id": "com.samsung.android.messaging"
+          },
+          {
+            "id": "com.samsung.android.app.contacts"
+          }
+        ]
+      },
+      {
+        "comment": "厂商系统应用",
+        "labelKey": "app_category_system",
+        "exactPackages": [
+          {
+            "id": "com.hihonor.android.hwintelligence",
+            "note": "智能检测"
+          },
+          {
+            "id": "com.hihonor.android.hncloud",
+            "note": "荣耀云"
+          },
+          {
+            "id": "com.hihonor.hncloud",
+            "note": "荣耀云（别名）"
+          },
+          {
+            "id": "com.hihonor.filemanager",
+            "note": "文件管理 — 若已在白名单则放行"
+          },
+          {
+            "id": "com.huawei.hidisk",
+            "note": "华为云盘"
+          },
+          {
+            "id": "com.huawei.hicloud",
+            "note": "华为云"
+          },
+          {
+            "id": "com.huawei.gamebox",
+            "note": "华为游戏"
+          },
+          {
+            "id": "com.hihonor.android.gamecenter",
+            "note": "荣耀游戏中心"
+          },
+          {
+            "id": "com.hihonor.gamecenter",
+            "note": "荣耀游戏"
+          },
+          {
+            "id": "com.hihonor.gameassistant",
+            "note": "游戏助手"
+          },
+          {
+            "id": "com.hihonor.quickengine",
+            "note": "快应用引擎"
+          },
+          {
+            "id": "com.huawei.music",
+            "note": "华为音乐"
+          },
+          {
+            "id": "com.huawei.himovie",
+            "note": "华为视频"
+          },
+          {
+            "id": "com.hihonor.youku.video",
+            "note": "荣耀视频"
+          },
+          {
+            "id": "com.hihonor.cloudmusic",
+            "note": "荣耀音乐"
+          },
+          {
+            "id": "com.hihonor.dz.reader",
+            "note": "荣耀阅读"
+          },
+          {
+            "id": "com.hihonor.hnoffice",
+            "note": "荣耀文档"
+          },
+          {
+            "id": "com.hihonor.notepad",
+            "note": "荣耀笔记"
+          },
+          {
+            "id": "com.hihonor.browser",
+            "note": "荣耀浏览器"
+          },
+          {
+            "id": "com.hihonor.hiboard",
+            "note": "负一屏"
+          },
+          {
+            "id": "com.hihonor.assistant",
+            "note": "YOYO 建议"
+          },
+          {
+            "id": "com.hihonor.wallet",
+            "note": "荣耀钱包"
+          },
+          {
+            "id": "com.huawei.wallet",
+            "note": "华为钱包"
+          },
+          {
+            "id": "com.hihonor.appmarket",
+            "note": "荣耀应用商店"
+          },
+          {
+            "id": "com.huawei.appmarket",
+            "note": "华为应用商店"
+          },
+          {
+            "id": "com.hihonor.phoneservice",
+            "note": "我的荣耀"
+          },
+          {
+            "id": "com.hihonor.vmall",
+            "note": "荣耀商城"
+          },
+          {
+            "id": "com.vmall.client",
+            "note": "华为商城"
+          },
+          {
+            "id": "com.huawei.browser",
+            "note": "华为浏览器"
+          },
+          {
+            "id": "com.hihonor.baidu.browser",
+            "note": "荣耀百度浏览器"
+          },
+          {
+            "id": "com.huawei.maps.app",
+            "note": "花瓣地图"
+          },
+          {
+            "id": "com.huawei.fastapp",
+            "note": "快应用中心"
+          },
+          {
+            "id": "com.hihonor.magichome",
+            "note": "智慧空间"
+          },
+          {
+            "id": "com.huawei.smartthome",
+            "note": "智慧生活"
+          },
+          {
+            "id": "com.hihonor.systemmanager",
+            "note": "系统管家"
+          },
+          {
+            "id": "com.hihonor.devicefinder",
+            "note": "查找设备"
+          },
+          {
+            "id": "com.hihonor.findmydevice",
+            "note": "查找设备服务"
+          },
+          {
+            "id": "cn.honor.qinxuan",
+            "note": "荣耀亲选"
+          },
+          {
+            "id": "com.miui.video",
+            "note": "小米视频"
+          },
+          {
+            "id": "com.miui.player",
+            "note": "小米音乐"
+          },
+          {
+            "id": "com.miui.music",
+            "note": "小米音乐"
+          },
+          {
+            "id": "com.miui.gallery",
+            "note": "MIUI 相册"
+          },
+          {
+            "id": "com.miui.weather2",
+            "note": "小米天气"
+          },
+          {
+            "id": "com.miui.notes",
+            "note": "小米笔记"
+          },
+          {
+            "id": "com.miui.thememanager",
+            "note": "主题"
+          },
+          {
+            "id": "com.miui.fm",
+            "note": "收音机"
+          },
+          {
+            "id": "com.miui.mediaviewer",
+            "note": "媒体查看器"
+          },
+          {
+            "id": "com.miui.carlink",
+            "note": "CarLink"
+          },
+          {
+            "id": "com.miui.voiceassist",
+            "note": "小爱同学"
+          },
+          {
+            "id": "com.miui.micloudsync",
+            "note": "云同步"
+          },
+          {
+            "id": "com.miuix.editor",
+            "note": "编辑器"
+          },
+          {
+            "id": "com.miui.personalassistant",
+            "note": "负一屏"
+          },
+          {
+            "id": "com.miui.guardprovider",
+            "note": "安全卫士"
+          },
+          {
+            "id": "com.miui.cloudbackup",
+            "note": "云备份"
+          },
+          {
+            "id": "com.miui.freeform",
+            "note": "自由窗口"
+          },
+          {
+            "id": "com.miui.miwallpaper",
+            "note": "壁纸"
+          },
+          {
+            "id": "com.miui.cloudservice",
+            "note": "云服务"
+          },
+          {
+            "id": "com.miui.usercenter",
+            "note": "我的小米"
+          },
+          {
+            "id": "com.miui.manual",
+            "note": "玩机技巧"
+          },
+          {
+            "id": "com.miui.translation.kingsoft",
+            "note": "金山翻译"
+          },
+          {
+            "id": "com.miui.translation.xmcloud",
+            "note": "云翻译"
+          },
+          {
+            "id": "com.xiaomi.market",
+            "note": "小米应用商店"
+          },
+          {
+            "id": "com.mi.globalbrowser",
+            "note": "小米浏览器"
+          },
+          {
+            "id": "com.xiaomi.mipicks",
+            "note": "小米海外商店"
+          },
+          {
+            "id": "com.xiaomi.shop",
+            "note": "小米商城"
+          },
+          {
+            "id": "com.xiaomi.smarthome",
+            "note": "米家"
+          },
+          {
+            "id": "com.xiaomi.gamecenter",
+            "note": "游戏中心"
+          },
+          {
+            "id": "com.xiaomi.joyose",
+            "note": "游戏服务"
+          },
+          {
+            "id": "com.mipay.wallet",
+            "note": "小米钱包"
+          },
+          {
+            "id": "com.duokan.phone.remotecontroller",
+            "note": "万能遥控"
+          },
+          {
+            "id": "com.xiaomi.xmsf",
+            "note": "推送框架"
+          },
+          {
+            "id": "com.xiaomi.misettings",
+            "note": "设置插件"
+          },
+          {
+            "id": "com.xiaomi.barrage",
+            "note": "弹幕"
+          },
+          {
+            "id": "com.xiaomi.mirror",
+            "note": "镜像"
+          },
+          {
+            "id": "com.xiaomi.migameservice",
+            "note": "游戏服务"
+          },
+          {
+            "id": "com.xiaomi.gamecenter.sdk.service",
+            "note": "游戏 SDK"
+          },
+          {
+            "id": "com.vivo.browser",
+            "note": "浏览器"
+          },
+          {
+            "id": "com.vivo.appstore",
+            "note": "应用商店"
+          },
+          {
+            "id": "com.bbk.appstore",
+            "note": "应用商店"
+          },
+          {
+            "id": "com.vivo.video",
+            "note": "视频"
+          },
+          {
+            "id": "com.vivo.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.android.bbkmusic",
+            "note": "i 音乐"
+          },
+          {
+            "id": "com.vivo.gallery",
+            "note": "相册"
+          },
+          {
+            "id": "com.vivo.theme",
+            "note": "主题"
+          },
+          {
+            "id": "com.bbk.theme",
+            "note": "i 主题"
+          },
+          {
+            "id": "com.vivo.weather",
+            "note": "天气"
+          },
+          {
+            "id": "com.iqoo.secure",
+            "note": "i 管家"
+          },
+          {
+            "id": "com.bbk.VoiceAssistant",
+            "note": "Jovi 语音"
+          },
+          {
+            "id": "com.vivo.game",
+            "note": "游戏中心"
+          },
+          {
+            "id": "com.vivo.gamecenter",
+            "note": "游戏中心"
+          },
+          {
+            "id": "com.oppo.browser",
+            "note": "浏览器"
+          },
+          {
+            "id": "com.heytap.browser",
+            "note": "欢太浏览器"
+          },
+          {
+            "id": "com.heytap.market",
+            "note": "软件商店"
+          },
+          {
+            "id": "com.oppo.market",
+            "note": "软件商店"
+          },
+          {
+            "id": "com.coloros.gallery3d",
+            "note": "相册"
+          },
+          {
+            "id": "com.coloros.video",
+            "note": "视频"
+          },
+          {
+            "id": "com.coloros.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.heytap.music",
+            "note": "音乐"
+          },
+          {
+            "id": "com.coloros.gamespace",
+            "note": "游戏空间"
+          },
+          {
+            "id": "com.heytap.pictorial",
+            "note": "乐划锁屏"
+          },
+          {
+            "id": "com.coloros.assistantscreen",
+            "note": "Breeno 速览"
+          },
+          {
+            "id": "com.finshell.wallet",
+            "note": "钱包"
+          },
+          {
+            "id": "com.oppo.usercenter",
+            "note": "我的 OPPO"
+          }
+        ],
+        "packagePrefixes": [
+          "com.hihonor.",
+          "cn.honor.",
+          "com.huawei.",
+          "com.miui.",
+          "com.xiaomi.",
+          "com.vivo.",
+          "com.bbk.",
+          "com.oppo.",
+          "com.coloros.",
+          "com.heytap.",
+          "com.oplus.",
+          "com.samsung.",
+          "com.sec.android.",
+          "com.oneplus.",
+          "cn.nubia.",
+          "com.realme.",
+          "com.meizu.",
+          "com.nothing."
+        ],
+        "excludeExactPackages": [
+          "com.hihonor.android.launcher"
+        ]
+      },
+      {
+        "comment": "浏览器",
+        "labelKey": "app_type_browser",
+        "exactPackages": [
+          {
+            "id": "com.android.browser",
+            "note": "AOSP 浏览器"
+          },
+          {
+            "id": "com.android.chrome",
+            "note": "Chrome"
+          },
+          {
+            "id": "com.chrome.beta",
+            "note": "Chrome Beta"
+          },
+          {
+            "id": "com.chrome.dev",
+            "note": "Chrome Dev"
+          },
+          {
+            "id": "com.google.android.apps.chrome",
+            "note": "Chrome"
+          },
+          {
+            "id": "com.microsoft.emmx",
+            "note": "Edge"
+          },
+          {
+            "id": "com.tencent.mtt",
+            "note": "QQ 浏览器"
+          },
+          {
+            "id": "com.UCMobile",
+            "note": "UC 浏览器"
+          },
+          {
+            "id": "com.quark.browser",
+            "note": "夸克"
+          },
+          {
+            "id": "com.sec.android.app.sbrowser",
+            "note": "三星浏览器"
+          }
+        ],
+        "packageContains": [
+          "browser",
+          "chrome"
+        ]
+      }
+    ]
+  }
+}

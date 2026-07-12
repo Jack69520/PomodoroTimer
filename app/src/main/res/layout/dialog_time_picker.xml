@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- 常用时长快捷选项 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/home_quick_duration_title"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <GridLayout
+        android:id="@+id/preset_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:columnCount="3"
+        android:alignmentMode="alignBounds"
+        android:useDefaultMargins="true">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_45min"
+            android:tag="45"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_60min"
+            android:tag="60"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_90min"
+            android:tag="90"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_120min"
+            android:tag="120"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_150min"
+            android:tag="150"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="@string/home_quick_duration_180min"
+            android:tag="180" />
+
+    </GridLayout>
+
+    <!-- 小时/分钟选择器 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginEnd="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/home_duration_unit_hour"
+                android:textColor="@color/text_primary" />
+
+            <NumberPicker
+                android:id="@+id/picker_hours"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/home_duration_unit_minute"
+                android:textColor="@color/text_primary" />
+
+            <NumberPicker
+                android:id="@+id/picker_minutes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
+
+

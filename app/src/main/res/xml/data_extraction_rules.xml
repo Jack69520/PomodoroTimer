@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  数据提取规则（Android 12+）：白名单 include，未列入的 SharedPreferences 不参与云备份/设备迁移。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="pomodoro_db" />
+        <include domain="database" path="pomodoro_db-shm" />
+        <include domain="database" path="pomodoro_db-wal" />
+        <include domain="sharedpref" path="PomodoroPrefs.xml" />
+        <include domain="sharedpref" path="account_prefs.xml" />
+        <include domain="sharedpref" path="privacy_consent_prefs.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="pomodoro_db" />
+        <include domain="database" path="pomodoro_db-shm" />
+        <include domain="database" path="pomodoro_db-wal" />
+        <include domain="sharedpref" path="PomodoroPrefs.xml" />
+        <include domain="sharedpref" path="account_prefs.xml" />
+        <include domain="sharedpref" path="privacy_consent_prefs.xml" />
+    </device-transfer>
+</data-extraction-rules>
