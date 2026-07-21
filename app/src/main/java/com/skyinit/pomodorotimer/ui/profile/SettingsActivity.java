@@ -7,8 +7,8 @@ import com.skyinit.pomodorotimer.data.repository.SettingsManager;
 import com.skyinit.pomodorotimer.data.repository.TimerSettingsRepository;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
-import com.skyinit.pomodorotimer.util.ExactAlarmPermissionHelper;
 import com.skyinit.pomodorotimer.util.FocusDndHelper;
+import com.skyinit.pomodorotimer.util.SettingsPermissionHelper;
 import com.skyinit.pomodorotimer.util.StudyDurationPickerHelper;
 import android.Manifest;
 import android.app.Activity;
@@ -44,6 +44,9 @@ import androidx.lifecycle.ViewModelProvider;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SettingsActivity extends BaseActivity {
     public static final String EXTRA_ENABLE_APP_BLOCKING = "extra_enable_app_blocking";
@@ -66,9 +69,32 @@ public class SettingsActivity extends BaseActivity {
     private View longBreakIntervalRow;
     private View longBreakDurationRow;
     private SettingsViewModel settingsViewModel;
-    private TextView exactAlarmStatusText;
-    private TextView exactAlarmOpenButton;
     private ActivityResultLauncher<Intent> ringtonePickerLauncher;
+    private ActivityResultLauncher<String> runtimePermissionLauncher;
+
+    private View permissionRowNotification;
+    private View permissionRowMediaFiles;
+    private View permissionRowMusicAudio;
+    private View permissionRowPhotosVideos;
+    private View permissionRowCamera;
+    private View permissionRowExactAlarm;
+    private View permissionRowUsageStats;
+    private View permissionRowOverlay;
+    private TextView permissionStatusNotification;
+    private TextView permissionStatusMediaFiles;
+    private TextView permissionStatusMusicAudio;
+    private TextView permissionStatusPhotosVideos;
+    private TextView permissionStatusCamera;
+    private TextView permissionStatusExactAlarm;
+    private TextView permissionStatusUsageStats;
+    private TextView permissionStatusOverlay;
+
+    /** 防止连点/并发申请同一或多项权限。 */
+    private final AtomicBoolean permissionRequestInFlight = new AtomicBoolean(false);
+    /** 当前进行中的运行时权限申请种类；设置页返回时用于忽略过期回调。 */
+    private final AtomicReference<SettingsPermissionHelper.Kind> pendingRuntimeKind =
+            new AtomicReference<>(null);
+    private final AtomicInteger permissionRequestGeneration = new AtomicInteger(0);
     
     private boolean isSpinnerInitialized = false;
     private boolean pendingDndPermissionRequest = false;
@@ -126,15 +152,39 @@ public class SettingsActivity extends BaseActivity {
                 this,
                 ((App) getApplication()).getContainer().getViewModelFactory()
         ).get(SettingsViewModel.class);
-        
+
+        registerPermissionLauncher();
         initViews();
         setupRingtonePicker();
         setupUI();
+        bindPermissionRows();
+        refreshAllPermissionUi();
 
         if (getIntent().getBooleanExtra(EXTRA_ENABLE_APP_BLOCKING, false)) {
             getIntent().removeExtra(EXTRA_ENABLE_APP_BLOCKING);
             AppBlockingEnabler.tryEnable(this, blockingEnablerHost);
         }
+    }
+
+    private void registerPermissionLauncher() {
+        runtimePermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    SettingsPermissionHelper.Kind kind = pendingRuntimeKind.getAndSet(null);
+                    permissionRequestInFlight.set(false);
+                    if (isFinishing() || isDestroyed() || kind == null) {
+                        return;
+                    }
+                    if (!granted) {
+                        // 系统弹窗被拒：引导至应用权限设置页
+                        if (!SettingsPermissionHelper.openPermissionSettings(this, kind)) {
+                            Toast.makeText(this,
+                                    R.string.settings_permission_open_settings_failed,
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    refreshAllPermissionUi();
+                });
     }
     
     private void initViews() {
@@ -153,39 +203,157 @@ public class SettingsActivity extends BaseActivity {
         longBreakDurationSpinner = findViewById(R.id.long_break_duration_spinner);
         longBreakIntervalRow = findViewById(R.id.long_break_interval_row);
         longBreakDurationRow = findViewById(R.id.long_break_duration_row);
-        exactAlarmStatusText = findViewById(R.id.exact_alarm_status_text);
-        exactAlarmOpenButton = findViewById(R.id.exact_alarm_open_button);
+        permissionRowNotification = findViewById(R.id.permission_row_notification);
+        permissionRowMediaFiles = findViewById(R.id.permission_row_media_files);
+        permissionRowMusicAudio = findViewById(R.id.permission_row_music_audio);
+        permissionRowPhotosVideos = findViewById(R.id.permission_row_photos_videos);
+        permissionRowCamera = findViewById(R.id.permission_row_camera);
+        permissionRowExactAlarm = findViewById(R.id.permission_row_exact_alarm);
+        permissionRowUsageStats = findViewById(R.id.permission_row_usage_stats);
+        permissionRowOverlay = findViewById(R.id.permission_row_overlay);
+        permissionStatusNotification = findViewById(R.id.permission_status_notification);
+        permissionStatusMediaFiles = findViewById(R.id.permission_status_media_files);
+        permissionStatusMusicAudio = findViewById(R.id.permission_status_music_audio);
+        permissionStatusPhotosVideos = findViewById(R.id.permission_status_photos_videos);
+        permissionStatusCamera = findViewById(R.id.permission_status_camera);
+        permissionStatusExactAlarm = findViewById(R.id.permission_status_exact_alarm);
+        permissionStatusUsageStats = findViewById(R.id.permission_status_usage_stats);
+        permissionStatusOverlay = findViewById(R.id.permission_status_overlay);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refreshExactAlarmPermissionUi();
+        // 运行时权限弹窗关闭前后可能触发 onResume；仅在无待处理运行时回调时释放 inFlight
+        if (pendingRuntimeKind.get() == null) {
+            permissionRequestInFlight.set(false);
+        }
+        refreshAllPermissionUi();
         refreshDndPermissionUi();
         refreshStudyDurationUi();
     }
 
-    /** 刷新精确闹钟权限状态（用户可能在系统设置中撤回授权）。 */
-    private void refreshExactAlarmPermissionUi() {
-        if (exactAlarmStatusText == null) {
+    private void bindPermissionRows() {
+        bindPermissionRow(permissionRowNotification, permissionStatusNotification,
+                SettingsPermissionHelper.Kind.NOTIFICATION);
+        bindPermissionRow(permissionRowMediaFiles, permissionStatusMediaFiles,
+                SettingsPermissionHelper.Kind.MEDIA_FILES);
+        bindPermissionRow(permissionRowMusicAudio, permissionStatusMusicAudio,
+                SettingsPermissionHelper.Kind.MUSIC_AUDIO);
+        bindPermissionRow(permissionRowPhotosVideos, permissionStatusPhotosVideos,
+                SettingsPermissionHelper.Kind.PHOTOS_VIDEOS);
+        bindPermissionRow(permissionRowCamera, permissionStatusCamera,
+                SettingsPermissionHelper.Kind.CAMERA);
+        bindPermissionRow(permissionRowExactAlarm, permissionStatusExactAlarm,
+                SettingsPermissionHelper.Kind.EXACT_ALARM);
+        bindPermissionRow(permissionRowUsageStats, permissionStatusUsageStats,
+                SettingsPermissionHelper.Kind.USAGE_STATS_BLOCKING);
+        bindPermissionRow(permissionRowOverlay, permissionStatusOverlay,
+                SettingsPermissionHelper.Kind.OVERLAY_BLOCKING);
+    }
+
+    private void bindPermissionRow(
+            @Nullable View row,
+            @Nullable TextView statusView,
+            @NonNull SettingsPermissionHelper.Kind kind) {
+        if (row == null || statusView == null) {
             return;
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            exactAlarmStatusText.setText(R.string.exact_alarm_status_not_required);
-            if (exactAlarmOpenButton != null) {
-                exactAlarmOpenButton.setVisibility(View.GONE);
+        boolean applicable = SettingsPermissionHelper.isApplicable(kind);
+        row.setVisibility(applicable ? View.VISIBLE : View.GONE);
+        if (!applicable) {
+            return;
+        }
+        statusView.setOnClickListener(v -> onPermissionStatusClicked(kind));
+    }
+
+    /** 主线程刷新全部权限行；已授权不可点，未授权可点申请。 */
+    private void refreshAllPermissionUi() {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        refreshPermissionStatus(permissionRowNotification, permissionStatusNotification,
+                SettingsPermissionHelper.Kind.NOTIFICATION);
+        refreshPermissionStatus(permissionRowMediaFiles, permissionStatusMediaFiles,
+                SettingsPermissionHelper.Kind.MEDIA_FILES);
+        refreshPermissionStatus(permissionRowMusicAudio, permissionStatusMusicAudio,
+                SettingsPermissionHelper.Kind.MUSIC_AUDIO);
+        refreshPermissionStatus(permissionRowPhotosVideos, permissionStatusPhotosVideos,
+                SettingsPermissionHelper.Kind.PHOTOS_VIDEOS);
+        refreshPermissionStatus(permissionRowCamera, permissionStatusCamera,
+                SettingsPermissionHelper.Kind.CAMERA);
+        refreshPermissionStatus(permissionRowExactAlarm, permissionStatusExactAlarm,
+                SettingsPermissionHelper.Kind.EXACT_ALARM);
+        refreshPermissionStatus(permissionRowUsageStats, permissionStatusUsageStats,
+                SettingsPermissionHelper.Kind.USAGE_STATS_BLOCKING);
+        refreshPermissionStatus(permissionRowOverlay, permissionStatusOverlay,
+                SettingsPermissionHelper.Kind.OVERLAY_BLOCKING);
+    }
+
+    private void refreshPermissionStatus(
+            @Nullable View row,
+            @Nullable TextView statusView,
+            @NonNull SettingsPermissionHelper.Kind kind) {
+        if (row == null || statusView == null) {
+            return;
+        }
+        boolean applicable = SettingsPermissionHelper.isApplicable(kind);
+        row.setVisibility(applicable ? View.VISIBLE : View.GONE);
+        if (!applicable) {
+            return;
+        }
+        boolean granted = SettingsPermissionHelper.isGranted(this, kind);
+        if (granted) {
+            statusView.setText(R.string.settings_permission_status_granted);
+            statusView.setTextColor(ContextCompat.getColor(this, R.color.theme_green));
+            statusView.setClickable(false);
+            statusView.setEnabled(false);
+        } else {
+            statusView.setText(R.string.settings_permission_status_denied);
+            statusView.setTextColor(ContextCompat.getColor(this, R.color.error));
+            statusView.setClickable(true);
+            statusView.setEnabled(true);
+        }
+    }
+
+    private void onPermissionStatusClicked(@NonNull SettingsPermissionHelper.Kind kind) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
+        if (SettingsPermissionHelper.isGranted(this, kind)) {
+            refreshAllPermissionUi();
+            return;
+        }
+        if (!permissionRequestInFlight.compareAndSet(false, true)) {
+            return;
+        }
+        int generation = permissionRequestGeneration.incrementAndGet();
+
+        if (SettingsPermissionHelper.requiresSettingsIntent(kind)
+                || SettingsPermissionHelper.shouldOpenSettingsDirectly(this, kind)) {
+            boolean opened = SettingsPermissionHelper.openPermissionSettings(this, kind);
+            // 设置页返回后由 onResume 清 inFlight；若跳转失败立即释放
+            if (!opened) {
+                permissionRequestInFlight.set(false);
+                Toast.makeText(this, R.string.settings_permission_open_settings_failed,
+                        Toast.LENGTH_SHORT).show();
             }
             return;
         }
-        boolean granted = ExactAlarmPermissionHelper.canScheduleExactAlarms(this);
-        exactAlarmStatusText.setText(granted
-                ? R.string.exact_alarm_status_granted
-                : R.string.exact_alarm_status_denied);
-        if (exactAlarmOpenButton != null) {
-            exactAlarmOpenButton.setVisibility(granted ? View.GONE : View.VISIBLE);
-            exactAlarmOpenButton.setOnClickListener(v ->
-                    ExactAlarmPermissionHelper.openExactAlarmSettings(SettingsActivity.this));
+
+        String permission = SettingsPermissionHelper.getRuntimePermission(kind);
+        if (permission == null) {
+            permissionRequestInFlight.set(false);
+            return;
         }
+        // 若用户在弹窗前状态已变或 generation 被更新，则放弃
+        if (generation != permissionRequestGeneration.get() || isFinishing() || isDestroyed()) {
+            permissionRequestInFlight.set(false);
+            return;
+        }
+        SettingsPermissionHelper.markRequested(this, permission);
+        pendingRuntimeKind.set(kind);
+        runtimePermissionLauncher.launch(permission);
     }
 
     /** 同步勿扰开关与系统权限：未授权时保持关闭并回写用户设置。 */
@@ -549,6 +717,7 @@ public class SettingsActivity extends BaseActivity {
                     getString(R.string.confirm),
                     ((App) getApplication()).getContainer().getTimerSettingsRepository().getDefaultStudyTimeMs(),
                     (totalMinutes, millis) -> {
+                        refreshStudyDurationUi(millis);
                         settingsViewModel.setDefaultStudyTimeMs(millis);
                         Toast.makeText(this, R.string.study_duration_updated, Toast.LENGTH_SHORT).show();
                     }));

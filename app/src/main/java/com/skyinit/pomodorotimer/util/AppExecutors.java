@@ -17,6 +17,9 @@ public final class AppExecutors {
     private static final String TAG = "AppExecutors";
     private static volatile AppExecutors instance;
 
+    /** 标记当前是否正在执行 diskIo 任务，避免同线程再 enqueue 造成读写乱序。 */
+    private static final ThreadLocal<Boolean> DISK_IO_DEPTH = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
     private final ExecutorService diskIo;
 
     private AppExecutors() {
@@ -27,6 +30,11 @@ public final class AppExecutors {
                     AppLog.e(TAG, "Uncaught exception on " + t.getName(), e));
             return thread;
         });
+    }
+
+    /** 是否正在 diskIo 工作线程的任务上下文中（含嵌套调用）。 */
+    public boolean isDiskIoThread() {
+        return Boolean.TRUE.equals(DISK_IO_DEPTH.get());
     }
 
     public static AppExecutors getInstance() {
@@ -50,6 +58,10 @@ public final class AppExecutors {
 
     private void runWithBoundary(String executorName, Runnable runnable,
                                  @Nullable ErrorHandler errorHandler) {
+        boolean enteredDiskIo = "diskIo".equals(executorName);
+        if (enteredDiskIo) {
+            DISK_IO_DEPTH.set(Boolean.TRUE);
+        }
         try {
             runnable.run();
         } catch (Throwable throwable) {
@@ -60,6 +72,10 @@ public final class AppExecutors {
                 } catch (Throwable handlerError) {
                     AppLog.e(TAG, "Error handler failed in " + executorName, handlerError);
                 }
+            }
+        } finally {
+            if (enteredDiskIo) {
+                DISK_IO_DEPTH.set(Boolean.FALSE);
             }
         }
     }

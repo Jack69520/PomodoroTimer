@@ -4,6 +4,9 @@ import com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings;
 
 /**
  * 用户级计时偏好（学习/休息时长、暂停上限），持久化于 Room {@link UserPomodoroSettings}。
+ * <p>
+ * 写路径统一走 {@link UserPomodoroSettingsRepository#applyUpdate}，避免缓存未命中时
+ * 用默认值整行覆盖，并与 diskIo 同步写语义兼容。
  */
 public class TimerSettingsRepository {
 
@@ -24,9 +27,7 @@ public class TimerSettingsRepository {
 
     public long setDefaultStudyTimeMs(long millis) {
         long clamped = clampStudy(millis);
-        UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
-        settings.defaultStudyTimeMs = clamped;
-        pomodoroSettingsRepository.saveSettings(settings);
+        pomodoroSettingsRepository.applyUpdate(settings -> settings.defaultStudyTimeMs = clamped);
         return clamped;
     }
 
@@ -36,9 +37,7 @@ public class TimerSettingsRepository {
 
     public long setDefaultBreakTimeMs(long millis) {
         long clamped = clampBreak(millis);
-        UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
-        settings.defaultBreakTimeMs = clamped;
-        pomodoroSettingsRepository.saveSettings(settings);
+        pomodoroSettingsRepository.applyUpdate(settings -> settings.defaultBreakTimeMs = clamped);
         return clamped;
     }
 
@@ -48,9 +47,7 @@ public class TimerSettingsRepository {
 
     public int setMaxPauseCount(int count) {
         int clamped = clampMaxPauseCount(count);
-        UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
-        settings.maxPauseCount = clamped;
-        pomodoroSettingsRepository.saveSettings(settings);
+        pomodoroSettingsRepository.applyUpdate(settings -> settings.maxPauseCount = clamped);
         return clamped;
     }
 
@@ -59,9 +56,7 @@ public class TimerSettingsRepository {
     }
 
     public void setDndDuringFocusEnabled(boolean enabled) {
-        UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
-        settings.dndDuringFocusEnabled = enabled;
-        pomodoroSettingsRepository.saveSettings(settings);
+        pomodoroSettingsRepository.applyUpdate(settings -> settings.dndDuringFocusEnabled = enabled);
     }
 
     public boolean isAutoBlockDuringPomodoroEnabled() {
@@ -69,9 +64,8 @@ public class TimerSettingsRepository {
     }
 
     public void setAutoBlockDuringPomodoroEnabled(boolean enabled) {
-        UserPomodoroSettings settings = pomodoroSettingsRepository.getSettings();
-        settings.autoBlockDuringPomodoro = enabled;
-        pomodoroSettingsRepository.saveSettings(settings);
+        pomodoroSettingsRepository.applyUpdate(
+                settings -> settings.autoBlockDuringPomodoro = enabled);
     }
 
     public long resetToDefault() {

@@ -264,7 +264,7 @@
     <string name="session_block_encourage_low">不错！分心次数不多，继续加油！</string>
     <string name="session_block_encourage_high">分心次数较多，下次试着减少切换应用，专注会更高效。</string>
     <string name="settings_auto_block_during_pomodoro">番茄计时期间自动屏蔽应用</string>
-    <string name="settings_auto_block_during_pomodoro_hint">开启后，学习计时进行中自动屏蔽非白名单应用；暂停与休息期间不屏蔽。需在「我的 > 应用屏蔽」授予相关权限。</string>
+    <string name="settings_auto_block_during_pomodoro_hint">开启后，学习计时进行中自动屏蔽非白名单应用；暂停与休息期间不屏蔽。需在“我的 > 应用屏蔽”授予相关权限。</string>
     <string name="calendar_a11y_day_suffix">%1$d日</string>
     <string name="calendar_a11y_has_records">，有专注记录</string>
     <string name="calendar_label_sessions_count">专注次数: %d</string>
@@ -361,6 +361,16 @@
     <string name="exact_alarm_status_granted">已授权：计时到点将准时提醒</string>
     <string name="exact_alarm_status_denied">未授权：计时到点提醒可能延迟，建议开启</string>
     <string name="exact_alarm_status_not_required">当前系统版本无需此权限</string>
+    <string name="settings_permission_status_granted">已授权</string>
+    <string name="settings_permission_status_denied">未授权</string>
+    <string name="settings_permission_notification">通知</string>
+    <string name="settings_permission_media_files">媒体与文件</string>
+    <string name="settings_permission_music_audio">音乐与音频</string>
+    <string name="settings_permission_photos_videos">照片与视频</string>
+    <string name="settings_permission_camera">相机</string>
+    <string name="settings_permission_usage_stats">使用情况访问（应用屏蔽）</string>
+    <string name="settings_permission_overlay">悬浮窗（应用屏蔽）</string>
+    <string name="settings_permission_open_settings_failed">无法打开系统权限设置，请手动在系统设置中授权</string>
     <string name="settings_auto_start_after_break">休息结束后自动开始下一轮番茄</string>
     <string name="settings_auto_start_after_break_hint">开启后，短/长休息结束将自动进入下一轮专注计时</string>
     <string name="settings_dnd_during_focus">专注期间启用勿扰</string>
@@ -377,7 +387,7 @@
     <string name="statistics_pause_reason_chart_label">暂停次数</string>
     <string name="statistics_pause_reason_empty">本月还没有暂停记录</string>
     <string name="settings_long_break_enabled">每 N 个番茄钟后长休息</string>
-    <string name="settings_long_break_enabled_hint">开启后，完成指定数量番茄钟后将进入 10~15 分钟长休息</string>
+    <string name="settings_long_break_enabled_hint">开启后，完成指定数量番茄钟后将进入10~15分钟长休息</string>
     <string name="settings_pomodoros_before_long_break">长休息间隔（N 个番茄钟）</string>
     <string name="settings_long_break_duration">长休息时长</string>
     <string name="select_theme">选择主题</string>
