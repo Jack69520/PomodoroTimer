@@ -5,6 +5,7 @@ import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.AppInitializationRepository;
 import com.skyinit.pomodorotimer.data.repository.PrivacyConsentRepository;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
+import com.skyinit.pomodorotimer.domain.appidentity.AppIdentityRulesLoader;
 import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyRulesLoader;
 import com.skyinit.pomodorotimer.util.AppCategory;
 import com.skyinit.pomodorotimer.util.AppCategoryRulesLoader;
@@ -143,6 +144,7 @@ public class App extends Application {
         AppContainer.init(this);
         CategoryDefaults.init(this);
         AppCategory.init(this);
+        AppIdentityRulesLoader.init(this);
         AppCategoryRulesLoader.init(this);
         BlockingPolicyRulesLoader.init(this);
         AppContainer.getInstance(this).getUserSessionRepository().syncFromAccountManager();

@@ -388,8 +388,12 @@ public class AppBlockingService extends Service {
         return null;
     }
 
+    /** 系统分区标志缓存，避免监控循环频繁查 PackageManager。 */
+    private final ConcurrentHashMap<String, Boolean> systemPartitionCache = new ConcurrentHashMap<>();
+
     /**
-     * 判定是否应拦截：缓存未就绪时一律放行；就绪后按白名单与默认策略判定。
+     * 判定是否应拦截：缓存未就绪时一律放行；
+     * 未入库的系统分区包一律不拦（隐藏=不管）；第三方未知包可按默认策略拦并异步入库。
      */
     private boolean isAppBlocked(String packageName) {
         if (!cacheLoaded.get()) {
@@ -401,7 +405,7 @@ public class AppBlockingService extends Service {
         if (packageName.equals(getPackageName())) {
             return false;
         }
-        if (policy.isSystemCriticalApp(packageName)) {
+        if (policy.isCritical(packageName)) {
             return false;
         }
         if (whitelistedPackages.contains(packageName)) {
@@ -409,6 +413,11 @@ public class AppBlockingService extends Service {
         }
         if (enabledBlockPackages.contains(packageName)) {
             return true;
+        }
+
+        // 未入库：系统分区 → 不拦不插入；第三方 → 可按默认策略拦并补入库
+        if (isSystemPartitionPackage(packageName)) {
+            return false;
         }
 
         boolean shouldBlock = policy.shouldBlockByDefault(packageName);
@@ -432,6 +441,24 @@ public class AppBlockingService extends Service {
             });
         }
         return shouldBlock;
+    }
+
+    private boolean isSystemPartitionPackage(String packageName) {
+        Boolean cached = systemPartitionCache.get(packageName);
+        if (cached != null) {
+            return cached;
+        }
+        boolean isSystem = false;
+        try {
+            ApplicationInfo info = getPackageManager()
+                    .getApplicationInfo(packageName, 0);
+            isSystem = (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+        } catch (Exception e) {
+            // 查不到时偏向不拦（不当第三方默认拦）
+            isSystem = true;
+        }
+        systemPartitionCache.put(packageName, isSystem);
+        return isSystem;
     }
 
     private void blockApp(String packageName) {

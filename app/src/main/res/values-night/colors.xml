@@ -107,4 +107,21 @@
     <color name="task_cat_other_bg">#E0D4C8</color>
     <color name="task_cat_other_border">#B8A898</color>
     <color name="task_cat_other_text">#585040</color>
+
+    <color name="chart_grid">#33FFFFFF</color>
+    <color name="chart_week_bar">#FF41CD9D</color>
+    <color name="chart_hourly_bar">#FF5BA4D9</color>
+    <color name="chart_pause_bar">#FFB39DDB</color>
+    <color name="chart_marker_bg">#E641CD9D</color>
+    <color name="chart_marker_text">#FFFFFFFF</color>
+    <color name="stats_hero_accent">#3341CD9D</color>
+    <color name="stats_insight_bg">#1F2A2A2A</color>
+
+    <!-- 日历 / 专注记录状态色 -->
+    <color name="session_status_completed">#FF81C784</color>
+    <color name="session_status_failed">#FFEF9A9A</color>
+    <color name="session_status_incomplete">#FFFFCC80</color>
+    <color name="calendar_indicator_completed">#FF41CD9D</color>
+    <color name="calendar_indicator_failed">#FFEF5350</color>
+    <color name="calendar_indicator_incomplete">#FFFFB74D</color>
 </resources>

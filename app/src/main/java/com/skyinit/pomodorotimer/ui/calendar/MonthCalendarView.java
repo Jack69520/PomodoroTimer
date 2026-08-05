@@ -36,8 +36,10 @@ public class MonthCalendarView extends LinearLayout {
     }
 
     private static final int DAY_CELL_HEIGHT_DP = 44;
+    private static final int NAV_BUTTON_SIZE_DP = 40;
 
     private final TextView monthTitleView;
+    private final GridLayout weekHeader;
     private final GridLayout daysGrid;
     private final Calendar displayedMonth = Calendar.getInstance();
     private Calendar selectedDate = Calendar.getInstance();
@@ -58,25 +60,22 @@ public class MonthCalendarView extends LinearLayout {
         header.setGravity(Gravity.CENTER_VERTICAL);
         LayoutParams headerParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
         header.setLayoutParams(headerParams);
+        header.setPadding(dp(4), dp(2), dp(4), dp(6));
 
-        ImageButton prevButton = new ImageButton(context);
-        prevButton.setImageResource(R.drawable.ic_chevron_left);
-        prevButton.setBackground(null);
-        prevButton.setContentDescription(context.getString(R.string.calendar_prev_month));
+        ImageButton prevButton = createNavButton(context, R.drawable.ic_chevron_left,
+                context.getString(R.string.calendar_prev_month));
         prevButton.setOnClickListener(v -> shiftMonth(-1));
 
         monthTitleView = new TextView(context);
         LayoutParams titleParams = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
         monthTitleView.setLayoutParams(titleParams);
         monthTitleView.setGravity(Gravity.CENTER);
-        monthTitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        monthTitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         monthTitleView.setTypeface(Typeface.DEFAULT_BOLD);
         monthTitleView.setTextColor(ContextCompat.getColor(context, R.color.text_primary));
 
-        ImageButton nextButton = new ImageButton(context);
-        nextButton.setImageResource(R.drawable.ic_chevron_right);
-        nextButton.setBackground(null);
-        nextButton.setContentDescription(context.getString(R.string.calendar_next_month));
+        ImageButton nextButton = createNavButton(context, R.drawable.ic_chevron_right,
+                context.getString(R.string.calendar_next_month));
         nextButton.setOnClickListener(v -> shiftMonth(1));
 
         header.addView(prevButton);
@@ -84,7 +83,7 @@ public class MonthCalendarView extends LinearLayout {
         header.addView(nextButton);
         addView(header);
 
-        GridLayout weekHeader = new GridLayout(context);
+        weekHeader = new GridLayout(context);
         weekHeader.setColumnCount(7);
         weekHeader.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         int cellPadding = dp(4);
@@ -92,7 +91,7 @@ public class MonthCalendarView extends LinearLayout {
         for (String label : weekLabels) {
             TextView tv = createWeekHeaderCell(label);
             tv.setPadding(cellPadding, cellPadding, cellPadding, cellPadding);
-            tv.setLayoutParams(createGridCellParams());
+            tv.setLayoutParams(createGridCellParams(dp(28)));
             weekHeader.addView(tv);
         }
         addView(weekHeader);
@@ -103,6 +102,34 @@ public class MonthCalendarView extends LinearLayout {
         addView(daysGrid);
 
         renderMonth();
+    }
+
+    /** 主题切换后刷新标题与星期栏颜色。 */
+    public void refreshTheme() {
+        monthTitleView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
+        for (int i = 0; i < weekHeader.getChildCount(); i++) {
+            View child = weekHeader.getChildAt(i);
+            if (child instanceof TextView) {
+                ((TextView) child).setTextColor(
+                        ContextCompat.getColor(getContext(), R.color.text_secondary));
+            }
+        }
+        renderMonth();
+    }
+
+    private ImageButton createNavButton(Context context, int iconRes, String description) {
+        ImageButton button = new ImageButton(context);
+        int size = dp(NAV_BUTTON_SIZE_DP);
+        LayoutParams params = new LayoutParams(size, size);
+        button.setLayoutParams(params);
+        button.setImageResource(iconRes);
+        button.setContentDescription(description);
+        button.setPadding(dp(8), dp(8), dp(8), dp(8));
+        TypedValue outValue = new TypedValue();
+        context.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        button.setBackgroundResource(outValue.resourceId);
+        button.setColorFilter(ContextCompat.getColor(context, R.color.text_secondary));
+        return button;
     }
 
     public void setHighlightedDates(Set<String> dates) {
@@ -151,7 +178,7 @@ public class MonthCalendarView extends LinearLayout {
 
         for (int i = 0; i < firstDayOfWeek; i++) {
             View spacer = new View(getContext());
-            spacer.setLayoutParams(createGridCellParams());
+            spacer.setLayoutParams(createGridCellParams(dp(DAY_CELL_HEIGHT_DP)));
             daysGrid.addView(spacer);
         }
 
@@ -168,8 +195,14 @@ public class MonthCalendarView extends LinearLayout {
 
             CalendarDayCellView cell = new CalendarDayCellView(getContext());
             cell.bind(day, hasRecord, selected, isToday);
-            cell.setLayoutParams(createGridCellParams());
+            cell.setLayoutParams(createGridCellParams(dp(DAY_CELL_HEIGHT_DP)));
             cell.setContentDescription(buildContentDescription(day, hasRecord, selected, isToday));
+            cell.setClickable(true);
+            cell.setFocusable(true);
+            TypedValue outValue = new TypedValue();
+            getContext().getTheme().resolveAttribute(
+                    android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+            cell.setBackgroundResource(outValue.resourceId);
             cell.setOnClickListener(v -> {
                 selectedDate = dayCal;
                 if (dateSelectedListener != null) {
@@ -181,10 +214,10 @@ public class MonthCalendarView extends LinearLayout {
         }
     }
 
-    private GridLayout.LayoutParams createGridCellParams() {
+    private GridLayout.LayoutParams createGridCellParams(int heightPx) {
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = 0;
-        lp.height = dp(DAY_CELL_HEIGHT_DP);
+        lp.height = heightPx;
         lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
         return lp;
     }
@@ -192,7 +225,7 @@ public class MonthCalendarView extends LinearLayout {
     private TextView createWeekHeaderCell(String text) {
         TextView tv = new TextView(getContext());
         tv.setText(text);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tv.setGravity(Gravity.CENTER);
         tv.setTextColor(ContextCompat.getColor(getContext(), R.color.text_secondary));
         tv.setTypeface(Typeface.DEFAULT_BOLD);

@@ -1,60 +1,65 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.AppContainer;
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.domain.blocking.AppTypeLabelResolver;
-import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyConfig;
-import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyRulesLoader;
-import com.skyinit.pomodorotimer.data.entity.BlockedApp;
-import com.skyinit.pomodorotimer.util.AppCategory;
-import com.skyinit.pomodorotimer.util.AppBlockingTestUtils;
-import com.skyinit.pomodorotimer.R;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.android.material.button.MaterialButton;
+import com.skyinit.pomodorotimer.AppContainer;
+import com.skyinit.pomodorotimer.BaseActivity;
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.domain.blocking.AppTypeLabelResolver;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyConfig;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyRulesLoader;
+import com.skyinit.pomodorotimer.util.AppCategory;
 
 /**
- * 应用屏蔽管理页（MVVM）：UI 只负责展示与事件转发，业务逻辑由 {@link AppBlockingViewModel} 处理。
+ * 应用屏蔽管理页：仅绑定 UI 与转发用户意图，业务状态由 {@link AppBlockingViewModel} 持有。
  */
 public class AppBlockingManagementActivity extends BaseActivity {
-    private static final int REQUEST_EDIT_CATEGORY = 1001;
 
     private EditText searchEditText;
-    private Button searchButton;
+    private ImageButton clearSearchButton;
     private Spinner categorySpinner;
-    private TextView totalAppsText;
-    private TextView blockedAppsText;
-    private Button btnAllApps;
-    private Button btnWhitelist;
-    private Button btnScanApps;
+    private TextView btnAllApps;
+    private TextView btnWhitelist;
+    private TextView statTotalValue;
+    private TextView statBlockedValue;
+    private TextView statWhitelistValue;
+    private MaterialButton btnScanApps;
+    private MaterialButton btnEmptyScan;
     private RecyclerView appsRecyclerView;
     private LinearLayout emptyStateLayout;
+    private TextView emptySubtitle;
     private ProgressBar progressBar;
 
     private AppBlockingViewModel viewModel;
     private BlockedAppAdapter adapter;
-    private final List<BlockedApp> filteredApps = new ArrayList<>();
+
+    private final ActivityResultLauncher<Intent> editCategoryLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                // LiveData 自动刷新列表
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,40 +78,21 @@ public class AppBlockingManagementActivity extends BaseActivity {
 
         BlockingPolicyConfig config = BlockingPolicyRulesLoader.getInstance().getConfig();
         adapter = new BlockedAppAdapter(
-                filteredApps,
-                new BlockedAppAdapter.OnAppToggleListener() {
-                    @Override
-                    public void onAppToggle(BlockedApp app, boolean isBlocked) {
-                        viewModel.updateBlockingStatus(app, isBlocked);
-                        showToggleToast(isBlocked, app.appName, true);
-                    }
-
-                    @Override
-                    public void onWhitelistToggle(BlockedApp app, boolean isWhitelisted) {
-                        viewModel.updateWhitelistStatus(app, isWhitelisted);
-                        showToggleToast(isWhitelisted, app.appName, false);
-                    }
-                },
+                (app, isBlocked) -> viewModel.updateBlockingStatus(app, isBlocked),
+                app -> editCategoryLauncher.launch(
+                        AppCategoryEditActivity.createIntent(this, app.packageName)),
                 BlockingPolicyRulesLoader.getInstance().createEngine(),
                 new AppTypeLabelResolver(config)
         );
-        adapter.setCategoryClickListener(app ->
-                startActivityForResult(
-                        AppCategoryEditActivity.createIntent(this, app.packageName),
-                        REQUEST_EDIT_CATEGORY));
 
         setupRecyclerView();
         setupSearch();
         setupCategoryFilter();
-        setupFilterButtons();
-        updateButtonStates(false);
-        setupScanButton();
+        setupFilterSegments();
+        setupScanButtons();
         observeViewModel();
 
         viewModel.checkAutoScan();
-
-        AppBlockingTestUtils.testPolicyLogic(this);
-        AppBlockingTestUtils.testAppTypeRecognition(this);
     }
 
     private void setupToolbar() {
@@ -119,20 +105,25 @@ public class AppBlockingManagementActivity extends BaseActivity {
 
     private void initViews() {
         searchEditText = findViewById(R.id.search_edit_text);
-        searchButton = findViewById(R.id.btn_search);
+        clearSearchButton = findViewById(R.id.btn_clear_search);
         categorySpinner = findViewById(R.id.category_spinner);
-        totalAppsText = findViewById(R.id.total_apps_text);
-        blockedAppsText = findViewById(R.id.blocked_apps_text);
         btnAllApps = findViewById(R.id.btn_all_apps);
         btnWhitelist = findViewById(R.id.btn_whitelist);
+        statTotalValue = findViewById(R.id.stat_total_value);
+        statBlockedValue = findViewById(R.id.stat_blocked_value);
+        statWhitelistValue = findViewById(R.id.stat_whitelist_value);
         btnScanApps = findViewById(R.id.btn_scan_apps);
+        btnEmptyScan = findViewById(R.id.btn_empty_scan);
         appsRecyclerView = findViewById(R.id.apps_recycler_view);
         emptyStateLayout = findViewById(R.id.empty_state_layout);
+        emptySubtitle = findViewById(R.id.empty_state_subtitle);
         progressBar = findViewById(R.id.progress_bar);
     }
 
     private void setupRecyclerView() {
         appsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        appsRecyclerView.setHasFixedSize(true);
+        appsRecyclerView.setItemAnimator(null);
         appsRecyclerView.setAdapter(adapter);
     }
 
@@ -143,15 +134,27 @@ public class AppBlockingManagementActivity extends BaseActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                viewModel.setSearchQuery(s.toString());
+                clearSearchButton.setVisibility(
+                        s != null && s.length() > 0 ? View.VISIBLE : View.GONE);
+                viewModel.setSearchQueryDebounced(s != null ? s.toString() : "");
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
 
-        searchButton.setOnClickListener(v ->
-                viewModel.setSearchQuery(searchEditText.getText().toString()));
+        searchEditText.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                viewModel.setSearchQueryImmediate(searchEditText.getText().toString());
+                return true;
+            }
+            return false;
+        });
+
+        clearSearchButton.setOnClickListener(v -> {
+            searchEditText.setText("");
+            viewModel.setSearchQueryImmediate("");
+        });
     }
 
     private void setupCategoryFilter() {
@@ -171,20 +174,21 @@ public class AppBlockingManagementActivity extends BaseActivity {
         });
     }
 
-    private void setupFilterButtons() {
-        btnAllApps.setOnClickListener(v -> {
-            viewModel.setShowWhitelistOnly(false);
-            updateButtonStates(false);
-        });
-
-        btnWhitelist.setOnClickListener(v -> {
-            viewModel.setShowWhitelistOnly(true);
-            updateButtonStates(true);
-        });
+    private void setupFilterSegments() {
+        btnAllApps.setOnClickListener(v -> viewModel.setShowWhitelistOnly(false));
+        btnWhitelist.setOnClickListener(v -> viewModel.setShowWhitelistOnly(true));
     }
 
-    private void setupScanButton() {
-        btnScanApps.setOnClickListener(v -> viewModel.scanInstalledApps());
+    private void setupScanButtons() {
+        View.OnClickListener scan = v -> {
+            AppBlockingViewModel.UiState state = viewModel.getUiState().getValue();
+            if (state != null && state.scanning) {
+                return;
+            }
+            viewModel.scanInstalledApps();
+        };
+        btnScanApps.setOnClickListener(scan);
+        btnEmptyScan.setOnClickListener(scan);
     }
 
     private void observeViewModel() {
@@ -193,103 +197,94 @@ public class AppBlockingManagementActivity extends BaseActivity {
                 return;
             }
 
-            if (progressBar != null) {
-                progressBar.setVisibility(state.scanning ? View.VISIBLE : View.GONE);
-            }
+            progressBar.setVisibility(state.scanning ? View.VISIBLE : View.GONE);
+            btnScanApps.setEnabled(!state.scanning);
+            btnEmptyScan.setEnabled(!state.scanning);
+            btnScanApps.setText(state.scanning
+                    ? R.string.blocking_scanning
+                    : R.string.blocking_btn_scan);
 
-            filteredApps.clear();
-            filteredApps.addAll(state.filteredApps);
-            adapter.notifyDataSetChanged();
-            updateEmptyState(state.filteredApps.isEmpty());
+            adapter.submitList(state.filteredApps);
 
-            totalAppsText.setText(getString(R.string.blocking_label_total_apps, state.totalCount));
-
-            if (state.showWhitelistOnly) {
-                blockedAppsText.setText(getString(R.string.blocking_label_whitelist_only, state.whitelistCount));
-            } else {
-                blockedAppsText.setText(getString(R.string.blocking_label_blocked_summary,
-                        state.blockedCount, state.whitelistCount));
-            }
-
-            if (state.message != null) {
-                if (state.messageIsError) {
-                    Toast.makeText(this, R.string.blocking_toast_scan_failed, Toast.LENGTH_SHORT).show();
-                } else if ("SCAN_HINT".equals(state.message)) {
-                    Toast.makeText(this, R.string.blocking_toast_scan_hint, Toast.LENGTH_SHORT).show();
-                } else if ("SCAN_NO_CHANGE".equals(state.message)) {
-                    Toast.makeText(this, R.string.blocking_toast_scan_no_change, Toast.LENGTH_SHORT).show();
-                } else if (state.message.startsWith("SCAN_COMPLETE:")) {
-                    String[] parts = state.message.split(":");
-                    int newCount = parts.length > 1 ? parseIntSafe(parts[1]) : 0;
-                    int updatedCount = parts.length > 2 ? parseIntSafe(parts[2]) : 0;
-                    String message = getString(R.string.blocking_toast_scan_complete);
-                    if (newCount > 0) {
-                        message += getString(R.string.blocking_toast_scan_new_apps, newCount);
-                    }
-                    if (updatedCount > 0) {
-                        message += getString(R.string.blocking_toast_scan_updated_categories, updatedCount);
-                    }
-                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            boolean empty = state.visibleCount == 0;
+            appsRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+            emptyStateLayout.setVisibility(empty ? View.VISIBLE : View.GONE);
+            if (empty) {
+                if (!state.hasAnyApps) {
+                    emptySubtitle.setText(R.string.blocking_empty_no_data);
+                    btnEmptyScan.setVisibility(View.VISIBLE);
+                } else {
+                    emptySubtitle.setText(R.string.blocking_empty_search_hint);
+                    btnEmptyScan.setVisibility(View.GONE);
                 }
-                viewModel.clearToast();
             }
+
+            statTotalValue.setText(String.valueOf(state.totalCount));
+            statBlockedValue.setText(String.valueOf(state.blockedCount));
+            statWhitelistValue.setText(String.valueOf(state.whitelistCount));
+
+            updateSegmentStates(state.showWhitelistOnly);
+        });
+
+        viewModel.getUiEvent().observe(this, event -> {
+            if (event == null || event.code == null) {
+                return;
+            }
+            showEventToast(event);
+            viewModel.clearEvent();
         });
     }
 
-    private int parseIntSafe(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
+    private void updateSegmentStates(boolean whitelistOnly) {
+        btnAllApps.setSelected(!whitelistOnly);
+        btnWhitelist.setSelected(whitelistOnly);
     }
 
-    private void updateButtonStates(boolean showingWhitelist) {
-        if (showingWhitelist) {
-            btnAllApps.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
-            btnWhitelist.setTextColor(getResources().getColor(R.color.primary, getTheme()));
-        } else {
-            btnAllApps.setTextColor(getResources().getColor(R.color.primary, getTheme()));
-            btnWhitelist.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
-        }
-    }
-
-    private void updateEmptyState(boolean empty) {
-        if (empty) {
-            appsRecyclerView.setVisibility(View.GONE);
-            emptyStateLayout.setVisibility(View.VISIBLE);
-        } else {
-            appsRecyclerView.setVisibility(View.VISIBLE);
-            emptyStateLayout.setVisibility(View.GONE);
-        }
-    }
-
-    private void showToggleToast(boolean enabled, String appName, boolean blockingToggle) {
+    private void showEventToast(AppBlockingViewModel.UiEvent event) {
         String message;
-        if (blockingToggle) {
-            message = enabled
-                    ? getString(R.string.blocking_toast_blocked_removed_whitelist, appName)
-                    : getString(R.string.blocking_toast_unblocked_added_whitelist, appName);
-        } else {
-            message = enabled
-                    ? getString(R.string.blocking_toast_whitelist_added, appName)
-                    : getString(R.string.blocking_toast_whitelist_removed, appName);
+        switch (event.code) {
+            case "CRITICAL_LOCKED":
+                message = getString(R.string.blocking_toast_critical_locked);
+                break;
+            case "SCAN_BUSY":
+                message = getString(R.string.blocking_toast_scan_busy);
+                break;
+            case "SCAN_HINT":
+                message = getString(R.string.blocking_toast_scan_hint);
+                break;
+            case "SCAN_NO_CHANGE":
+                message = getString(R.string.blocking_toast_scan_no_change);
+                break;
+            case "SCAN_FAILED":
+                message = getString(R.string.blocking_toast_scan_failed);
+                break;
+            case "SCAN_COMPLETE":
+                message = getString(R.string.blocking_toast_scan_complete);
+                if (event.newCount > 0) {
+                    message += getString(R.string.blocking_toast_scan_new_apps, event.newCount);
+                }
+                if (event.updatedCount > 0) {
+                    message += getString(R.string.blocking_toast_scan_updated_categories, event.updatedCount);
+                }
+                break;
+            case "TOGGLE_BLOCKED":
+                message = getString(R.string.blocking_toast_toggle_blocked,
+                        event.appName != null ? event.appName : "");
+                break;
+            case "TOGGLE_ALLOWED":
+                message = getString(R.string.blocking_toast_toggle_allowed,
+                        event.appName != null ? event.appName : "");
+                break;
+            default:
+                return;
         }
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_EDIT_CATEGORY && resultCode == RESULT_OK) {
-            // LiveData 会自动刷新
-        }
-    }
-
-    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            getOnBackPressedDispatcher().onBackPressed();
             return true;
         }
         return super.onOptionsItemSelected(item);

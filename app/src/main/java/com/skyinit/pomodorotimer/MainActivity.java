@@ -37,8 +37,12 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
+import androidx.navigation.NavGraph;
+import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
+
+import android.view.MenuItem;
 
 import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.AppInitializationRepository;
@@ -498,18 +502,26 @@ public class MainActivity extends BaseActivity {
         if (shortcutAction == null) {
             return;
         }
+        // 立即消费 extra，并通过 setIntent 固化，避免进程恢复 / onNewIntent 重复触发。
         intent.removeExtra(ShortcutActions.EXTRA_SHORTCUT_ACTION);
+        setIntent(intent);
 
         switch (shortcutAction) {
             case ShortcutActions.ACTION_START_FOCUS_25:
                 startFocus25FromShortcut();
                 break;
             case ShortcutActions.ACTION_VIEW_STATISTICS:
-                navigateToDestination(R.id.nav_statistics);
+                navigateToTopLevelDestination(R.id.nav_statistics);
                 break;
             case ShortcutActions.ACTION_ENABLE_BLOCKING:
-                navigateToDestination(R.id.nav_profile);
-                AppBlockingEnabler.tryEnable(this, blockingEnablerHost);
+                navigateToTopLevelDestination(R.id.nav_profile);
+                // 等底部导航 / Fragment 事务落稳后再弹权限框，避免与导航竞态。
+                runOnUiThreadAfterNavSettled(() -> {
+                    if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    AppBlockingEnabler.tryEnable(MainActivity.this, blockingEnablerHost);
+                });
                 break;
             default:
                 break;
@@ -524,17 +536,72 @@ public class MainActivity extends BaseActivity {
         startActivity(new Intent(this, TimerActivity.class));
     }
 
-    private void navigateToDestination(int destinationId) {
-        if (navController == null) {
+    /**
+     * 程序化切换底部顶层 Tab，NavOptions 与 {@link NavigationUI} 保持一致
+     *（launchSingleTop + popUpTo(start) saveState + restoreState），
+     * 避免裸 {@code navigate(id)} 破坏多返回栈后无法回到主页。
+     * <p>
+     * 不额外调用 {@code setSelectedItemId}，防止与 NavigationUI 二次导航。
+     * 选中态由 {@code setupWithNavController} 的 destination 监听同步。
+     */
+    private void navigateToTopLevelDestination(int destinationId) {
+        if (!isTopLevelDestination(destinationId)) {
+            AppLog.w("MainActivity", "navigateToTopLevelDestination ignored non-top-level id=" + destinationId);
             return;
         }
-        navController.navigate(destinationId);
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        if (bottomNav != null) {
-            bottomNav.setSelectedItemId(destinationId);
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            new Handler(Looper.getMainLooper()).post(() -> navigateToTopLevelDestination(destinationId));
+            return;
         }
-        selectedNavId = destinationId;
-        updateMainToolbarForDestination(destinationId);
+        if (isFinishing() || isDestroyed() || navController == null) {
+            return;
+        }
+
+        if (navController.getCurrentDestination() != null
+                && navController.getCurrentDestination().getId() == destinationId) {
+            selectedNavId = destinationId;
+            return;
+        }
+
+        BottomNavigationView bottomNav = bottomNavigationView != null
+                ? bottomNavigationView
+                : findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            MenuItem item = bottomNav.getMenu().findItem(destinationId);
+            if (item != null) {
+                // 与用户点击底部栏同一路径，保证多返回栈语义一致。
+                if (NavigationUI.onNavDestinationSelected(item, navController)) {
+                    selectedNavId = destinationId;
+                    return;
+                }
+            }
+        }
+
+        NavGraph graph = navController.getGraph();
+        int startDestinationId = graph.getStartDestinationId();
+        NavOptions options = new NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setRestoreState(true)
+                .setPopUpTo(startDestinationId, /* inclusive= */ false, /* saveState= */ true)
+                .build();
+        try {
+            navController.navigate(destinationId, null, options);
+            selectedNavId = destinationId;
+        } catch (IllegalArgumentException e) {
+            AppLog.e("MainActivity", "Failed to navigate to top-level destination: " + destinationId, e);
+        }
+    }
+
+    /** 在下一帧 UI 空闲时执行，降低与导航 Fragment 事务的竞态。 */
+    private void runOnUiThreadAfterNavSettled(@NonNull Runnable action) {
+        View anchor = bottomNavigationView != null
+                ? bottomNavigationView
+                : findViewById(R.id.bottom_navigation);
+        if (anchor != null) {
+            anchor.post(action);
+        } else {
+            new Handler(Looper.getMainLooper()).post(action);
+        }
     }
 
     private void handleNavigationIntent(Intent intent) {
@@ -545,14 +612,18 @@ public class MainActivity extends BaseActivity {
         if (destinationId == 0) {
             return;
         }
-        navController.navigate(destinationId);
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        if (bottomNav != null) {
-            bottomNav.setSelectedItemId(destinationId);
-        }
-        selectedNavId = destinationId;
-        updateMainToolbarForDestination(destinationId);
         intent.removeExtra(FocusBlockNavigation.EXTRA_NAV_DESTINATION);
+        setIntent(intent);
+
+        if (isTopLevelDestination(destinationId)) {
+            navigateToTopLevelDestination(destinationId);
+        } else {
+            try {
+                navController.navigate(destinationId);
+            } catch (IllegalArgumentException e) {
+                AppLog.e("MainActivity", "Failed to navigate from intent: " + destinationId, e);
+            }
+        }
     }
 
     private final AppBlockingEnabler.Host blockingEnablerHost = new AppBlockingEnabler.Host() {
@@ -684,8 +755,6 @@ public class MainActivity extends BaseActivity {
     }
 
     public void switchToHome() {
-        if (navController != null) {
-            navController.navigate(R.id.nav_home);
-        }
+        navigateToTopLevelDestination(R.id.nav_home);
     }
 }

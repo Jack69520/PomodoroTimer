@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "_readme": {
+    "description": "应用来源身份规则：与屏蔽策略、业务分类解耦。",
+    "axes": [
+      "PLATFORM — Android 平台核心",
+      "GOOGLE — Google 应用与服务",
+      "OEM_SERVICE — 厂商系统服务",
+      "OEM_PRELOAD — 厂商预装应用",
+      "THIRD_PARTY — 第三方"
+    ]
+  },
+  "platformExact": [
+    "com.android.systemui",
+    "com.android.settings",
+    "com.android.phone",
+    "com.android.permissioncontroller",
+    "com.android.networkstack",
+    "com.android.networkstack.tethering",
+    "com.android.networkstack.permissionconfig",
+    "com.android.captiveportallogin",
+    "com.android.wifi.resources",
+    "com.android.ethernet",
+    "com.android.cellbroadcastreceiver",
+    "com.android.bluetooth",
+    "com.android.nfc",
+    "android"
+  ],
+  "googleExact": [
+    "com.google.android.gsf",
+    "com.android.vending",
+    "com.google.android.gms",
+    "com.google.android.gsf.login"
+  ],
+  "platformPrefixes": [
+    "android.",
+    "com.android."
+  ],
+  "googlePrefixes": [
+    "com.google.android."
+  ],
+  "oemPrefixes": [
+    "com.huawei.",
+    "com.hihonor.",
+    "cn.honor.",
+    "com.miui.",
+    "com.xiaomi.",
+    "com.mi.",
+    "com.vivo.",
+    "com.bbk.",
+    "com.iqoo.",
+    "com.oppo.",
+    "com.coloros.",
+    "com.heytap.",
+    "com.oplus.",
+    "com.realme.",
+    "com.samsung.",
+    "com.sec.android.",
+    "com.oneplus.",
+    "cn.nubia.",
+    "com.redmagic.",
+    "com.nothing.",
+    "com.meizu.",
+    "com.smartisanos."
+  ],
+  "oemServiceExact": [
+    "com.huawei.hwid",
+    "com.huawei.hms",
+    "com.huawei.android.hwouc",
+    "com.hihonor.id",
+    "com.hihonor.android.hwbase",
+    "com.miui.system",
+    "com.xiaomi.xmsf",
+    "com.miui.systemAdSolution"
+  ],
+  "oemPreloadExact": [
+    "com.miui.video",
+    "com.miui.player",
+    "com.miui.music",
+    "com.xiaomi.market",
+    "com.xiaomi.mipicks",
+    "com.huawei.music",
+    "com.huawei.himovie",
+    "com.huawei.gamebox",
+    "com.huawei.appmarket",
+    "com.hihonor.browser",
+    "com.hihonor.cloudmusic",
+    "com.hihonor.youku.video",
+    "com.hihonor.gamecenter",
+    "com.hihonor.appmarket",
+    "com.vivo.browser",
+    "com.vivo.video",
+    "com.vivo.music",
+    "com.vivo.appstore",
+    "com.bbk.appstore",
+    "com.oppo.music",
+    "com.oppo.market",
+    "com.heytap.browser",
+    "com.heytap.market",
+    "com.coloros.browser",
+    "com.oplus.market",
+    "com.samsung.android.app.sbrowser",
+    "com.sec.android.app.samsungapps",
+    "com.oneplus.market",
+    "com.realme.market",
+    "com.meizu.mstore",
+    "cn.nubia.neostore"
+  ]
+}

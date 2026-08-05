@@ -1,10 +1,5 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.data.entity.BlockedApp;
-import com.skyinit.pomodorotimer.domain.blocking.AppTypeLabelResolver;
-import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyEngine;
-import com.skyinit.pomodorotimer.util.AppCategory;
-import com.skyinit.pomodorotimer.R;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -13,41 +8,69 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.Switch;
 import android.widget.TextView;
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-import java.util.List;
 
-public class BlockedAppAdapter extends RecyclerView.Adapter<BlockedAppAdapter.ViewHolder> {
-    private List<BlockedApp> apps;
-    private OnAppToggleListener listener;
-    private OnCategoryClickListener categoryClickListener;
-    private Context context;
-    private final BlockingPolicyEngine policyEngine;
-    private final AppTypeLabelResolver typeLabelResolver;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.entity.BlockedApp;
+import com.skyinit.pomodorotimer.domain.blocking.AppTypeLabelResolver;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyEngine;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingRole;
+import com.skyinit.pomodorotimer.util.AppCategory;
+
+import java.util.Objects;
+
+/**
+ * 屏蔽应用列表：ListAdapter + DiffUtil，避免全量刷新与开关竞态闪烁。
+ */
+public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter.ViewHolder> {
 
     public interface OnAppToggleListener {
-        void onAppToggle(BlockedApp app, boolean isBlocked);
-        void onWhitelistToggle(BlockedApp app, boolean isWhitelisted);
+        void onBlockToggle(BlockedApp app, boolean isBlocked);
     }
 
     public interface OnCategoryClickListener {
         void onCategoryClick(BlockedApp app);
     }
 
-    public BlockedAppAdapter(List<BlockedApp> apps,
-                             OnAppToggleListener listener,
+    private final OnAppToggleListener listener;
+    private final OnCategoryClickListener categoryClickListener;
+    private final BlockingPolicyEngine policyEngine;
+    private final AppTypeLabelResolver typeLabelResolver;
+    private Context context;
+
+    private static final DiffUtil.ItemCallback<BlockedApp> DIFF = new DiffUtil.ItemCallback<BlockedApp>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull BlockedApp oldItem, @NonNull BlockedApp newItem) {
+            return Objects.equals(oldItem.packageName, newItem.packageName);
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull BlockedApp oldItem, @NonNull BlockedApp newItem) {
+            return Objects.equals(oldItem.appName, newItem.appName)
+                    && Objects.equals(oldItem.category, newItem.category)
+                    && oldItem.categoryManual == newItem.categoryManual
+                    && oldItem.isEnabled == newItem.isEnabled
+                    && oldItem.isWhitelisted == newItem.isWhitelisted
+                    && Objects.equals(oldItem.provenance, newItem.provenance)
+                    && Objects.equals(oldItem.blockingRole, newItem.blockingRole);
+        }
+    };
+
+    public BlockedAppAdapter(OnAppToggleListener listener,
+                             OnCategoryClickListener categoryClickListener,
                              BlockingPolicyEngine policyEngine,
                              AppTypeLabelResolver typeLabelResolver) {
-        this.apps = apps;
+        super(DIFF);
         this.listener = listener;
+        this.categoryClickListener = categoryClickListener;
         this.policyEngine = policyEngine;
         this.typeLabelResolver = typeLabelResolver;
-    }
-
-    public void setCategoryClickListener(OnCategoryClickListener categoryClickListener) {
-        this.categoryClickListener = categoryClickListener;
     }
 
     @NonNull
@@ -60,7 +83,7 @@ public class BlockedAppAdapter extends RecyclerView.Adapter<BlockedAppAdapter.Vi
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        BlockedApp app = apps.get(position);
+        BlockedApp app = getItem(position);
 
         holder.appNameText.setText(app.appName);
         holder.appPackageText.setText(app.packageName);
@@ -70,55 +93,56 @@ public class BlockedAppAdapter extends RecyclerView.Adapter<BlockedAppAdapter.Vi
             categoryLabel = app.category + context.getString(R.string.blocking_label_manual_suffix);
         }
         holder.appCategoryText.setText(categoryLabel);
+        holder.appCategoryText.setBackgroundResource(AppCategory.getBackgroundRes(app.category));
 
-        String appType = typeLabelResolver.resolve(context, app.packageName);
+        String appType = typeLabelResolver.resolve(context, app.packageName, app.provenance);
         String normalType = context.getString(R.string.blocking_app_type_normal);
-        if (!normalType.equals(appType)) {
+        if (!normalType.equals(appType)
+                && !context.getString(R.string.app_type_system_critical).equals(appType)) {
             holder.appTypeText.setText(appType);
             holder.appTypeText.setVisibility(View.VISIBLE);
         } else {
             holder.appTypeText.setVisibility(View.GONE);
         }
 
+        boolean isCritical = BlockingRole.CRITICAL == BlockingRole.fromStorage(app.blockingRole)
+                || policyEngine.isCritical(app.packageName);
+
+        holder.lockedBadge.setVisibility(isCritical ? View.VISIBLE : View.GONE);
+
         setAppIcon(holder.appIcon, app.packageName);
 
         holder.blockSwitch.setOnCheckedChangeListener(null);
-        holder.whitelistSwitch.setOnCheckedChangeListener(null);
-
         holder.blockSwitch.setChecked(app.isEnabled);
-        holder.whitelistSwitch.setChecked(app.isWhitelisted);
+        holder.blockSwitch.setEnabled(!isCritical);
+        holder.blockSwitch.setAlpha(isCritical ? 0.45f : 1f);
 
-        boolean isSystemCritical = policyEngine.isSystemCriticalApp(app.packageName);
-        holder.blockSwitch.setEnabled(!isSystemCritical);
-        holder.blockSwitch.setAlpha(isSystemCritical ? 0.5f : 1.0f);
+        if (isCritical) {
+            holder.statusLabel.setText(R.string.blocking_status_locked);
+        } else if (app.isEnabled) {
+            holder.statusLabel.setText(R.string.blocking_status_blocked);
+        } else {
+            holder.statusLabel.setText(R.string.blocking_status_allowed);
+        }
 
         holder.blockSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isCritical) {
+                buttonView.setChecked(app.isEnabled);
+                if (listener != null) {
+                    listener.onBlockToggle(app, app.isEnabled);
+                }
+                return;
+            }
             if (listener != null) {
-                app.isEnabled = isChecked;
-                app.isWhitelisted = !isChecked;
-                listener.onAppToggle(app, isChecked);
+                listener.onBlockToggle(app, isChecked);
             }
         });
 
-        holder.whitelistSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (listener != null) {
-                app.isWhitelisted = isChecked;
-                app.isEnabled = !isChecked;
-                listener.onWhitelistToggle(app, isChecked);
-            }
-        });
-
-        holder.appCategoryText.setBackgroundResource(AppCategory.getBackgroundRes(app.category));
         holder.appCategoryText.setOnClickListener(v -> {
             if (categoryClickListener != null) {
                 categoryClickListener.onCategoryClick(app);
             }
         });
-    }
-
-    @Override
-    public int getItemCount() {
-        return apps.size();
     }
 
     private void setAppIcon(ImageView imageView, String packageName) {
@@ -132,24 +156,26 @@ public class BlockedAppAdapter extends RecyclerView.Adapter<BlockedAppAdapter.Vi
         }
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView appIcon;
-        TextView appNameText;
-        TextView appPackageText;
-        TextView appCategoryText;
-        TextView appTypeText;
-        Switch blockSwitch;
-        Switch whitelistSwitch;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final ImageView appIcon;
+        final TextView appNameText;
+        final TextView appPackageText;
+        final TextView appCategoryText;
+        final TextView appTypeText;
+        final TextView lockedBadge;
+        final SwitchCompat blockSwitch;
+        final TextView statusLabel;
 
-        public ViewHolder(@NonNull View itemView) {
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIcon = itemView.findViewById(R.id.app_icon);
             appNameText = itemView.findViewById(R.id.app_name);
             appPackageText = itemView.findViewById(R.id.app_package);
             appCategoryText = itemView.findViewById(R.id.app_category);
             appTypeText = itemView.findViewById(R.id.app_type);
+            lockedBadge = itemView.findViewById(R.id.locked_badge);
             blockSwitch = itemView.findViewById(R.id.block_switch);
-            whitelistSwitch = itemView.findViewById(R.id.whitelist_switch);
+            statusLabel = itemView.findViewById(R.id.block_status_label);
         }
     }
 }

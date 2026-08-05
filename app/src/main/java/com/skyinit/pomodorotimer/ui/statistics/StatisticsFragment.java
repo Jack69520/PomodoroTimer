@@ -1,31 +1,29 @@
 package com.skyinit.pomodorotimer.ui.statistics;
 
-import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.R;
-import com.skyinit.pomodorotimer.util.AppLog;
-import com.skyinit.pomodorotimer.util.CategoryDefaults;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+
 import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.charts.HorizontalBarChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
@@ -33,71 +31,102 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
+import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
+import com.skyinit.pomodorotimer.ui.statistics.chart.MonthlyFocusAreaChartView;
+import com.skyinit.pomodorotimer.ui.statistics.chart.StatisticsChartTheme;
+import com.skyinit.pomodorotimer.util.CategoryDefaults;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * 统计页 UI：只负责绑定 {@link StatisticsViewModel} 快照与图表渲染，不含数据查询。
+ */
 public class StatisticsFragment extends Fragment {
-    private TextView todaySessionsText;
-    private TextView todayDurationText;
-    private TextView weekSessionsText;
-    private TextView weekDurationText;
-    private TextView monthSessionsText;
-    private TextView monthDurationText;
-    private LineChart chart;
-    private TextView chartEmptyText;
-    private android.widget.ImageView chartEmptyImage;
-    private LineChart monthlyChart;
+
+    private TextView heroTodayDuration;
+    private TextView heroTodaySessions;
+    private TextView heroWeekDuration;
+    private TextView heroWeekSessions;
+    private TextView heroMonthDuration;
+    private TextView heroMonthSessions;
+    private TextView heroStreak;
+    private TextView heroCompare;
+    private TextView heroMilestone;
+    private TextView heroMotivation;
+    private TextView insightPeakHour;
+    private TextView insightTopCategory;
+    private TextView insightEmpty;
+    private MonthlyFocusAreaChartView monthlyAreaChart;
     private TextView monthlyChartEmptyText;
-    private com.github.mikephil.charting.charts.BarChart hourlyDistributionChart;
-    private TextView hourlyDistributionEmptyText;
+    private BarChart weekBarChart;
+    private TextView weekChartEmptyText;
     private PieChart categoryPieChart;
     private TextView categoryChartEmptyText;
-    private BarChart pauseReasonChart;
+    private BarChart hourlyDistributionChart;
+    private TextView hourlyDistributionEmptyText;
+    private HorizontalBarChart pauseReasonChart;
     private TextView pauseReasonChartEmptyText;
-    private List<CategoryStats> latestCategoryStats = new ArrayList<>();
-    @Nullable
-    private String pendingCategoryDrillDown;
+    private LinearLayout pauseSectionHeader;
+    private LinearLayout pauseSectionBody;
+    private TextView pauseSectionToggle;
+    private ProgressBar loadingView;
 
     private StatisticsViewModel viewModel;
+    private boolean pauseSectionExpanded;
+    private boolean categoryDrillDownDialogShowing;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_statistics, container, false);
-        
-        initViews(view);
-        initViewModel();
-        setupChart();
-        observeViewModel();
-        viewModel.refresh();
-        
-        return view;
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_statistics, container, false);
     }
 
-    private void initViews(View view) {
-        todaySessionsText = view.findViewById(R.id.today_sessions);
-        todayDurationText = view.findViewById(R.id.today_duration);
-        weekSessionsText = view.findViewById(R.id.week_sessions);
-        weekDurationText = view.findViewById(R.id.week_duration);
-        monthSessionsText = view.findViewById(R.id.month_sessions);
-        monthDurationText = view.findViewById(R.id.month_duration);
-        chart = view.findViewById(R.id.chart);
-        chartEmptyText = view.findViewById(R.id.chart_empty_text);
-        chartEmptyImage = view.findViewById(R.id.chart_empty_image);
-        monthlyChart = view.findViewById(R.id.monthly_chart);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        bindViews(view);
+        initViewModel();
+        setupStaticCharts();
+        setupPauseSectionToggle();
+        observeViewModel();
+    }
+
+    private void bindViews(@NonNull View view) {
+        heroTodayDuration = view.findViewById(R.id.hero_today_duration);
+        heroTodaySessions = view.findViewById(R.id.hero_today_sessions);
+        heroWeekDuration = view.findViewById(R.id.hero_week_duration);
+        heroWeekSessions = view.findViewById(R.id.hero_week_sessions);
+        heroMonthDuration = view.findViewById(R.id.hero_month_duration);
+        heroMonthSessions = view.findViewById(R.id.hero_month_sessions);
+        heroStreak = view.findViewById(R.id.hero_streak);
+        heroCompare = view.findViewById(R.id.hero_compare);
+        heroMilestone = view.findViewById(R.id.hero_milestone);
+        heroMotivation = view.findViewById(R.id.hero_motivation);
+        insightPeakHour = view.findViewById(R.id.insight_peak_hour);
+        insightTopCategory = view.findViewById(R.id.insight_top_category);
+        insightEmpty = view.findViewById(R.id.insight_empty);
+        monthlyAreaChart = view.findViewById(R.id.monthly_area_chart);
         monthlyChartEmptyText = view.findViewById(R.id.monthly_chart_empty_text);
-        hourlyDistributionChart = view.findViewById(R.id.hourly_distribution_chart);
-        hourlyDistributionEmptyText = view.findViewById(R.id.hourly_distribution_empty_text);
+        weekBarChart = view.findViewById(R.id.week_bar_chart);
+        weekChartEmptyText = view.findViewById(R.id.week_chart_empty_text);
         categoryPieChart = view.findViewById(R.id.category_pie_chart);
         categoryChartEmptyText = view.findViewById(R.id.category_chart_empty_text);
+        hourlyDistributionChart = view.findViewById(R.id.hourly_distribution_chart);
+        hourlyDistributionEmptyText = view.findViewById(R.id.hourly_distribution_empty_text);
         pauseReasonChart = view.findViewById(R.id.pause_reason_chart);
         pauseReasonChartEmptyText = view.findViewById(R.id.pause_reason_chart_empty_text);
+        pauseSectionHeader = view.findViewById(R.id.pause_section_header);
+        pauseSectionBody = view.findViewById(R.id.pause_section_body);
+        pauseSectionToggle = view.findViewById(R.id.pause_section_toggle);
+        loadingView = view.findViewById(R.id.statistics_loading);
     }
 
     private void initViewModel() {
@@ -106,524 +135,23 @@ public class StatisticsFragment extends Fragment {
                 .get(StatisticsViewModel.class);
     }
 
-    private void observeViewModel() {
-        viewModel.getTodayStats().observe(getViewLifecycleOwner(), stats -> {
-            if (stats != null && todaySessionsText != null) {
-                todaySessionsText.setText(getString(R.string.statistics_label_today_sessions, stats.count));
-                todayDurationText.setText(formatDuration(stats.totalDuration));
-            }
-        });
+    private void setupStaticCharts() {
+        StatisticsChartTheme.applyCartesianChrome(weekBarChart, requireContext());
+        weekBarChart.setTouchEnabled(true);
+        weekBarChart.setDragEnabled(false);
+        weekBarChart.getXAxis().setGranularity(1f);
+        weekBarChart.getXAxis().setLabelCount(7, false);
 
-        viewModel.getWeekStats().observe(getViewLifecycleOwner(), stats -> {
-            if (stats != null && weekSessionsText != null) {
-                weekSessionsText.setText(getString(R.string.statistics_label_week_sessions, stats.totalSessions));
-                weekDurationText.setText(formatDuration(stats.totalDuration));
-            }
-        });
-
-        viewModel.getMonthStats().observe(getViewLifecycleOwner(), stats -> {
-            if (stats != null && monthSessionsText != null) {
-                monthSessionsText.setText(getString(R.string.statistics_label_month_sessions, stats.totalSessions));
-                monthDurationText.setText(formatDuration(stats.totalDuration));
-            }
-        });
-
-        viewModel.getWeeklyChartData().observe(getViewLifecycleOwner(), this::updateChart);
-        viewModel.getMonthlyChartData().observe(getViewLifecycleOwner(), this::updateMonthlyChart);
-        viewModel.getHourlyChartData().observe(getViewLifecycleOwner(), this::updateHourlyDistributionChart);
-        viewModel.getCategoryStats().observe(getViewLifecycleOwner(), this::updateCategoryPieChart);
-        viewModel.getPauseReasonStats().observe(getViewLifecycleOwner(), this::updatePauseReasonChart);
-        viewModel.getCategoryDrillDownSessions().observe(getViewLifecycleOwner(), sessions -> {
-            if (pendingCategoryDrillDown == null || sessions == null || !isAdded()) {
-                return;
-            }
-            String category = pendingCategoryDrillDown;
-            pendingCategoryDrillDown = null;
-            showCategoryDrillDownDialog(category, sessions);
-        });
-    }
-
-    private void loadStatistics() {
-        viewModel.refresh();
-    }
-
-    private void setupChart() {
-        // 设置7天图表
-        chart.getDescription().setEnabled(false);
-        chart.setTouchEnabled(true);
-        chart.setDragEnabled(true);
-        chart.setScaleEnabled(true);
-        chart.setPinchZoom(true);
-        chart.setNoDataText(""); // 禁用默认的"No chart data available"消息
-        
-        XAxis xAxis = chart.getXAxis();
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setGranularity(1f);
-        xAxis.setValueFormatter(new DateValueFormatter());
-        
-        // 设置Y轴（专注时间轴）
-        YAxis leftAxis = chart.getAxisLeft();
-        leftAxis.setValueFormatter(new DurationValueFormatter());
-        leftAxis.setAxisMinimum(0f); // 设置最小值为0，专注时间不能为负数
-        leftAxis.setGranularity(5f); // 设置刻度间隔为5分钟
-        leftAxis.setLabelCount(6, true); // 设置标签数量
-        
-        chart.getAxisRight().setEnabled(false);
-        
-        // 设置本月图表
-        monthlyChart.getDescription().setEnabled(false);
-        monthlyChart.setTouchEnabled(true);
-        monthlyChart.setDragEnabled(true);
-        monthlyChart.setScaleEnabled(true);
-        monthlyChart.setPinchZoom(true);
-        monthlyChart.setNoDataText(""); // 禁用默认的"No chart data available"消息
-        
-        XAxis monthlyXAxis = monthlyChart.getXAxis();
-        monthlyXAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        monthlyXAxis.setGranularity(5f); // 设置间隔为5天，避免标签重叠
-        monthlyXAxis.setLabelCount(7, true); // 设置标签数量，显示约7个标签
-        monthlyXAxis.setValueFormatter(new MonthlyDateValueFormatter());
-        monthlyXAxis.setAxisMinimum(0f);
-        monthlyXAxis.setAxisMaximum(30f); // 设置最大值为30（0-30对应1-31日）
-        
-        // 设置Y轴（专注时间轴）
-        YAxis monthlyLeftAxis = monthlyChart.getAxisLeft();
-        monthlyLeftAxis.setValueFormatter(new DurationValueFormatter());
-        monthlyLeftAxis.setAxisMinimum(0f); // 设置最小值为0，专注时间不能为负数
-        monthlyLeftAxis.setGranularity(10f); // 设置刻度间隔为10分钟
-        monthlyLeftAxis.setLabelCount(6, true); // 设置标签数量
-        
-        monthlyChart.getAxisRight().setEnabled(false);
-        
-        // 设置时段分布图表
-        hourlyDistributionChart.getDescription().setEnabled(false);
-        hourlyDistributionChart.setTouchEnabled(true);
-        hourlyDistributionChart.setDragEnabled(true);
-        hourlyDistributionChart.setScaleEnabled(true);
-        hourlyDistributionChart.setPinchZoom(true);
-        hourlyDistributionChart.setNoDataText(""); // 禁用默认的"No chart data available"消息
-        
-        XAxis hourlyXAxis = hourlyDistributionChart.getXAxis();
-        hourlyXAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        hourlyXAxis.setGranularity(1f);
-        hourlyXAxis.setValueFormatter(new HourValueFormatter());
-        hourlyXAxis.setAxisMinimum(0f);
-        hourlyXAxis.setAxisMaximum(24f);
-        hourlyXAxis.setLabelCount(9, true); // 显示0,3,6,9,12,15,18,21,24点
-        
-        YAxis hourlyLeftAxis = hourlyDistributionChart.getAxisLeft();
-        hourlyLeftAxis.setValueFormatter(new DurationValueFormatter());
-        hourlyLeftAxis.setAxisMinimum(0f);
-        hourlyLeftAxis.setGranularity(5f); // 设置刻度间隔为5分钟
-        hourlyLeftAxis.setLabelCount(6, true);
-        
-        hourlyDistributionChart.getAxisRight().setEnabled(false);
-    }
-
-    private void updateChart(List<DailyStats> dailyStatsList) {
-        List<Entry> entries = new ArrayList<>();
-        
-        // 调试日志
-        AppLog.d("StatisticsFragment", "updateChart called with " + dailyStatsList.size() + " daily stats");
-        for (DailyStats stats : dailyStatsList) {
-            AppLog.d("StatisticsFragment", "DailyStats: date=" + stats.date + ", count=" + stats.count + ", duration=" + stats.totalDuration);
-        }
-        
-        // 准备最近7天的数据
-        Calendar calendar = Calendar.getInstance();
-        float maxDuration = 0f; // 用于动态调整Y轴最大值
-        boolean hasData = false; // 检查是否有任何数据
-        
-        for (int i = 6; i >= 0; i--) {
-            Calendar dayCalendar = Calendar.getInstance();
-            dayCalendar.add(Calendar.DAY_OF_MONTH, -i);
-            String dateStr = new SimpleDateFormat("MM-dd", Locale.getDefault()).format(dayCalendar.getTime());
-            String dbDateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(dayCalendar.getTime());
-            
-            AppLog.d("StatisticsFragment", "Processing day " + (6-i) + ": dateStr=" + dateStr + ", dbDateStr=" + dbDateStr);
-            
-            // 查找对应日期的数据
-            long duration = 0;
-            for (DailyStats stats : dailyStatsList) {
-                // 数据库返回的是 yyyy-MM-dd 格式，需要匹配
-                if (stats.date.equals(dbDateStr)) {
-                    duration = stats.totalDuration;
-                    AppLog.d("StatisticsFragment", "Found match for " + dbDateStr + ": duration=" + duration);
-                    break;
-                }
-            }
-            
-            float durationMinutes = duration / (1000 * 60); // 转换为分钟
-            AppLog.d("StatisticsFragment", "Final duration for " + dateStr + ": " + durationMinutes + " minutes");
-            entries.add(new Entry(6 - i, durationMinutes));
-            
-            // 更新最大时长，用于Y轴范围调整
-            if (durationMinutes > maxDuration) {
-                maxDuration = durationMinutes;
-            }
-            
-            // 检查是否有任何数据
-            if (durationMinutes > 0) {
-                hasData = true;
-            }
-        }
-        
-        // 如果没有数据，显示空状态提示
-        if (!hasData) {
-            chart.setVisibility(View.GONE);
-            chartEmptyText.setVisibility(View.VISIBLE);
-            return;
-        }
-        
-        // 有数据时显示图表
-        chart.setVisibility(View.VISIBLE);
-        chartEmptyText.setVisibility(View.GONE);
-        if (chartEmptyImage != null) chartEmptyImage.setVisibility(View.GONE);
-
-        LineDataSet dataSet = new LineDataSet(entries, getString(R.string.statistics_chart_focus_minutes));
-        dataSet.setColor(Color.parseColor("#4CAF50"));
-        dataSet.setLineWidth(3f);
-        dataSet.setCircleColor(Color.parseColor("#4CAF50"));
-        dataSet.setCircleRadius(6f);
-        dataSet.setValueTextSize(12f);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setDrawValues(true); // 显示数值
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.format("%.0f", value);
-            }
-        });
-
-        LineData lineData = new LineData(dataSet);
-        chart.setData(lineData);
-        
-        // 动态设置Y轴最大值，确保图表显示合理
-        YAxis leftAxis = chart.getAxisLeft();
-        if (maxDuration > 0) {
-            leftAxis.setAxisMaximum(maxDuration * 1.2f); // 最大值比实际最大值多20%
-        } else {
-            leftAxis.setAxisMaximum(60f); // 如果没有数据，默认最大值为60分钟
-        }
-        
-        chart.invalidate();
-    }
-
-    private String formatDuration(long durationMs) {
-        long minutes = durationMs / (1000 * 60);
-        long hours = minutes / 60;
-        minutes = minutes % 60;
-
-        if (hours > 0) {
-            return getString(R.string.format_duration_hours_minutes, hours, minutes);
-        }
-        return getString(R.string.format_duration_minutes, minutes);
-    }
-
-    private class DateValueFormatter extends ValueFormatter {
-        @Override
-        public String getFormattedValue(float value) {
-            Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.DAY_OF_MONTH, (int) value - 6);
-            return new SimpleDateFormat("MM/dd", Locale.getDefault()).format(calendar.getTime());
-        }
-    }
-
-    private class DurationValueFormatter extends ValueFormatter {
-        @Override
-        public String getFormattedValue(float value) {
-            return getString(R.string.format_duration_minutes_float, value);
-        }
-    }
-
-    private class MonthlyDateValueFormatter extends ValueFormatter {
-        @Override
-        public String getFormattedValue(float value) {
-            int day = (int) value + 1;
-            if (day % 5 == 0 || day == 1 || day == 31) {
-                return getString(R.string.statistics_label_day, day);
-            }
-            return "";
-        }
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        loadStatistics();
-    }
-
-    private void updateMonthlyChart(List<DailyStats> dailyStatsList) {
-        List<Entry> entries = new ArrayList<>();
-        
-        // 调试日志
-        AppLog.d("StatisticsFragment", "updateMonthlyChart called with " + dailyStatsList.size() + " daily stats");
-        for (DailyStats stats : dailyStatsList) {
-            AppLog.d("StatisticsFragment", "MonthlyDailyStats: date=" + stats.date + ", count=" + stats.count + ", duration=" + stats.totalDuration);
-        }
-        
-        // 准备本月的数据
-        Calendar calendar = Calendar.getInstance();
-        int currentDay = calendar.get(Calendar.DAY_OF_MONTH);
-        int daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        float maxDuration = 0f; // 用于动态调整Y轴最大值
-        boolean hasData = false; // 检查是否有任何数据
-        
-        for (int day = 1; day <= daysInMonth; day++) {
-            Calendar dayCalendar = Calendar.getInstance();
-            dayCalendar.set(Calendar.DAY_OF_MONTH, day);
-            String dbDateStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(dayCalendar.getTime());
-            
-            AppLog.d("StatisticsFragment", "Processing monthly day " + day + ": dbDateStr=" + dbDateStr);
-            
-            // 查找对应日期的数据
-            long duration = 0;
-            for (DailyStats stats : dailyStatsList) {
-                // 数据库返回的是 yyyy-MM-dd 格式，需要匹配
-                if (stats.date.equals(dbDateStr)) {
-                    duration = stats.totalDuration;
-                    AppLog.d("StatisticsFragment", "Found monthly match for " + dbDateStr + ": duration=" + duration);
-                    break;
-                }
-            }
-            
-            float durationMinutes = duration / (1000 * 60); // 转换为分钟
-            AppLog.d("StatisticsFragment", "Final monthly duration for day " + day + ": " + durationMinutes + " minutes");
-            entries.add(new Entry(day - 1, durationMinutes)); // 使用day-1作为X轴索引，因为Entry的索引从0开始
-            
-            // 更新最大时长，用于Y轴范围调整
-            if (durationMinutes > maxDuration) {
-                maxDuration = durationMinutes;
-            }
-            
-            // 检查是否有任何数据
-            if (durationMinutes > 0) {
-                hasData = true;
-            }
-        }
-        
-        // 如果没有数据，显示空状态提示
-        if (!hasData) {
-            monthlyChart.setVisibility(View.GONE);
-            monthlyChartEmptyText.setVisibility(View.VISIBLE);
-            return;
-        }
-        
-        // 有数据时显示图表
-        monthlyChart.setVisibility(View.VISIBLE);
-        monthlyChartEmptyText.setVisibility(View.GONE);
-
-        LineDataSet dataSet = new LineDataSet(entries, getString(R.string.statistics_chart_focus_minutes));
-        dataSet.setColor(Color.parseColor("#4CAF50"));
-        dataSet.setLineWidth(3f);
-        dataSet.setCircleColor(Color.parseColor("#4CAF50"));
-        dataSet.setCircleRadius(4f);
-        dataSet.setValueTextSize(10f);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setDrawValues(true); // 显示数值
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.format("%.0f", value);
-            }
-        });
-
-        LineData lineData = new LineData(dataSet);
-        monthlyChart.setData(lineData);
-        
-        // 设置Y轴最大值
-        if (maxDuration > 0) {
-            monthlyChart.getAxisLeft().setAxisMaximum(maxDuration * 1.1f); // 留10%的余量
-        }
-        
-        monthlyChart.invalidate(); // 刷新图表
-    }
-
-    private void updateHourlyDistributionChart(List<HourlyStats> hourlyStatsList) {
-        List<com.github.mikephil.charting.data.BarEntry> entries = new ArrayList<>();
-        
-        // 调试日志
-        AppLog.d("StatisticsFragment", "updateHourlyDistributionChart called with " + hourlyStatsList.size() + " hourly stats");
-        for (HourlyStats stats : hourlyStatsList) {
-            AppLog.d("StatisticsFragment", "HourlyStats: hour=" + stats.hour + ", duration=" + stats.totalDuration);
-        }
-        
-        // 准备24小时的数据（0-23点）
-        float maxDuration = 0f;
-        boolean hasData = false;
-        
-        for (int hour = 0; hour < 24; hour++) {
-            // 查找对应小时的数据
-            long duration = 0;
-            for (HourlyStats stats : hourlyStatsList) {
-                if (stats.hour == hour) {
-                    duration = stats.totalDuration;
-                    AppLog.d("StatisticsFragment", "Found match for hour " + hour + ": duration=" + duration);
-                    break;
-                }
-            }
-            
-            float durationMinutes = duration / (1000 * 60); // 转换为分钟
-            AppLog.d("StatisticsFragment", "Final duration for hour " + hour + ": " + durationMinutes + " minutes");
-            entries.add(new com.github.mikephil.charting.data.BarEntry(hour, durationMinutes));
-            
-            // 更新最大时长
-            if (durationMinutes > maxDuration) {
-                maxDuration = durationMinutes;
-            }
-            
-            // 检查是否有任何数据
-            if (durationMinutes > 0) {
-                hasData = true;
-            }
-        }
-        
-        // 如果没有数据，显示空状态提示
-        if (!hasData) {
-            hourlyDistributionChart.setVisibility(View.GONE);
-            hourlyDistributionEmptyText.setText(R.string.statistics_empty_hourly);
-            hourlyDistributionEmptyText.setOnClickListener(null); // 确保没有点击监听器
-            hourlyDistributionEmptyText.setVisibility(View.VISIBLE);
-            return;
-        }
-        
-        // 有数据时显示图表
-        hourlyDistributionChart.setVisibility(View.VISIBLE);
-        hourlyDistributionEmptyText.setVisibility(View.GONE);
-
-        com.github.mikephil.charting.data.BarDataSet dataSet = new com.github.mikephil.charting.data.BarDataSet(entries, getString(R.string.statistics_chart_focus_minutes));
-        dataSet.setColor(Color.parseColor("#FF9800")); // 橙色
-        dataSet.setValueTextSize(10f);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setDrawValues(true);
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.format("%.0f", value);
-            }
-        });
-
-        com.github.mikephil.charting.data.BarData barData = new com.github.mikephil.charting.data.BarData(dataSet);
-        hourlyDistributionChart.setData(barData);
-        
-        // 设置Y轴最大值
-        if (maxDuration > 0) {
-            hourlyDistributionChart.getAxisLeft().setAxisMaximum(maxDuration * 1.2f); // 留20%的余量
-        }
-        
-        hourlyDistributionChart.invalidate(); // 刷新图表
-    }
-
-    private void updatePauseReasonChart(List<PauseReasonStats> statsList) {
-        if (pauseReasonChart == null || pauseReasonChartEmptyText == null) {
-            return;
-        }
-        if (statsList == null || statsList.isEmpty()) {
-            pauseReasonChart.setVisibility(View.GONE);
-            pauseReasonChartEmptyText.setVisibility(View.VISIBLE);
-            return;
-        }
-
-        pauseReasonChart.setVisibility(View.VISIBLE);
-        pauseReasonChartEmptyText.setVisibility(View.GONE);
-
-        pauseReasonChart.getDescription().setEnabled(false);
-        pauseReasonChart.setFitBars(true);
-
-        List<com.github.mikephil.charting.data.BarEntry> entries = new ArrayList<>();
-        final List<String> labels = new ArrayList<>();
-        float maxCount = 0f;
-        for (int i = 0; i < statsList.size(); i++) {
-            PauseReasonStats stats = statsList.get(i);
-            float count = stats.count;
-            entries.add(new com.github.mikephil.charting.data.BarEntry(i, count));
-            labels.add(stats.pauseReason != null ? stats.pauseReason : getString(R.string.session_detail_none));
-            if (count > maxCount) {
-                maxCount = count;
-            }
-        }
-
-        BarDataSet dataSet = new BarDataSet(entries, getString(R.string.statistics_pause_reason_chart_label));
-        dataSet.setColor(Color.parseColor("#673AB7"));
-        dataSet.setValueTextSize(11f);
-        dataSet.setDrawValues(true);
-
-        pauseReasonChart.setData(new BarData(dataSet));
-        pauseReasonChart.getXAxis().setGranularity(1f);
-        pauseReasonChart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-        pauseReasonChart.getXAxis().setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                int index = (int) value;
-                if (index >= 0 && index < labels.size()) {
-                    String label = labels.get(index);
-                    return label.length() > 6 ? label.substring(0, 6) + "…" : label;
-                }
-                return "";
-            }
-        });
-        if (maxCount > 0f) {
-            pauseReasonChart.getAxisLeft().setAxisMaximum(maxCount * 1.2f);
-        }
-        pauseReasonChart.invalidate();
-    }
-
-    private void updateCategoryPieChart(List<CategoryStats> categoryStatsList) {
-        if (categoryPieChart == null || categoryChartEmptyText == null) {
-            return;
-        }
-
-        latestCategoryStats = categoryStatsList != null ? categoryStatsList : new ArrayList<>();
-        if (latestCategoryStats.isEmpty()) {
-            categoryPieChart.setVisibility(View.GONE);
-            categoryChartEmptyText.setVisibility(View.VISIBLE);
-            return;
-        }
-
-        categoryPieChart.setVisibility(View.VISIBLE);
-        categoryChartEmptyText.setVisibility(View.GONE);
-
-        List<PieEntry> entries = new ArrayList<>();
-        for (CategoryStats stats : latestCategoryStats) {
-            String label = stats.category != null && !stats.category.isEmpty()
-                    ? stats.category : CategoryDefaults.getDefault();
-            entries.add(new PieEntry(stats.totalDuration / (1000f * 60f), label));
-        }
-
-        int[] colors = {
-                Color.parseColor("#4CAF50"),
-                Color.parseColor("#2196F3"),
-                Color.parseColor("#FF9800"),
-                Color.parseColor("#9C27B0"),
-                Color.parseColor("#F44336"),
-                Color.parseColor("#009688"),
-                Color.parseColor("#795548")
-        };
-
-        PieDataSet dataSet = new PieDataSet(entries, "");
-        dataSet.setColors(colors);
-        dataSet.setValueTextSize(12f);
-        dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return getString(R.string.format_duration_minutes_float, value);
-            }
-        });
-
-        PieData pieData = new PieData(dataSet);
-        categoryPieChart.setData(pieData);
-        categoryPieChart.getDescription().setEnabled(false);
-        categoryPieChart.setDrawEntryLabels(true);
-        categoryPieChart.setEntryLabelColor(Color.BLACK);
-        categoryPieChart.setEntryLabelTextSize(11f);
-        categoryPieChart.setUsePercentValues(false);
-        categoryPieChart.setHighlightPerTapEnabled(true);
+        StatisticsChartTheme.applyPieChrome(categoryPieChart, requireContext());
         categoryPieChart.setOnChartValueSelectedListener(new OnChartValueSelectedListener() {
             @Override
             public void onValueSelected(com.github.mikephil.charting.data.Entry e, Highlight h) {
-                if (e instanceof PieEntry) {
-                    showCategoryDrillDown(((PieEntry) e).getLabel());
+                if (categoryDrillDownDialogShowing || !(e instanceof PieEntry)) {
+                    return;
+                }
+                String label = ((PieEntry) e).getLabel();
+                if (label != null && !label.isEmpty()) {
+                    viewModel.loadCategoryDrillDown(label);
                 }
             }
 
@@ -631,21 +159,333 @@ public class StatisticsFragment extends Fragment {
             public void onNothingSelected() {
             }
         });
+
+        StatisticsChartTheme.applyCartesianChrome(hourlyDistributionChart, requireContext());
+        hourlyDistributionChart.setTouchEnabled(true);
+        hourlyDistributionChart.setDragEnabled(false);
+        XAxis hourlyX = hourlyDistributionChart.getXAxis();
+        hourlyX.setGranularity(1f);
+        hourlyX.setAxisMinimum(-0.5f);
+        hourlyX.setAxisMaximum(23.5f);
+        hourlyX.setLabelCount(9, true);
+        hourlyX.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int hour = Math.round(value);
+                if (hour == 0 || hour == 3 || hour == 6 || hour == 9 || hour == 12
+                        || hour == 15 || hour == 18 || hour == 21) {
+                    return getString(R.string.statistics_label_hour, hour);
+                }
+                return "";
+            }
+        });
+
+        StatisticsChartTheme.applyCartesianChrome(pauseReasonChart, requireContext());
+        pauseReasonChart.setFitBars(true);
+        pauseReasonChart.setTouchEnabled(true);
+        pauseReasonChart.setDragEnabled(false);
+    }
+
+    private void setupPauseSectionToggle() {
+        pauseSectionHeader.setOnClickListener(v -> {
+            pauseSectionExpanded = !pauseSectionExpanded;
+            pauseSectionBody.setVisibility(pauseSectionExpanded ? View.VISIBLE : View.GONE);
+            pauseSectionToggle.setText(pauseSectionExpanded
+                    ? R.string.statistics_pause_section_collapse
+                    : R.string.statistics_pause_section_expand);
+            if (pauseSectionExpanded && pauseReasonChart.getData() != null) {
+                pauseReasonChart.animateY(400);
+            }
+        });
+    }
+
+    private void observeViewModel() {
+        viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
+            if (loadingView != null) {
+                loadingView.setVisibility(Boolean.TRUE.equals(loading) ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        viewModel.getDashboard().observe(getViewLifecycleOwner(), this::bindDashboard);
+
+        viewModel.getCategoryDrillDown().observe(getViewLifecycleOwner(), event -> {
+            if (event == null || !isAdded() || categoryDrillDownDialogShowing) {
+                return;
+            }
+            showCategoryDrillDownDialog(event.category, event.sessions);
+            viewModel.clearCategoryDrillDown();
+        });
+    }
+
+    private void bindDashboard(@Nullable StatisticsDashboard dashboard) {
+        if (dashboard == null || !isAdded()) {
+            return;
+        }
+        bindHero(dashboard);
+        bindInsights(dashboard);
+        bindMonthlyArea(dashboard.monthlyDays);
+        bindWeekBars(dashboard.weeklyDays);
+        bindCategoryPie(dashboard.categoryStats);
+        bindHourlyBars(dashboard.hourlyStats);
+        bindPauseBars(dashboard.pauseReasonStats);
+    }
+
+    private void bindHero(@NonNull StatisticsDashboard dashboard) {
+        heroTodayDuration.setText(formatDuration(dashboard.today.totalDuration));
+        heroTodaySessions.setText(getString(R.string.statistics_hero_sessions_format, dashboard.today.count));
+        heroWeekDuration.setText(formatDuration(dashboard.week.totalDuration));
+        heroWeekSessions.setText(getString(R.string.statistics_hero_sessions_format, dashboard.week.totalSessions));
+        heroMonthDuration.setText(formatDuration(dashboard.month.totalDuration));
+        heroMonthSessions.setText(getString(
+                R.string.statistics_active_days_month, dashboard.activeDaysThisMonth)
+                + " · "
+                + getString(R.string.statistics_hero_sessions_format, dashboard.month.totalSessions));
+        heroStreak.setText(StatisticsCopywriter.streakLabel(requireContext(), dashboard.currentStreak));
+        heroCompare.setText(StatisticsCopywriter.weekCompare(
+                requireContext(), dashboard.week, dashboard.lastWeek));
+        heroMilestone.setText(StatisticsCopywriter.milestone(
+                requireContext(), dashboard.totalCompletedCount));
+        heroMotivation.setText(StatisticsCopywriter.motivation(requireContext(), dashboard));
+    }
+
+    private void bindInsights(@NonNull StatisticsDashboard dashboard) {
+        String peak = StatisticsCopywriter.peakHourText(requireContext(), dashboard.peakHourInsight);
+        String top = StatisticsCopywriter.topCategoryText(requireContext(), dashboard.topCategoryInsight);
+        boolean hasInsight = peak != null || top != null;
+        insightEmpty.setVisibility(hasInsight ? View.GONE : View.VISIBLE);
+        if (peak != null) {
+            insightPeakHour.setVisibility(View.VISIBLE);
+            insightPeakHour.setText(peak);
+        } else {
+            insightPeakHour.setVisibility(View.GONE);
+        }
+        if (top != null) {
+            insightTopCategory.setVisibility(View.VISIBLE);
+            insightTopCategory.setText(top);
+        } else {
+            insightTopCategory.setVisibility(View.GONE);
+        }
+    }
+
+    private void bindMonthlyArea(@NonNull List<DailyStats> monthlyDays) {
+        float[] minutes = new float[monthlyDays.size()];
+        boolean hasData = false;
+        for (int i = 0; i < monthlyDays.size(); i++) {
+            float value = monthlyDays.get(i).totalDuration / (1000f * 60f);
+            minutes[i] = value;
+            if (value > 0f) {
+                hasData = true;
+            }
+        }
+        if (!hasData) {
+            monthlyAreaChart.setVisibility(View.GONE);
+            monthlyChartEmptyText.setVisibility(View.VISIBLE);
+            monthlyAreaChart.setMonthData(new float[0], false);
+            return;
+        }
+        monthlyAreaChart.setVisibility(View.VISIBLE);
+        monthlyChartEmptyText.setVisibility(View.GONE);
+        monthlyAreaChart.setMonthData(minutes, true);
+    }
+
+    private void bindWeekBars(@NonNull List<DailyStats> weeklyDays) {
+        List<BarEntry> entries = new ArrayList<>();
+        final List<String> labels = new ArrayList<>();
+        SimpleDateFormat labelFormat = new SimpleDateFormat("MM/dd", Locale.getDefault());
+        SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        float max = 0f;
+        boolean hasData = false;
+        for (int i = 0; i < weeklyDays.size(); i++) {
+            DailyStats day = weeklyDays.get(i);
+            float minutes = day.totalDuration / (1000f * 60f);
+            entries.add(new BarEntry(i, minutes));
+            String label = day.date;
+            try {
+                Date parsed = parseFormat.parse(day.date);
+                if (parsed != null) {
+                    label = labelFormat.format(parsed);
+                }
+            } catch (Exception ignored) {
+            }
+            labels.add(label);
+            max = Math.max(max, minutes);
+            if (minutes > 0f) {
+                hasData = true;
+            }
+        }
+        if (!hasData) {
+            weekBarChart.setVisibility(View.GONE);
+            weekChartEmptyText.setVisibility(View.VISIBLE);
+            return;
+        }
+        weekBarChart.setVisibility(View.VISIBLE);
+        weekChartEmptyText.setVisibility(View.GONE);
+
+        BarDataSet dataSet = new BarDataSet(entries, "");
+        dataSet.setColor(StatisticsChartTheme.weekBar(requireContext()));
+        dataSet.setDrawValues(false);
+        dataSet.setHighLightAlpha(80);
+
+        BarData data = new BarData(dataSet);
+        data.setBarWidth(0.55f);
+        weekBarChart.setData(data);
+        weekBarChart.getXAxis().setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int index = Math.round(value);
+                if (index >= 0 && index < labels.size()) {
+                    return labels.get(index);
+                }
+                return "";
+            }
+        });
+        YAxis left = weekBarChart.getAxisLeft();
+        left.setAxisMaximum(max > 0f ? max * 1.2f : 60f);
+        left.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return getString(R.string.format_duration_minutes_float, value);
+            }
+        });
+        weekBarChart.invalidate();
+    }
+
+    private void bindCategoryPie(@NonNull List<CategoryStats> categoryStats) {
+        if (categoryStats.isEmpty()) {
+            categoryPieChart.setVisibility(View.GONE);
+            categoryChartEmptyText.setVisibility(View.VISIBLE);
+            return;
+        }
+        categoryPieChart.setVisibility(View.VISIBLE);
+        categoryChartEmptyText.setVisibility(View.GONE);
+
+        List<PieEntry> entries = new ArrayList<>();
+        List<Integer> colors = new ArrayList<>();
+        for (CategoryStats stats : categoryStats) {
+            if (stats.totalDuration <= 0L) {
+                continue;
+            }
+            String label = stats.category != null && !stats.category.isEmpty()
+                    ? stats.category : CategoryDefaults.getDefault();
+            entries.add(new PieEntry(stats.totalDuration / (1000f * 60f), label));
+            colors.add(StatisticsChartTheme.categorySlice(requireContext(), label));
+        }
+        if (entries.isEmpty()) {
+            categoryPieChart.setVisibility(View.GONE);
+            categoryChartEmptyText.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        PieDataSet dataSet = new PieDataSet(entries, "");
+        dataSet.setColors(colors);
+        dataSet.setDrawValues(false);
+        dataSet.setSliceSpace(2f);
+        dataSet.setSelectionShift(6f);
+
+        categoryPieChart.setData(new PieData(dataSet));
+        StatisticsChartTheme.applyPieChrome(categoryPieChart, requireContext());
         categoryPieChart.invalidate();
     }
 
-    private void showCategoryDrillDown(String category) {
-        pendingCategoryDrillDown = category;
-        viewModel.loadCategoryDrillDown(category);
+    private void bindHourlyBars(@NonNull List<HourlyStats> hourlyStats) {
+        float[] minutesByHour = new float[24];
+        float max = 0f;
+        boolean hasData = false;
+        for (HourlyStats stats : hourlyStats) {
+            if (stats == null || stats.hour < 0 || stats.hour > 23) {
+                continue;
+            }
+            float minutes = stats.totalDuration / (1000f * 60f);
+            minutesByHour[stats.hour] = minutes;
+            max = Math.max(max, minutes);
+            if (minutes > 0f) {
+                hasData = true;
+            }
+        }
+        if (!hasData) {
+            hourlyDistributionChart.setVisibility(View.GONE);
+            hourlyDistributionEmptyText.setVisibility(View.VISIBLE);
+            return;
+        }
+        hourlyDistributionChart.setVisibility(View.VISIBLE);
+        hourlyDistributionEmptyText.setVisibility(View.GONE);
+
+        List<BarEntry> entries = new ArrayList<>(24);
+        for (int hour = 0; hour < 24; hour++) {
+            entries.add(new BarEntry(hour, minutesByHour[hour]));
+        }
+        BarDataSet dataSet = new BarDataSet(entries, "");
+        dataSet.setColor(StatisticsChartTheme.hourlyBar(requireContext()));
+        dataSet.setDrawValues(false);
+        BarData data = new BarData(dataSet);
+        data.setBarWidth(0.7f);
+        hourlyDistributionChart.setData(data);
+        hourlyDistributionChart.getAxisLeft().setAxisMaximum(max > 0f ? max * 1.2f : 60f);
+        hourlyDistributionChart.getAxisLeft().setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return getString(R.string.format_duration_minutes_float, value);
+            }
+        });
+        hourlyDistributionChart.invalidate();
     }
 
-    private void showCategoryDrillDownDialog(String category, List<PomodoroSession> sessions) {
+    private void bindPauseBars(@NonNull List<PauseReasonStats> statsList) {
+        if (statsList.isEmpty()) {
+            pauseReasonChart.setVisibility(View.GONE);
+            pauseReasonChartEmptyText.setVisibility(View.VISIBLE);
+            return;
+        }
+        pauseReasonChart.setVisibility(View.VISIBLE);
+        pauseReasonChartEmptyText.setVisibility(View.GONE);
+
+        List<BarEntry> entries = new ArrayList<>();
+        final List<String> labels = new ArrayList<>();
+        float max = 0f;
+        // HorizontalBarChart 自下而上绘制，反转顺序让最高的在顶部。
+        for (int i = statsList.size() - 1; i >= 0; i--) {
+            PauseReasonStats stats = statsList.get(i);
+            float count = stats.count;
+            entries.add(new BarEntry(statsList.size() - 1 - i, count));
+            labels.add(stats.pauseReason != null
+                    ? stats.pauseReason
+                    : getString(R.string.session_detail_none));
+            max = Math.max(max, count);
+        }
+
+        BarDataSet dataSet = new BarDataSet(entries, "");
+        dataSet.setColor(StatisticsChartTheme.pauseBar(requireContext()));
+        dataSet.setDrawValues(false);
+        pauseReasonChart.setData(new BarData(dataSet));
+        pauseReasonChart.getXAxis().setGranularity(1f);
+        pauseReasonChart.getXAxis().setLabelCount(labels.size());
+        pauseReasonChart.getXAxis().setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int index = Math.round(value);
+                if (index >= 0 && index < labels.size()) {
+                    return labels.get(index);
+                }
+                return "";
+            }
+        });
+        pauseReasonChart.getAxisLeft().setAxisMaximum(max > 0f ? max * 1.2f : 5f);
+        pauseReasonChart.getAxisLeft().setGranularity(1f);
+        pauseReasonChart.invalidate();
+    }
+
+    private void showCategoryDrillDownDialog(@NonNull String category,
+                                             @NonNull List<PomodoroSession> sessions) {
+        if (!isAdded() || categoryDrillDownDialogShowing) {
+            return;
+        }
+        categoryDrillDownDialogShowing = true;
         long totalDuration = 0L;
         int count = 0;
         StringBuilder message = new StringBuilder();
         SimpleDateFormat timeFormat = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault());
         for (PomodoroSession session : sessions) {
-            if (!session.completed) {
+            if (session == null || !session.completed) {
                 continue;
             }
             count++;
@@ -660,76 +500,71 @@ public class StatisticsFragment extends Fragment {
         }
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.statistics_category_drilldown_title, category))
-                .setMessage(getString(R.string.statistics_category_drilldown_summary, count, formatDuration(totalDuration))
-                        + "\n\n" + message)
+                .setMessage(getString(R.string.statistics_category_drilldown_summary,
+                        count, formatDuration(totalDuration)) + "\n\n" + message)
                 .setPositiveButton(R.string.confirm, null)
                 .create();
-        dialog.setOnDismissListener(d -> clearCategoryPieChartSelection());
+        dialog.setOnDismissListener(d -> {
+            categoryDrillDownDialogShowing = false;
+            clearCategoryPieSelection();
+        });
         dialog.show();
     }
 
-    private void clearCategoryPieChartSelection() {
-        if (categoryPieChart == null) {
-            return;
+    private void clearCategoryPieSelection() {
+        if (categoryPieChart != null) {
+            categoryPieChart.highlightValues(null);
+            categoryPieChart.invalidate();
         }
-        categoryPieChart.highlightValues(null);
-        categoryPieChart.invalidate();
     }
-    
+
+    private String formatDuration(long durationMs) {
+        long minutes = Math.max(0L, durationMs) / (1000 * 60);
+        long hours = minutes / 60;
+        minutes = minutes % 60;
+        if (hours > 0) {
+            return getString(R.string.format_duration_hours_minutes, hours, minutes);
+        }
+        return getString(R.string.format_duration_minutes, minutes);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (viewModel != null) {
+            viewModel.refresh();
+        }
+    }
+
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        // 当配置变化时（如深色模式切换），更新UI组件
-        updateUIForThemeChange();
-    }
-    
-    private void updateUIForThemeChange() {
-        // 当主题变化时，更新UI组件的颜色和样式
-        if (getView() == null) return;
-        
-        // 更新文字颜色
-        if (todaySessionsText != null) {
-            todaySessionsText.setTextColor(getResources().getColor(R.color.text_primary));
+        applyThemeToUi();
+        if (viewModel != null && viewModel.getDashboard().getValue() != null) {
+            bindDashboard(viewModel.getDashboard().getValue());
         }
-        if (todayDurationText != null) {
-            todayDurationText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        if (weekSessionsText != null) {
-            weekSessionsText.setTextColor(getResources().getColor(R.color.text_primary));
-        }
-        if (weekDurationText != null) {
-            weekDurationText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        if (monthSessionsText != null) {
-            monthSessionsText.setTextColor(getResources().getColor(R.color.text_primary));
-        }
-        if (monthDurationText != null) {
-            monthDurationText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        if (chartEmptyText != null) {
-            chartEmptyText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        if (monthlyChartEmptyText != null) {
-            monthlyChartEmptyText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        if (hourlyDistributionEmptyText != null) {
-            hourlyDistributionEmptyText.setTextColor(getResources().getColor(R.color.text_secondary));
-        }
-        
-        // 重新设置图表样式
-        setupChart();
-        loadStatistics();
     }
 
-    private class HourValueFormatter extends ValueFormatter {
-        @Override
-        public String getFormattedValue(float value) {
-            int hour = (int) value;
-            if (hour == 0 || hour == 3 || hour == 6 || hour == 9 || hour == 12
-                    || hour == 15 || hour == 18 || hour == 21 || hour == 24) {
-                return getString(R.string.statistics_label_hour, hour);
-            }
-            return "";
+    private void applyThemeToUi() {
+        if (getView() == null || !isAdded()) {
+            return;
         }
+        int primaryText = ContextCompat.getColor(requireContext(), R.color.text_primary);
+        int secondaryText = ContextCompat.getColor(requireContext(), R.color.text_secondary);
+        heroTodayDuration.setTextColor(primaryText);
+        heroTodaySessions.setTextColor(secondaryText);
+        heroWeekDuration.setTextColor(primaryText);
+        heroMonthDuration.setTextColor(primaryText);
+        heroCompare.setTextColor(secondaryText);
+        heroMotivation.setTextColor(primaryText);
+        monthlyChartEmptyText.setTextColor(secondaryText);
+        weekChartEmptyText.setTextColor(secondaryText);
+        categoryChartEmptyText.setTextColor(secondaryText);
+        hourlyDistributionEmptyText.setTextColor(secondaryText);
+        pauseReasonChartEmptyText.setTextColor(secondaryText);
+        if (monthlyAreaChart != null) {
+            monthlyAreaChart.applyThemeColors();
+        }
+        setupStaticCharts();
     }
 }

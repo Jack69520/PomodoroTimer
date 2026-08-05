@@ -3,22 +3,22 @@ package com.skyinit.pomodorotimer.ui.calendar;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.MainActivity;
 import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
-import com.skyinit.pomodorotimer.ui.account.LoginActivity;
 import com.skyinit.pomodorotimer.ui.statistics.SessionAdapter;
 import com.skyinit.pomodorotimer.R;
 
-import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
@@ -28,25 +28,37 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Set;
 
 public class CalendarFragment extends Fragment {
+    private static final long ACTION_DEBOUNCE_MS = 500L;
+
+    private NestedScrollView calendarScroll;
+    private View calendarCard;
     private MonthCalendarView calendarView;
     private RecyclerView sessionsRecyclerView;
     private TextView selectedDateText;
     private TextView totalDurationText;
     private TextView totalSessionsText;
-    private ScrollView sessionsEmptyScroll;
+    private TextView backToTodayChip;
+    private TextView recordsCountBadge;
     private LinearLayout sessionsEmptyLayout;
-    private ImageView emptyStateIcon;
     private TextView sessionsEmptyTitle;
     private TextView sessionsEmptyMessage;
     private TextView startFocusBtn;
-    private TextView loginBtn;
+    private TextView pickDateBtn;
+    private LinearLayout quickActionsLayout;
 
     private SessionAdapter sessionAdapter;
     private Calendar selectedDate = Calendar.getInstance();
     private CalendarViewModel viewModel;
+    private long lastActionMs;
+    private boolean navigating;
+
+    private enum EmptyActionMode {
+        TODAY,
+        PAST,
+        FUTURE
+    }
 
     @Nullable
     @Override
@@ -63,18 +75,21 @@ public class CalendarFragment extends Fragment {
     }
 
     private void initViews(View view) {
+        calendarScroll = view.findViewById(R.id.calendar_scroll);
+        calendarCard = view.findViewById(R.id.calendar_card);
         calendarView = view.findViewById(R.id.calendar_view);
         sessionsRecyclerView = view.findViewById(R.id.sessions_recycler);
         selectedDateText = view.findViewById(R.id.selected_date_text);
         totalDurationText = view.findViewById(R.id.total_duration);
         totalSessionsText = view.findViewById(R.id.total_sessions);
-        sessionsEmptyScroll = view.findViewById(R.id.sessions_empty_scroll);
+        backToTodayChip = view.findViewById(R.id.back_to_today_chip);
+        recordsCountBadge = view.findViewById(R.id.records_count_badge);
         sessionsEmptyLayout = view.findViewById(R.id.sessions_empty_layout);
-        emptyStateIcon = view.findViewById(R.id.empty_state_icon);
         sessionsEmptyTitle = view.findViewById(R.id.sessions_empty_title);
         sessionsEmptyMessage = view.findViewById(R.id.sessions_empty_message);
         startFocusBtn = view.findViewById(R.id.start_focus_btn);
-        loginBtn = view.findViewById(R.id.login_btn);
+        pickDateBtn = view.findViewById(R.id.pick_date_btn);
+        quickActionsLayout = view.findViewById(R.id.quick_actions_layout);
 
         setupQuickActions();
     }
@@ -92,15 +107,21 @@ public class CalendarFragment extends Fragment {
             }
         });
 
-        viewModel.getSessions().observe(getViewLifecycleOwner(), sessions -> {
-            if (sessionAdapter != null) {
-                sessionAdapter.setSessions(sessions == null ? new ArrayList<>() : sessions);
+        viewModel.getSelectedDate().observe(getViewLifecycleOwner(), date -> {
+            if (date != null) {
+                selectedDate = (Calendar) date.clone();
+                updateBackToTodayVisibility();
             }
-            if (sessions == null || sessions.isEmpty()) {
-                Calendar date = selectedDate;
-                if (date != null) {
-                    showEmptyStateForDate(date);
-                }
+        });
+
+        viewModel.getSessions().observe(getViewLifecycleOwner(), sessions -> {
+            List<PomodoroSession> safe = sessions == null ? new ArrayList<>() : sessions;
+            if (sessionAdapter != null) {
+                sessionAdapter.setSessions(safe);
+            }
+            updateRecordsCount(safe.size());
+            if (safe.isEmpty()) {
+                showEmptyStateForDate(selectedDate);
             } else {
                 showSessionsList();
             }
@@ -126,44 +147,120 @@ public class CalendarFragment extends Fragment {
         calendarView.setOnDateSelectedListener(date -> {
             selectedDate = date;
             viewModel.selectDate(date);
+            updateBackToTodayVisibility();
         });
         calendarView.setOnMonthChangedListener((year, month) -> viewModel.loadHighlightedDates(year, month));
 
         viewModel.selectDate(selectedDate);
         viewModel.loadHighlightedDates(selectedDate.get(Calendar.YEAR), selectedDate.get(Calendar.MONTH));
+        updateBackToTodayVisibility();
     }
 
     private void setupRecyclerView() {
         sessionAdapter = new SessionAdapter(new ArrayList<>());
         sessionAdapter.setOnItemClickListener(session -> {
+            if (!tryConsumeAction() || navigating || !isAdded()) {
+                return;
+            }
+            navigating = true;
             Bundle args = new Bundle();
             args.putInt("sessionId", session.id);
-            Navigation.findNavController(requireView()).navigate(R.id.nav_session_detail, args);
+            try {
+                Navigation.findNavController(requireView()).navigate(R.id.nav_session_detail, args);
+            } catch (IllegalArgumentException | IllegalStateException ignored) {
+                navigating = false;
+            }
         });
-        sessionsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        sessionsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()) {
+            @Override
+            public boolean canScrollVertically() {
+                return false;
+            }
+        });
         sessionsRecyclerView.setAdapter(sessionAdapter);
+        sessionsRecyclerView.setNestedScrollingEnabled(false);
+        sessionsRecyclerView.setHasFixedSize(false);
+        sessionsRecyclerView.setItemAnimator(null);
     }
 
     private void setupQuickActions() {
-        startFocusBtn.setOnClickListener(v -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).switchToHome();
+        backToTodayChip.setOnClickListener(v -> {
+            if (!tryConsumeAction()) {
+                return;
             }
+            jumpToToday();
         });
+    }
 
-        loginBtn.setOnClickListener(v -> {
-            if (getString(R.string.calendar_empty_action_pick_date).contentEquals(loginBtn.getText())) {
-                calendarView.requestFocus();
-            } else {
-                startActivity(new Intent(getActivity(), LoginActivity.class));
-            }
-        });
+    private void jumpToToday() {
+        Calendar today = Calendar.getInstance();
+        selectedDate = today;
+        calendarView.setSelectedDate(today);
+        viewModel.selectDate(today);
+        viewModel.loadHighlightedDates(today.get(Calendar.YEAR), today.get(Calendar.MONTH));
+        updateBackToTodayVisibility();
+        highlightCalendarForPick();
+    }
+
+    private void highlightCalendarForPick() {
+        if (calendarScroll != null) {
+            calendarScroll.smoothScrollTo(0, 0);
+        }
+        if (calendarCard == null) {
+            return;
+        }
+        calendarCard.animate().cancel();
+        calendarCard.setScaleX(1f);
+        calendarCard.setScaleY(1f);
+        calendarCard.animate()
+                .scaleX(0.985f)
+                .scaleY(0.985f)
+                .setDuration(110)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> calendarCard.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(160)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .start())
+                .start();
+        calendarView.requestFocus();
+    }
+
+    private boolean tryConsumeAction() {
+        long now = System.currentTimeMillis();
+        if (now - lastActionMs < ACTION_DEBOUNCE_MS) {
+            return false;
+        }
+        lastActionMs = now;
+        return true;
+    }
+
+    private void updateBackToTodayVisibility() {
+        if (backToTodayChip == null) {
+            return;
+        }
+        boolean show = selectedDate != null && !isSameDay(selectedDate, Calendar.getInstance());
+        backToTodayChip.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateRecordsCount(int count) {
+        if (recordsCountBadge == null) {
+            return;
+        }
+        if (count <= 0) {
+            recordsCountBadge.setText(R.string.calendar_records_count_zero);
+        } else {
+            recordsCountBadge.setText(getString(R.string.calendar_records_count, count));
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        navigating = false;
         viewModel.refresh();
+        updateBackToTodayVisibility();
     }
 
     private String formatDuration(long durationMs) {
@@ -177,49 +274,6 @@ public class CalendarFragment extends Fragment {
         return getString(R.string.calendar_total_duration_minutes, minutes);
     }
 
-    private void showEmptyState(String title, String message, String buttonText) {
-        if (sessionsRecyclerView != null) {
-            sessionsRecyclerView.setVisibility(View.GONE);
-        }
-        if (sessionsEmptyScroll != null) {
-            sessionsEmptyScroll.setVisibility(View.VISIBLE);
-        }
-        if (sessionsEmptyLayout != null) {
-            if (sessionsEmptyTitle != null) {
-                sessionsEmptyTitle.setText(title);
-            }
-            if (sessionsEmptyMessage != null) {
-                sessionsEmptyMessage.setText(message);
-            }
-            if (startFocusBtn != null) {
-                startFocusBtn.setText(buttonText);
-            }
-        }
-    }
-
-    private void showEmptyStateWithTwoButtons(String title, String message, String leftButtonText, String rightButtonText) {
-        if (sessionsRecyclerView != null) {
-            sessionsRecyclerView.setVisibility(View.GONE);
-        }
-        if (sessionsEmptyScroll != null) {
-            sessionsEmptyScroll.setVisibility(View.VISIBLE);
-        }
-        if (sessionsEmptyLayout != null) {
-            if (sessionsEmptyTitle != null) {
-                sessionsEmptyTitle.setText(title);
-            }
-            if (sessionsEmptyMessage != null) {
-                sessionsEmptyMessage.setText(message);
-            }
-            if (startFocusBtn != null) {
-                startFocusBtn.setText(leftButtonText);
-            }
-            if (loginBtn != null) {
-                loginBtn.setText(rightButtonText);
-            }
-        }
-    }
-
     private void showEmptyStateForDate(Calendar date) {
         Calendar today = Calendar.getInstance();
         Calendar yesterday = Calendar.getInstance();
@@ -227,32 +281,124 @@ public class CalendarFragment extends Fragment {
 
         String title;
         String message;
+        EmptyActionMode mode;
 
         if (isSameDay(date, today)) {
             title = getString(R.string.calendar_empty_today_title);
             message = getMotivationalMessage();
+            mode = EmptyActionMode.TODAY;
+        } else if (isFutureDay(date, today)) {
+            title = getString(R.string.calendar_empty_future_title);
+            message = getString(R.string.calendar_empty_future_message);
+            mode = EmptyActionMode.FUTURE;
         } else if (isSameDay(date, yesterday)) {
             title = getString(R.string.calendar_empty_yesterday_title);
             message = getString(R.string.calendar_empty_yesterday_message);
-        } else if (date.before(today)) {
+            mode = EmptyActionMode.PAST;
+        } else {
             title = getString(R.string.calendar_empty_past_title);
             message = getString(R.string.calendar_empty_past_message);
-        } else {
-            title = getString(R.string.calendar_empty_future_title);
-            message = getString(R.string.calendar_empty_future_message);
+            mode = EmptyActionMode.PAST;
         }
 
-        showEmptyStateWithTwoButtons(title, message,
-                getString(R.string.calendar_empty_action_focus),
-                getString(R.string.calendar_empty_action_pick_date));
+        applyEmptyState(title, message, mode);
+    }
+
+    /** 按「日」比较，忽略时分秒。 */
+    private boolean isFutureDay(Calendar date, Calendar today) {
+        Calendar d = startOfDay(date);
+        Calendar t = startOfDay(today);
+        return d.after(t);
+    }
+
+    private Calendar startOfDay(Calendar source) {
+        Calendar cal = (Calendar) source.clone();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal;
+    }
+
+    private void applyEmptyState(String title, String message, EmptyActionMode mode) {
+        if (sessionsRecyclerView != null) {
+            sessionsRecyclerView.setVisibility(View.GONE);
+        }
+        if (sessionsEmptyLayout != null) {
+            sessionsEmptyLayout.setVisibility(View.VISIBLE);
+        }
+        if (sessionsEmptyTitle != null) {
+            sessionsEmptyTitle.setText(title);
+        }
+        if (sessionsEmptyMessage != null) {
+            sessionsEmptyMessage.setText(message);
+        }
+        if (quickActionsLayout != null) {
+            quickActionsLayout.setVisibility(View.VISIBLE);
+        }
+
+        startFocusBtn.setVisibility(View.VISIBLE);
+        pickDateBtn.setVisibility(View.VISIBLE);
+
+        if (mode == EmptyActionMode.FUTURE) {
+            // 防呆：未来日期不引导「去专注」
+            startFocusBtn.setText(R.string.calendar_back_to_today);
+            startFocusBtn.setContentDescription(getString(R.string.calendar_a11y_back_to_today));
+            startFocusBtn.setOnClickListener(v -> {
+                if (!tryConsumeAction()) {
+                    return;
+                }
+                jumpToToday();
+            });
+            pickDateBtn.setText(R.string.calendar_empty_action_pick_date);
+            pickDateBtn.setContentDescription(getString(R.string.calendar_a11y_pick_date));
+            pickDateBtn.setOnClickListener(v -> {
+                if (!tryConsumeAction()) {
+                    return;
+                }
+                highlightCalendarForPick();
+            });
+            return;
+        }
+
+        startFocusBtn.setText(R.string.calendar_empty_action_focus);
+        startFocusBtn.setContentDescription(getString(R.string.calendar_a11y_start_focus));
+        startFocusBtn.setOnClickListener(v -> {
+            if (!tryConsumeAction()) {
+                return;
+            }
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).switchToHome();
+            }
+        });
+
+        if (mode == EmptyActionMode.PAST) {
+            pickDateBtn.setText(R.string.calendar_back_to_today);
+            pickDateBtn.setContentDescription(getString(R.string.calendar_a11y_back_to_today));
+            pickDateBtn.setOnClickListener(v -> {
+                if (!tryConsumeAction()) {
+                    return;
+                }
+                jumpToToday();
+            });
+        } else {
+            pickDateBtn.setText(R.string.calendar_empty_action_pick_date);
+            pickDateBtn.setContentDescription(getString(R.string.calendar_a11y_pick_date));
+            pickDateBtn.setOnClickListener(v -> {
+                if (!tryConsumeAction()) {
+                    return;
+                }
+                highlightCalendarForPick();
+            });
+        }
     }
 
     private void showSessionsList() {
         if (sessionsRecyclerView != null) {
             sessionsRecyclerView.setVisibility(View.VISIBLE);
         }
-        if (sessionsEmptyScroll != null) {
-            sessionsEmptyScroll.setVisibility(View.GONE);
+        if (sessionsEmptyLayout != null) {
+            sessionsEmptyLayout.setVisibility(View.GONE);
         }
     }
 
@@ -262,14 +408,14 @@ public class CalendarFragment extends Fragment {
     }
 
     private String getMotivationalMessage() {
-        Calendar now = Calendar.getInstance();
-        int hour = now.get(Calendar.HOUR_OF_DAY);
-
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         if (hour < 6) {
             return getString(R.string.calendar_empty_late_night);
-        } else if (hour < 12) {
+        }
+        if (hour < 12) {
             return getString(R.string.calendar_empty_first_pomodoro);
-        } else if (hour < 18) {
+        }
+        if (hour < 18) {
             return getString(R.string.calendar_empty_start_today);
         }
         return getString(R.string.calendar_empty_time_precious);
@@ -286,24 +432,35 @@ public class CalendarFragment extends Fragment {
             return;
         }
 
+        int primaryText = ContextCompat.getColor(requireContext(), R.color.text_primary);
+        int secondaryText = ContextCompat.getColor(requireContext(), R.color.text_secondary);
+
         if (selectedDateText != null) {
-            selectedDateText.setTextColor(getResources().getColor(R.color.text_primary));
+            selectedDateText.setTextColor(primaryText);
         }
         if (totalDurationText != null) {
-            totalDurationText.setTextColor(getResources().getColor(R.color.text_secondary));
+            totalDurationText.setTextColor(primaryText);
         }
         if (totalSessionsText != null) {
-            totalSessionsText.setTextColor(getResources().getColor(R.color.text_secondary));
+            totalSessionsText.setTextColor(primaryText);
         }
         if (sessionsEmptyTitle != null) {
-            sessionsEmptyTitle.setTextColor(getResources().getColor(R.color.text_primary));
+            sessionsEmptyTitle.setTextColor(primaryText);
         }
         if (sessionsEmptyMessage != null) {
-            sessionsEmptyMessage.setTextColor(getResources().getColor(R.color.text_secondary));
+            sessionsEmptyMessage.setTextColor(secondaryText);
         }
-
+        if (recordsCountBadge != null) {
+            recordsCountBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
+        }
+        if (backToTodayChip != null) {
+            backToTodayChip.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
+        }
         if (sessionsRecyclerView != null && sessionAdapter != null) {
             sessionAdapter.notifyDataSetChanged();
+        }
+        if (calendarView != null) {
+            calendarView.refreshTheme();
         }
     }
 }

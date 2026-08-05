@@ -27,9 +27,9 @@ public class AppBlockingTestUtils {
 
         for (String packageName : systemApps) {
             boolean shouldBeWhitelisted = policy.shouldBeWhitelisted(packageName);
-            boolean isSystemCritical = policy.isSystemCriticalApp(packageName);
-            AppLog.d(TAG, String.format("系统应用 %s: 应白名单=%s, 系统关键=%s",
-                    packageName, shouldBeWhitelisted, isSystemCritical));
+            boolean isCritical = policy.isCritical(packageName);
+            AppLog.d(TAG, String.format("平台关键 %s: 应白名单=%s, CRITICAL=%s",
+                    packageName, shouldBeWhitelisted, isCritical));
         }
 
         String[] typicalApps = {
@@ -62,7 +62,7 @@ public class AppBlockingTestUtils {
         int blockedCount = 0;
 
         for (BlockedApp app : apps) {
-            if (policy.isSystemCriticalApp(app.packageName)) {
+            if (policy.isCritical(app.packageName)) {
                 systemCriticalCount++;
             }
             if (app.isWhitelisted) {

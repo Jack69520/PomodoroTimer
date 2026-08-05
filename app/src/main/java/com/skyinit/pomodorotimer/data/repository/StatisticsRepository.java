@@ -8,19 +8,26 @@ import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.dao.PomodoroSessionDao;
 import com.skyinit.pomodorotimer.data.dao.SessionAppBlockRecordDao;
 import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
+import com.skyinit.pomodorotimer.ui.statistics.CategoryStats;
 import com.skyinit.pomodorotimer.ui.statistics.DailyStats;
 import com.skyinit.pomodorotimer.ui.statistics.HourlyStats;
 import com.skyinit.pomodorotimer.ui.statistics.PauseReasonStats;
+import com.skyinit.pomodorotimer.ui.statistics.StatisticsDashboard;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.util.AppLog;
+import com.skyinit.pomodorotimer.util.CategoryDefaults;
 import com.skyinit.pomodorotimer.util.SessionPauseUtils;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 统计数据仓库：所有查询均按当前登录用户过滤。
@@ -370,6 +377,296 @@ public class StatisticsRepository {
         });
     }
 
+    /**
+     * 在单一 diskIo 任务中构建统计页完整快照，避免多路异步交错。
+     * 回调保证投递到主线程；调用方应用 generation 丢弃过期结果。
+     */
+    public void loadDashboard(DashboardCallback callback) {
+        final String userId = accountManager.requireActiveUserId();
+        AppExecutors.getInstance().diskIo(() -> {
+            try {
+                StatisticsDashboard dashboard = buildDashboardSync(userId);
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onDashboardLoaded(dashboard));
+                }
+            } catch (Exception e) {
+                AppLog.e("StatisticsRepository", "Failed to load dashboard", e);
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onDashboardLoaded(emptyDashboard()));
+                }
+            }
+        });
+    }
+
+    private StatisticsDashboard buildDashboardSync(String userId) {
+        long[] todayRange = todayRange();
+        long[] thisWeekRange = weekRange(0);
+        long[] lastWeekRange = weekRange(-1);
+        long[] monthRange = monthRange();
+
+        int todayCount = sessionDao.getCompletedCountInRangeForUser(userId, todayRange[0], todayRange[1]);
+        long todayDuration = sessionDao.getTotalDurationInRangeForUser(userId, todayRange[0], todayRange[1]);
+        DailyStats today = new DailyStats(
+                appContext.getString(R.string.statistics_label_today), todayCount, todayDuration);
+
+        WeeklyStats week = new WeeklyStats(
+                sessionDao.getCompletedCountInRangeForUser(userId, thisWeekRange[0], thisWeekRange[1]),
+                sessionDao.getTotalDurationInRangeForUser(userId, thisWeekRange[0], thisWeekRange[1]));
+        WeeklyStats lastWeek = new WeeklyStats(
+                sessionDao.getCompletedCountInRangeForUser(userId, lastWeekRange[0], lastWeekRange[1]),
+                sessionDao.getTotalDurationInRangeForUser(userId, lastWeekRange[0], lastWeekRange[1]));
+        MonthlyStats month = new MonthlyStats(
+                sessionDao.getCompletedCountInRangeForUser(userId, monthRange[0], monthRange[1]),
+                sessionDao.getTotalDurationInRangeForUser(userId, monthRange[0], monthRange[1]));
+
+        long streakLookbackStart = daysAgoStart(120);
+        List<DailyStats> streakSource = sessionDao.getDailyStatsInRangeSync(
+                userId, streakLookbackStart, todayRange[1]);
+        int currentStreak = computeCurrentStreak(streakSource);
+
+        List<DailyStats> rawWeekly = sessionDao.getDailyStatsInRangeSync(
+                userId, daysAgoStart(6), todayRange[1]);
+        List<DailyStats> weeklyDays = fillLastNDays(rawWeekly, 7);
+
+        List<DailyStats> rawMonthly = sessionDao.getDailyStatsInRangeSync(
+                userId, monthRange[0], monthRange[1]);
+        List<DailyStats> monthlyDays = fillMonthDays(rawMonthly);
+        int activeDaysThisMonth = 0;
+        for (DailyStats day : monthlyDays) {
+            if (day.count > 0 || day.totalDuration > 0L) {
+                activeDaysThisMonth++;
+            }
+        }
+
+        List<HourlyStats> hourlyStats = sessionDao.getHourlyStatsInRangeSync(
+                userId, monthRange[0], monthRange[1]);
+        if (hourlyStats == null) {
+            hourlyStats = new ArrayList<>();
+        }
+        List<CategoryStats> categoryStats = sessionDao.getCategoryStatsSync(
+                userId, monthRange[0], monthRange[1]);
+        if (categoryStats == null) {
+            categoryStats = new ArrayList<>();
+        }
+        List<PauseReasonStats> pauseReasonStats = buildPauseReasonStatsSync(userId, monthRange);
+        int totalCompleted = sessionDao.getTotalCompletedCountForUser(userId);
+
+        return new StatisticsDashboard(
+                today,
+                week,
+                lastWeek,
+                month,
+                currentStreak,
+                activeDaysThisMonth,
+                totalCompleted,
+                weeklyDays,
+                monthlyDays,
+                hourlyStats,
+                categoryStats,
+                pauseReasonStats,
+                buildPeakHourInsight(hourlyStats),
+                buildTopCategoryInsight(categoryStats));
+    }
+
+    private StatisticsDashboard emptyDashboard() {
+        DailyStats today = new DailyStats(appContext.getString(R.string.statistics_label_today), 0, 0L);
+        WeeklyStats zeroWeek = new WeeklyStats(0, 0L);
+        MonthlyStats zeroMonth = new MonthlyStats(0, 0L);
+        return new StatisticsDashboard(
+                today, zeroWeek, zeroWeek, zeroMonth,
+                0, 0, 0,
+                fillLastNDays(new ArrayList<>(), 7),
+                fillMonthDays(new ArrayList<>()),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                null,
+                null);
+    }
+
+    private List<PauseReasonStats> buildPauseReasonStatsSync(String userId, long[] range) {
+        List<PomodoroSession> sessions = sessionDao.getCompletedSessionsWithPausesInRangeSync(
+                userId, range[0], range[1]);
+        Map<String, Integer> reasonCounts = new HashMap<>();
+        if (sessions != null) {
+            for (PomodoroSession session : sessions) {
+                List<String> reasons = SessionPauseUtils.decodeReasons(
+                        session.pauseReasons, session.pauseReason);
+                for (String reason : reasons) {
+                    reasonCounts.merge(reason, 1, Integer::sum);
+                }
+            }
+        }
+        List<PauseReasonStats> data = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : reasonCounts.entrySet()) {
+            data.add(new PauseReasonStats(entry.getKey(), entry.getValue()));
+        }
+        data.sort((a, b) -> Integer.compare(b.count, a.count));
+        return data;
+    }
+
+    private StatisticsDashboard.PeakHourInsight buildPeakHourInsight(List<HourlyStats> hourlyStats) {
+        if (hourlyStats == null || hourlyStats.isEmpty()) {
+            return null;
+        }
+        HourlyStats peak = null;
+        for (HourlyStats stats : hourlyStats) {
+            if (stats == null || stats.totalDuration <= 0L) {
+                continue;
+            }
+            if (peak == null || stats.totalDuration > peak.totalDuration) {
+                peak = stats;
+            }
+        }
+        if (peak == null) {
+            return null;
+        }
+        return new StatisticsDashboard.PeakHourInsight(peak.hour, peak.totalDuration);
+    }
+
+    private StatisticsDashboard.TopCategoryInsight buildTopCategoryInsight(List<CategoryStats> categoryStats) {
+        if (categoryStats == null || categoryStats.isEmpty()) {
+            return null;
+        }
+        CategoryStats top = null;
+        long total = 0L;
+        for (CategoryStats stats : categoryStats) {
+            if (stats == null) {
+                continue;
+            }
+            total += Math.max(0L, stats.totalDuration);
+            if (top == null || stats.totalDuration > top.totalDuration) {
+                top = stats;
+            }
+        }
+        if (top == null || top.totalDuration <= 0L || total <= 0L) {
+            return null;
+        }
+        String category = top.category != null && !top.category.isEmpty()
+                ? top.category : CategoryDefaults.getDefault();
+        float percent = top.totalDuration * 100f / total;
+        return new StatisticsDashboard.TopCategoryInsight(category, top.totalDuration, percent);
+    }
+
+    private int computeCurrentStreak(List<DailyStats> dailyStats) {
+        Set<String> activeDays = new HashSet<>();
+        if (dailyStats != null) {
+            for (DailyStats stats : dailyStats) {
+                if (stats != null && stats.date != null
+                        && (stats.count > 0 || stats.totalDuration > 0L)) {
+                    activeDays.add(stats.date);
+                }
+            }
+        }
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        Calendar cursor = Calendar.getInstance();
+        // 今天还没有完成时，从昨天开始连续计数，避免「当天未完成就直接断签」。
+        String todayKey = format.format(cursor.getTime());
+        if (!activeDays.contains(todayKey)) {
+            cursor.add(Calendar.DAY_OF_MONTH, -1);
+        }
+        int streak = 0;
+        while (true) {
+            String key = format.format(cursor.getTime());
+            if (!activeDays.contains(key)) {
+                break;
+            }
+            streak++;
+            cursor.add(Calendar.DAY_OF_MONTH, -1);
+            if (streak > 400) {
+                break;
+            }
+        }
+        return streak;
+    }
+
+    private List<DailyStats> fillLastNDays(List<DailyStats> raw, int days) {
+        Map<String, DailyStats> byDate = indexByDate(raw);
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        List<DailyStats> filled = new ArrayList<>(days);
+        for (int i = days - 1; i >= 0; i--) {
+            Calendar day = Calendar.getInstance();
+            day.add(Calendar.DAY_OF_MONTH, -i);
+            String key = format.format(day.getTime());
+            DailyStats existing = byDate.get(key);
+            if (existing != null) {
+                filled.add(existing);
+            } else {
+                filled.add(new DailyStats(key, 0, 0L));
+            }
+        }
+        return filled;
+    }
+
+    private List<DailyStats> fillMonthDays(List<DailyStats> raw) {
+        Map<String, DailyStats> byDate = indexByDate(raw);
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        Calendar calendar = Calendar.getInstance();
+        int daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
+        List<DailyStats> filled = new ArrayList<>(daysInMonth);
+        for (int day = 1; day <= daysInMonth; day++) {
+            Calendar dayCal = Calendar.getInstance();
+            dayCal.set(Calendar.DAY_OF_MONTH, day);
+            String key = format.format(dayCal.getTime());
+            DailyStats existing = byDate.get(key);
+            if (existing != null) {
+                filled.add(existing);
+            } else {
+                filled.add(new DailyStats(key, 0, 0L));
+            }
+        }
+        return filled;
+    }
+
+    private Map<String, DailyStats> indexByDate(List<DailyStats> raw) {
+        Map<String, DailyStats> map = new HashMap<>();
+        if (raw == null) {
+            return map;
+        }
+        for (DailyStats stats : raw) {
+            if (stats != null && stats.date != null) {
+                map.put(stats.date, stats);
+            }
+        }
+        return map;
+    }
+
+    private long[] todayRange() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long start = calendar.getTimeInMillis();
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
+        return new long[]{start, calendar.getTimeInMillis()};
+    }
+
+    /** @param weekOffset 0=本周(周一起)，-1=上周 */
+    private long[] weekRange(int weekOffset) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+        int diffToMonday = (dayOfWeek == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dayOfWeek);
+        calendar.add(Calendar.DAY_OF_MONTH, diffToMonday + (weekOffset * 7));
+        long start = calendar.getTimeInMillis();
+        calendar.add(Calendar.DAY_OF_MONTH, 7);
+        return new long[]{start, calendar.getTimeInMillis()};
+    }
+
+    private long daysAgoStart(int daysAgo) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_MONTH, -daysAgo);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTimeInMillis();
+    }
+
     private interface RangeSupplier {
         long[] getRange();
     }
@@ -458,6 +755,10 @@ public class StatisticsRepository {
 
     public interface TotalCountCallback {
         void onCountReceived(int count);
+    }
+
+    public interface DashboardCallback {
+        void onDashboardLoaded(StatisticsDashboard dashboard);
     }
 
     public interface ChartDataCallback {

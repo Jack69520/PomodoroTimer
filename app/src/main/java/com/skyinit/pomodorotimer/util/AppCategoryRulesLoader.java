@@ -221,8 +221,12 @@ public final class AppCategoryRulesLoader {
             this.skipSystemApp = skipSystemApp;
         }
 
-        public boolean matches(String packageName, String appName, boolean isSystemApp) {
-            if (skipSystemApp && isSystemApp) {
+        /**
+         * @param skipFuzzyMatch true 时若规则配置了 skipSystemApp，则跳过模糊匹配
+         *                       （对应 PLATFORM / GOOGLE / OEM_SERVICE）
+         */
+        public boolean matches(String packageName, String appName, boolean skipFuzzyMatch) {
+            if (skipSystemApp && skipFuzzyMatch) {
                 return false;
             }
             for (String prefix : packagePrefixes) {

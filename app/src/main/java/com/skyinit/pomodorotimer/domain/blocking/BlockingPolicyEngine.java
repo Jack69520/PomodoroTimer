@@ -16,12 +16,28 @@ public final class BlockingPolicyEngine {
         this.config = config;
     }
 
-    public boolean isSystemCriticalApp(String packageName) {
+    public BlockingRole resolveRole(String packageName) {
+        if (isCritical(packageName)) {
+            return BlockingRole.CRITICAL;
+        }
+        if (shouldBeWhitelisted(packageName)) {
+            return BlockingRole.DEFAULT_ALLOW;
+        }
+        return BlockingRole.DEFAULT_BLOCK;
+    }
+
+    public boolean isCritical(String packageName) {
         return config.criticalApps.contains(packageName);
     }
 
+    /** @deprecated 使用 {@link #isCritical(String)} */
+    @Deprecated
+    public boolean isSystemCriticalApp(String packageName) {
+        return isCritical(packageName);
+    }
+
     public boolean shouldBeWhitelisted(String packageName) {
-        if (isSystemCriticalApp(packageName)) {
+        if (isCritical(packageName)) {
             return true;
         }
         if (config.defaultWhitelist.contains(packageName)) {
@@ -31,14 +47,14 @@ public final class BlockingPolicyEngine {
     }
 
     public boolean shouldBlockByDefault(String packageName) {
-        return !shouldBeWhitelisted(packageName) && !isSystemCriticalApp(packageName);
+        return resolveRole(packageName) == BlockingRole.DEFAULT_BLOCK;
     }
 
     /**
      * 系统分区应用是否纳入屏蔽管理列表（用户可感知、可主动打开的应用）。
      */
-    public boolean shouldIncludeSystemApp(String packageName) {
-        if (isSystemCriticalApp(packageName)) {
+    public boolean shouldIncludeInManagedList(String packageName) {
+        if (isCritical(packageName)) {
             return true;
         }
         if (shouldBeWhitelisted(packageName)) {
@@ -50,13 +66,21 @@ public final class BlockingPolicyEngine {
         return matchesAny(packageName, config.scanIncludeRules);
     }
 
+    /** @deprecated 使用 {@link #shouldIncludeInManagedList(String)} */
+    @Deprecated
+    public boolean shouldIncludeSystemApp(String packageName) {
+        return shouldIncludeInManagedList(packageName);
+    }
+
     public boolean isUnblockableApp(String packageName) {
-        return isSystemCriticalApp(packageName);
+        return isCritical(packageName);
     }
 
     public void applyDefaultPolicy(BlockedApp app) {
-        app.isWhitelisted = shouldBeWhitelisted(app.packageName);
-        app.isEnabled = shouldBlockByDefault(app.packageName);
+        BlockingRole role = resolveRole(app.packageName);
+        app.blockingRole = role.toStorage();
+        app.isWhitelisted = role != BlockingRole.DEFAULT_BLOCK;
+        app.isEnabled = role == BlockingRole.DEFAULT_BLOCK;
     }
 
     public void applyWhitelistConfig(List<BlockedApp> apps) {
@@ -64,6 +88,9 @@ public final class BlockingPolicyEngine {
             if (shouldBeWhitelisted(app.packageName)) {
                 app.isWhitelisted = true;
                 app.isEnabled = false;
+                if (app.blockingRole == null || app.blockingRole.isEmpty()) {
+                    app.blockingRole = resolveRole(app.packageName).toStorage();
+                }
             }
         }
     }

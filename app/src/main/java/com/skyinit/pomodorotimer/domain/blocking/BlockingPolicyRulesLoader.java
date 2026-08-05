@@ -110,12 +110,10 @@ public final class BlockingPolicyRulesLoader {
         Set<String> defaultWhitelist = parsePackageCollection(root.opt("defaultWhitelist"));
 
         JSONObject scanInclude = root.optJSONObject("scanInclude");
+        // 传入整个 scanInclude 对象，才能正确解析 sections[].packages（勿只传 sections 数组）
         Set<String> scanExact = scanInclude != null
-                ? parsePackageCollection(scanInclude.opt("exactPackages"))
+                ? parsePackageCollection(scanInclude)
                 : Collections.emptySet();
-        if (scanInclude != null) {
-            scanExact = union(scanExact, parsePackageCollection(scanInclude.opt("sections")));
-        }
         List<PackageMatchRule> scanRules = scanInclude != null
                 ? parseRuleList(scanInclude.optJSONArray("rules"))
                 : Collections.emptyList();

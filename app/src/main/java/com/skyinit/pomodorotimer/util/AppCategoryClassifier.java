@@ -3,9 +3,13 @@ package com.skyinit.pomodorotimer.util;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 
+import com.skyinit.pomodorotimer.domain.appidentity.AppProvenance;
+import com.skyinit.pomodorotimer.domain.appidentity.AppProvenanceResolver;
+import com.skyinit.pomodorotimer.domain.appidentity.AppIdentityRulesLoader;
+
 /**
- * 应用分类器：精确包名 HashSet 查找 + JSON 规则 + 系统 category 兜底。
- * 分类逻辑与屏蔽策略完全解耦。
+ * 应用分类器：精确包名 HashSet 查找 + JSON 规则 + 来源回落 + 系统 category 兜底。
+ * 分类逻辑与屏蔽策略解耦；「系统服务」仅收纳无法功能归类的平台/厂商服务组件。
  */
 public final class AppCategoryClassifier {
 
@@ -13,10 +17,17 @@ public final class AppCategoryClassifier {
     }
 
     public static String classify(String packageName, String appName) {
-        return classify(packageName, appName, null);
+        return classify(packageName, appName, null, null);
     }
 
     public static String classify(String packageName, String appName, ApplicationInfo appInfo) {
+        return classify(packageName, appName, appInfo, null);
+    }
+
+    public static String classify(String packageName,
+                                  String appName,
+                                  ApplicationInfo appInfo,
+                                  AppProvenance provenance) {
         if (packageName == null || packageName.isEmpty()) {
             return AppCategory.OTHER;
         }
@@ -28,22 +39,28 @@ public final class AppCategoryClassifier {
             return exactCategory;
         }
 
-        boolean isSystemApp = isSystemPackage(packageName);
+        AppProvenance resolved = provenance != null
+                ? provenance
+                : resolveProvenanceFallback(packageName, appInfo);
+        boolean skipFuzzy = resolved.skipsFuzzyCategoryRules();
 
         for (AppCategoryRulesLoader.CategoryRule rule : loader.getRulesInOrder()) {
             if (AppCategory.SYSTEM.equals(rule.category)) {
                 continue;
             }
-            if (rule.matches(packageName, safeAppName, isSystemApp)) {
+            if (rule.matches(packageName, safeAppName, skipFuzzy)) {
                 return rule.category;
             }
         }
 
-        if (!isSystemApp && packageName.contains("work") && !isSystemWorkPackage(packageName)) {
+        if (!skipFuzzy && packageName.contains("work") && !isSystemWorkPackage(packageName)) {
             return AppCategory.JOB;
         }
 
-        if (isVendorSystemApp(packageName)) {
+        // 仅平台 / Google / 厂商服务回落到「系统服务」；OEM 预装与第三方走其他
+        if (resolved == AppProvenance.PLATFORM
+                || resolved == AppProvenance.GOOGLE
+                || resolved == AppProvenance.OEM_SERVICE) {
             return AppCategory.SYSTEM;
         }
 
@@ -57,15 +74,19 @@ public final class AppCategoryClassifier {
         return AppCategory.OTHER;
     }
 
-    private static boolean isSystemPackage(String packageName) {
-        return packageName.startsWith("com.android.")
-                || packageName.startsWith("com.google.android.")
-                || packageName.startsWith("com.huawei.")
-                || packageName.startsWith("com.miui.")
-                || packageName.startsWith("com.xiaomi.")
-                || packageName.startsWith("com.hihonor.")
-                || packageName.startsWith("cn.honor.")
-                || packageName.startsWith("android.");
+    private static AppProvenance resolveProvenanceFallback(String packageName,
+                                                           ApplicationInfo appInfo) {
+        try {
+            AppProvenanceResolver resolver =
+                    AppIdentityRulesLoader.getInstance().createResolver();
+            boolean system = appInfo != null
+                    && (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            // 无 Context 时无法查 launcher；OEM 前缀默认按预装处理，避免误入系统服务桶
+            boolean hasLauncher = true;
+            return resolver.resolve(packageName, system, hasLauncher);
+        } catch (IllegalStateException e) {
+            return AppProvenance.THIRD_PARTY;
+        }
     }
 
     private static boolean isSystemWorkPackage(String packageName) {
@@ -79,34 +100,5 @@ public final class AppCategoryClassifier {
                 || packageName.contains("bluetooth")
                 || packageName.contains("telephony")
                 || packageName.contains("connectivity");
-    }
-
-    private static boolean isVendorSystemApp(String packageName) {
-        if ((packageName.startsWith("com.hihonor.") || packageName.startsWith("cn.honor."))
-                && !packageName.equals("com.hihonor.android.launcher")) {
-            return true;
-        }
-        if (packageName.startsWith("com.huawei.")) {
-            return true;
-        }
-        if (packageName.startsWith("com.miui.") || packageName.startsWith("com.xiaomi.")) {
-            return true;
-        }
-        if (packageName.startsWith("com.vivo.") || packageName.startsWith("com.bbk.")) {
-            return true;
-        }
-        if (packageName.startsWith("com.oppo.")
-                || packageName.startsWith("com.coloros.")
-                || packageName.startsWith("com.heytap.")
-                || packageName.startsWith("com.oplus.")) {
-            return true;
-        }
-        if (packageName.startsWith("com.samsung.") || packageName.startsWith("com.sec.android.")) {
-            return true;
-        }
-        if (packageName.startsWith("com.oneplus.")) {
-            return true;
-        }
-        return packageName.startsWith("cn.nubia.") || packageName.startsWith("com.redmagic.");
     }
 }

@@ -1,233 +1,341 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/calendar_scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:overScrollMode="ifContentScrolls"
+    android:scrollbars="none">
 
-    <!-- 日历 -->
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp">
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="24dp">
 
-        <com.skyinit.pomodorotimer.ui.calendar.MonthCalendarView
-            android:id="@+id/calendar_view"
+        <!-- 月历 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/calendar_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/transparent"
-            android:padding="8dp" />
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/background_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/stats_hero_accent"
+            app:strokeWidth="1dp">
 
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- 选中日期信息 -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
-
-            <TextView
-                android:id="@+id/selected_date_text"
+            <com.skyinit.pomodorotimer.ui.calendar.MonthCalendarView
+                android:id="@+id/calendar_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/layout_placeholder_date_full"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:gravity="center"
-                android:layout_marginBottom="12dp" />
+                android:paddingHorizontal="8dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="8dp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 选中日摘要 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/day_summary_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/background_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="1dp"
+            app:strokeColor="@color/border_light"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/total_sessions"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/selected_date_text"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/layout_placeholder_sessions_count"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="@string/layout_placeholder_date_full"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
-                        android:textColor="@color/text_primary" />
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/back_to_today_chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_calendar_today_chip"
+                        android:clickable="true"
+                        android:contentDescription="@string/calendar_a11y_back_to_today"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:text="@string/calendar_back_to_today"
+                        android:textColor="@color/primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
 
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/total_duration"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/layout_placeholder_duration_zero"
-                        android:textSize="16sp"
-                        android:textColor="@color/text_primary" />
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_calendar_stat_chip"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/calendar_stat_sessions_label"
+                            android:textColor="@color/text_hint"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/total_sessions"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/layout_placeholder_pomodoro_count"
+                            android:textColor="@color/text_primary"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_calendar_stat_chip"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/calendar_stat_duration_label"
+                            android:textColor="@color/text_hint"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/total_duration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/layout_placeholder_duration_zero"
+                            android:textColor="@color/text_primary"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
             </LinearLayout>
 
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- 会话列表 -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp">
-
-        <LinearLayout
+        <!-- 当日专注记录：高度随内容撑开，由外层 NestedScrollView 统一滚动 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/daily_records_card"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/background_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="1dp"
+            app:strokeColor="@color/border_light"
+            app:strokeWidth="1dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/calendar_label_daily_records"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:padding="16dp"
-                android:gravity="center" />
+                android:orientation="vertical">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/sessions_recycler"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:scrollbars="none"
-                android:padding="8dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="8dp">
 
-            <!-- 会话列表空状态提示 -->
-            <ScrollView
-                android:id="@+id/sessions_empty_scroll"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:scrollbars="none"
-                android:visibility="gone">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/calendar_label_daily_records"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/records_count_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="24dp"
+                        android:background="@drawable/bg_calendar_count_badge"
+                        android:gravity="center"
+                        android:minWidth="36dp"
+                        android:paddingHorizontal="10dp"
+                        android:text="@string/calendar_records_count_zero"
+                        android:textColor="@color/primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="@color/divider" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/sessions_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never"
+                    android:paddingHorizontal="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="12dp"
+                    android:scrollbars="none" />
 
                 <LinearLayout
                     android:id="@+id/sessions_empty_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
                     android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="24dp"
-                    android:minHeight="400dp">
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="28dp"
+                    android:visibility="gone">
 
-                <ImageView
-                    android:id="@+id/empty_state_icon"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:src="@drawable/ic_timer"
-                    android:alpha="0.3"
-                    android:layout_marginBottom="16dp" />
+                    <FrameLayout
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/bg_calendar_empty_icon">
 
-                <TextView
-                    android:id="@+id/sessions_empty_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calendar_empty_today_title"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="8dp" />
+                        <ImageView
+                            android:id="@+id/empty_state_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_timer"
+                            app:tint="@color/primary" />
 
-                <TextView
-                    android:id="@+id/sessions_empty_message"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calendar_empty_first_pomodoro"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="center"
-                    android:lineSpacingExtra="4dp"
-                    android:layout_marginBottom="24dp" />
-
-                <LinearLayout
-                    android:id="@+id/quick_actions_layout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginHorizontal="8dp">
+                    </FrameLayout>
 
                     <TextView
-                        android:id="@+id/start_focus_btn"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="6dp"
-                        android:text="@string/calendar_empty_action_focus"
-                        android:textSize="12sp"
-                        android:textColor="@color/primary"
-                        android:background="@drawable/rounded_background_light"
-                        android:padding="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground"
+                        android:id="@+id/sessions_empty_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:minWidth="80dp" />
+                        android:text="@string/calendar_empty_today_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/login_btn"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="6dp"
-                        android:text="@string/calendar_empty_action_login"
-                        android:textSize="12sp"
+                        android:id="@+id/sessions_empty_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:lineSpacingExtra="3dp"
+                        android:text="@string/calendar_empty_first_pomodoro"
                         android:textColor="@color/text_secondary"
-                        android:background="@drawable/rounded_background_light"
-                        android:padding="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackground"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:id="@+id/quick_actions_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
                         android:gravity="center"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:minWidth="80dp" />
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/start_focus_btn"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_calendar_primary_btn"
+                            android:clickable="true"
+                            android:contentDescription="@string/calendar_a11y_start_focus"
+                            android:ellipsize="end"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:text="@string/calendar_empty_action_focus"
+                            android:textColor="@android:color/white"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/pick_date_btn"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_calendar_secondary_btn"
+                            android:clickable="true"
+                            android:contentDescription="@string/calendar_a11y_pick_date"
+                            android:ellipsize="end"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:text="@string/calendar_empty_action_pick_date"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
-                </LinearLayout>
+            </LinearLayout>
 
-            </ScrollView>
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+    </LinearLayout>
 
-    </com.google.android.material.card.MaterialCardView>
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>
