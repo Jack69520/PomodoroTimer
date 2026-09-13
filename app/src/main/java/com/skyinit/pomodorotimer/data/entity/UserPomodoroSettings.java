@@ -1,23 +1,12 @@
 package com.skyinit.pomodorotimer.data.entity;
 
 import androidx.annotation.NonNull;
-import androidx.room.Entity;
-import androidx.room.ForeignKey;
-import androidx.room.Ignore;
-import androidx.room.PrimaryKey;
+import androidx.annotation.Nullable;
 
 /**
- * 用户级番茄钟工作流与计时偏好，按 userId 持久化。
+ * 设备级番茄钟工作流与计时偏好快照（非 Room 实体；持久化于 SharedPreferences）。
+ * {@link #pomodoroCycleCount} 为运行时周期计数，切号/登出时清零。
  */
-@Entity(
-        tableName = "user_pomodoro_settings",
-        foreignKeys = @ForeignKey(
-                entity = User.class,
-                parentColumns = "userId",
-                childColumns = "userId",
-                onDelete = ForeignKey.CASCADE
-        )
-)
 public class UserPomodoroSettings {
 
     public static final int MIN_POMODOROS_BEFORE_LONG_BREAK = 2;
@@ -32,48 +21,29 @@ public class UserPomodoroSettings {
     public static final int MIN_MAX_PAUSE_COUNT = 1;
     public static final int MAX_MAX_PAUSE_COUNT = 5;
 
-    @PrimaryKey
+    /** 兼容旧调用；设备级设置下可为空。 */
     @NonNull
-    public String userId;
+    public String userId = "";
 
-    /** 默认学习时长（毫秒）。 */
     public long defaultStudyTimeMs;
-
-    /** 默认休息时长（毫秒）。 */
     public long defaultBreakTimeMs;
-
-    /** 单次番茄允许的最大暂停次数。 */
     public int maxPauseCount;
-
-    /** 学习计时期间是否启用勿扰（DND）模式。 */
     public boolean dndDuringFocusEnabled;
-
-    /** 番茄学习计时期间是否自动屏蔽非白名单应用，默认关闭。 */
     public boolean autoBlockDuringPomodoro;
-
-    /** 休息结束后是否自动开始下一轮番茄计时，默认关闭。 */
+    /** 专注/休息期间锁屏全屏显示计时页（默认关）。 */
+    public boolean lockScreenFullscreenEnabled;
     public boolean autoStartAfterBreak;
-
-    /** 是否启用每 N 个番茄钟后的长休息。 */
     public boolean longBreakEnabled;
-
-    /** 长休息触发间隔（N ≥ 2）。 */
     public int pomodorosBeforeLongBreak;
-
-    /** 长休息时长（10~15 分钟）。 */
     public long longBreakDurationMs;
-
-    /** 当前周期内已完成的番茄钟数，用于长休息判定。 */
     public int pomodoroCycleCount;
 
     public UserPomodoroSettings() {
-        this.userId = "";
         applyDefaults();
     }
 
-    @Ignore
-    public UserPomodoroSettings(@NonNull String userId) {
-        this.userId = userId;
+    public UserPomodoroSettings(@Nullable String userId) {
+        this.userId = userId != null ? userId : "";
         applyDefaults();
     }
 
@@ -83,6 +53,7 @@ public class UserPomodoroSettings {
         maxPauseCount = DEFAULT_MAX_PAUSE_COUNT;
         dndDuringFocusEnabled = false;
         autoBlockDuringPomodoro = false;
+        lockScreenFullscreenEnabled = false;
         autoStartAfterBreak = false;
         longBreakEnabled = false;
         pomodorosBeforeLongBreak = DEFAULT_POMODOROS_BEFORE_LONG_BREAK;

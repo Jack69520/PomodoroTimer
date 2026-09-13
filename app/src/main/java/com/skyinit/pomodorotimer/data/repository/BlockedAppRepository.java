@@ -1,6 +1,8 @@
 package com.skyinit.pomodorotimer.data.repository;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 
 import androidx.lifecycle.LiveData;
 
@@ -10,6 +12,7 @@ import com.skyinit.pomodorotimer.domain.appidentity.AppIdentityRulesLoader;
 import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyEngine;
 import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyRulesLoader;
 import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
+import com.skyinit.pomodorotimer.util.AppCategoryClassifier;
 import com.skyinit.pomodorotimer.util.AppCategoryRulesLoader;
 import com.skyinit.pomodorotimer.util.AppScanner;
 
@@ -102,6 +105,44 @@ public final class BlockedAppRepository {
         }
         updateAppAndNotifyService(existing);
         return true;
+    }
+
+    /**
+     * 手动设置分类；复扫时保留手动标记。
+     * @return true 表示已写入
+     */
+    public boolean updateManualCategory(String userId, String packageName, String category) {
+        BlockedApp existing = blockedAppDao.getBlockedAppByPackage(userId, packageName);
+        if (existing == null || category == null || category.isEmpty()) {
+            return false;
+        }
+        existing.category = category;
+        existing.categoryManual = true;
+        blockedAppDao.update(existing);
+        return true;
+    }
+
+    /**
+     * 恢复自动分类并清除手动标记。
+     * @return 恢复后的分类名；失败返回 null
+     */
+    public String restoreAutoCategory(String userId, String packageName) {
+        BlockedApp existing = blockedAppDao.getBlockedAppByPackage(userId, packageName);
+        if (existing == null) {
+            return null;
+        }
+        PackageManager pm = appContext.getPackageManager();
+        try {
+            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
+            String appName = pm.getApplicationLabel(appInfo).toString();
+            String autoCategory = AppCategoryClassifier.classify(packageName, appName, appInfo);
+            existing.category = autoCategory;
+            existing.categoryManual = false;
+            blockedAppDao.update(existing);
+            return autoCategory;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public ScanResult scanAndSync(String userId) {

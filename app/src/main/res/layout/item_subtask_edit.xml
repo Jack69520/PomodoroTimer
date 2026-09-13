@@ -1,56 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingTop="10dp"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingBottom="10dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:gravity="center_vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="10dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_subtask_row"
+    android:minHeight="52dp">
 
     <TextView
         android:id="@+id/subtask_order"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:text="@string/layout_placeholder_pomodoro_count"
         android:textSize="12sp"
-        android:textColor="@color/text_primary"
+        android:textColor="@color/text_secondary"
         android:background="@drawable/order_background"
         android:gravity="center"
         android:layout_marginEnd="8dp" />
 
     <CheckBox
         android:id="@+id/subtask_checkbox"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginEnd="8dp" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp" />
 
     <TextView
         android:id="@+id/subtask_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp"
-        android:textColor="@color/text_primary" />
-
-    <TextView
-        android:id="@+id/subtask_pomodoro_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/task_pomodoro_emoji"
-        android:textSize="14sp"
-        android:layout_marginEnd="4dp" />
-
-    <EditText
-        android:id="@+id/subtask_estimated_pomodoros"
-        android:layout_width="48dp"
-        android:layout_height="36dp"
-        android:inputType="number"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:background="@drawable/edit_text_background"
-        android:layout_marginEnd="8dp" />
+        android:textSize="15sp"
+        android:textColor="@color/text_primary"
+        android:maxLines="2"
+        android:ellipsize="end" />
 
     <TextView
         android:id="@+id/subtask_pomodoro_progress"
@@ -58,6 +45,25 @@
         android:layout_height="wrap_content"
         android:textSize="12sp"
         android:textColor="@color/text_secondary"
-        android:layout_marginEnd="8dp" />
+        android:layout_marginEnd="4dp" />
 
+    <EditText
+        android:id="@+id/subtask_estimated_pomodoros"
+        android:layout_width="40dp"
+        android:layout_height="36dp"
+        android:inputType="number"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:background="@drawable/bg_task_edit_field"
+        android:layout_marginEnd="4dp" />
+
+    <ImageButton
+        android:id="@+id/btn_delete_subtask"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/task_a11y_delete_subtask"
+        android:src="@drawable/ic_close_soft"
+        android:padding="6dp"
+        app:tint="@color/text_hint" />
 </LinearLayout>

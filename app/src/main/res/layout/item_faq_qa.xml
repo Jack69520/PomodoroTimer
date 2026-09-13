@@ -55,7 +55,7 @@
             android:layout_width="3dp"
             android:layout_height="match_parent"
             android:layout_marginEnd="5dp"
-            android:background="@color/primary" />
+            android:background="@color/brand" />
 
         <TextView
             android:id="@+id/faq_answer"
@@ -74,7 +74,7 @@
         android:id="@+id/faq_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/divider"
+        android:background="@color/stroke_subtle"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp" />
 

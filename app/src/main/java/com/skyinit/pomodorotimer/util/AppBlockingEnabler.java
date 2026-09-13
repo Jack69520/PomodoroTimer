@@ -8,8 +8,9 @@ import android.content.Intent;
 import android.os.Build;
 import android.provider.Settings;
 
+import com.skyinit.pomodorotimer.AppContainer;
 import com.skyinit.pomodorotimer.R;
-import com.skyinit.pomodorotimer.data.repository.SettingsManager;
+import com.skyinit.pomodorotimer.data.repository.AccountManager;
 
 /**
  * 从我的页或快捷方式启用应用屏蔽的共用流程。
@@ -40,13 +41,31 @@ public final class AppBlockingEnabler {
         }
     }
 
-    /** 权限页返回后调用。 */
-    public static void onPermissionActivityResult(Activity activity, Host host) {
+    /** 权限页返回后调用：已齐则启用；当前步已授则继续下一项；否则失败。 */
+    public static void onPermissionActivityResult(Activity activity, Host host, int requestCode) {
         if (PermissionUtils.hasAllAppBlockingPermissions(activity)) {
             enableBlocking(activity, host);
-        } else {
-            host.onBlockingEnableFailed();
+            return;
         }
+        if (!wasRequestedPermissionGranted(activity, requestCode)) {
+            host.onBlockingEnableFailed();
+            return;
+        }
+        // 当前步骤已授权，继续引导下一项缺失权限（避免首项完成后误报失败）。
+        requestNextMissingPermission(activity);
+    }
+
+    private static boolean wasRequestedPermissionGranted(Activity activity, int requestCode) {
+        if (requestCode == REQUEST_USAGE_STATS) {
+            return PermissionUtils.hasUsageStatsPermission(activity);
+        }
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            return PermissionUtils.hasOverlayPermission(activity);
+        }
+        if (requestCode == REQUEST_QUERY_ALL_PACKAGES) {
+            return PermissionUtils.hasQueryAllPackagesPermission(activity);
+        }
+        return false;
     }
 
     /** 按顺序请求缺失权限。 */
@@ -71,7 +90,13 @@ public final class AppBlockingEnabler {
     }
 
     private static void enableBlocking(Context context, Host host) {
-        new SettingsManager(context).setAppBlockingEnabled(true);
+        if (!AccountManager.getInstance(context).hasActiveSession()) {
+            host.onBlockingEnableFailed();
+            return;
+        }
+        AppContainer.getInstance(context)
+                .getUserAppBlockingRepository()
+                .setEnabledForCurrentUser(true);
         AppBlockingServiceUtils.startStandaloneBlocking(context);
         host.onBlockingEnabled();
     }

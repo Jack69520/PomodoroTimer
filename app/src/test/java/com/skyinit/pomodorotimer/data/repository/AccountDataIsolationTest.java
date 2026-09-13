@@ -8,7 +8,7 @@ import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
 import com.skyinit.pomodorotimer.data.entity.TodoItem;
 import com.skyinit.pomodorotimer.data.entity.User;
-import com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings;
+import com.skyinit.pomodorotimer.data.entity.UserAppBlocking;
 
 import org.junit.After;
 import org.junit.Before;
@@ -18,9 +18,13 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+/**
+ * 多注册用户数据隔离：番茄记录、屏蔽开关、待办删除不影响计时记录。
+ */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, application = android.app.Application.class)
 public class AccountDataIsolationTest {
@@ -53,42 +57,31 @@ public class AccountDataIsolationTest {
     }
 
     @Test
-    public void userPomodoroSettings_isolatedPerUser() {
+    public void userAppBlocking_isolatedPerUser() {
         insertUser("user_a");
         insertUser("user_b");
-        UserPomodoroSettings settingsA = new UserPomodoroSettings("user_a");
-        settingsA.defaultStudyTimeMs = 30L * 60L * 1000L;
-        settingsA.maxPauseCount = 3;
 
-        UserPomodoroSettings settingsB = new UserPomodoroSettings("user_b");
-        settingsB.defaultStudyTimeMs = 45L * 60L * 1000L;
-        settingsB.maxPauseCount = 1;
+        UserAppBlocking blockingA = new UserAppBlocking();
+        blockingA.userId = "user_a";
+        blockingA.enabled = true;
+        UserAppBlocking blockingB = new UserAppBlocking();
+        blockingB.userId = "user_b";
+        blockingB.enabled = false;
 
-        database.userPomodoroSettingsDao().upsert(settingsA);
-        database.userPomodoroSettingsDao().upsert(settingsB);
+        database.userAppBlockingDao().upsert(blockingA);
+        database.userAppBlockingDao().upsert(blockingB);
 
-        UserPomodoroSettings loadedA = database.userPomodoroSettingsDao().getByUserId("user_a");
-        UserPomodoroSettings loadedB = database.userPomodoroSettingsDao().getByUserId("user_b");
+        UserAppBlocking loadedA = database.userAppBlockingDao().getByUserId("user_a");
+        UserAppBlocking loadedB = database.userAppBlockingDao().getByUserId("user_b");
 
-        assertEquals(30L * 60L * 1000L, loadedA.defaultStudyTimeMs);
-        assertEquals(45L * 60L * 1000L, loadedB.defaultStudyTimeMs);
-        assertNotEquals(loadedA.maxPauseCount, loadedB.maxPauseCount);
+        assertTrue(loadedA.enabled);
+        assertFalse(loadedB.enabled);
     }
 
     @Test
     public void registeredUsers_doNotShareSessionCounts() {
-        User user1 = new User();
-        user1.userId = "reg_1";
-        user1.accountType = User.ACCOUNT_TYPE_REGISTERED;
-        user1.nickname = "A";
-
-        User user2 = new User();
-        user2.userId = "reg_2";
-        user2.accountType = User.ACCOUNT_TYPE_REGISTERED;
-        user2.nickname = "B";
-
-        database.userDao().insert(user1);
-        database.userDao().insert(user2);
+        insertUser("reg_1");
+        insertUser("reg_2");
 
         insertCompletedSession("reg_1", 5000L);
         insertCompletedSession("reg_2", 6000L);
@@ -103,18 +96,14 @@ public class AccountDataIsolationTest {
      */
     @Test
     public void deleteTodo_preservesPomodoroSessions() {
-        User user = new User();
-        user.userId = "user_timer";
-        user.accountType = User.ACCOUNT_TYPE_LOCAL;
-        user.nickname = "Timer User";
-        database.userDao().insert(user);
+        insertUser("user_timer");
 
         TodoItem todo = new TodoItem("Focus task");
-        todo.userId = user.userId;
+        todo.userId = "user_timer";
         long todoId = database.todoDao().insert(todo);
 
         PomodoroSession session = new PomodoroSession();
-        session.userId = user.userId;
+        session.userId = "user_timer";
         session.startTime = System.currentTimeMillis();
         session.endTime = session.startTime + 1500_000L;
         session.duration = 1500_000L;
@@ -126,7 +115,7 @@ public class AccountDataIsolationTest {
         database.todoDao().delete(database.todoDao().getTodoByIdSync((int) todoId));
 
         assertNull(database.todoDao().getTodoByIdSync((int) todoId));
-        assertEquals(1, database.pomodoroSessionDao().getTotalCompletedCountForUser(user.userId));
+        assertEquals(1, database.pomodoroSessionDao().getTotalCompletedCountForUser("user_timer"));
         assertEquals((int) todoId, session.taskId);
     }
 
@@ -134,7 +123,6 @@ public class AccountDataIsolationTest {
         User user = new User();
         user.userId = userId;
         user.nickname = userId;
-        user.accountType = User.ACCOUNT_TYPE_LOCAL;
         database.userDao().insert(user);
     }
 

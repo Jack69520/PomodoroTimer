@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Wallpaper skins only — never use as component accent -->
+    <color name="wallpaper_standard_00">#FFEEEEEE</color>
+    <color name="wallpaper_standard_01">#FFCCCF</color>
+    <color name="wallpaper_standard_02">#FFD4B2</color>
+    <color name="wallpaper_standard_03">#FFDAC1</color>
+    <color name="wallpaper_standard_04">#E2F0CB</color>
+    <color name="wallpaper_standard_05">#B3EAE9</color>
+    <color name="wallpaper_standard_06">#C7CEEA</color>
+    <color name="wallpaper_standard_07">#F8B195</color>
+    <color name="wallpaper_standard_08">#F67280</color>
+    <color name="wallpaper_standard_09">#C06C84</color>
+    <color name="wallpaper_standard_10">#6C5B7B</color>
+
+    <color name="wallpaper_chinese_01">#1D5D45</color>
+    <color name="wallpaper_chinese_02">#7A8D9C</color>
+    <color name="wallpaper_chinese_03">#BB5C45</color>
+    <color name="wallpaper_chinese_04">#E8F1F5</color>
+    <color name="wallpaper_chinese_05">#F0D3A7</color>
+    <color name="wallpaper_chinese_06">#B7D7A2</color>
+    <color name="wallpaper_chinese_07">#EA9DB4</color>
+    <color name="wallpaper_chinese_08">#D8A868</color>
+    <color name="wallpaper_chinese_09">#CF5C48</color>
+    <color name="wallpaper_chinese_10">#E0CDCF</color>
+
+    <color name="wallpaper_morandi_01">#D4C4B0</color>
+    <color name="wallpaper_morandi_02">#C8B5A7</color>
+    <color name="wallpaper_morandi_03">#B8A99A</color>
+    <color name="wallpaper_morandi_04">#A8B5A0</color>
+    <color name="wallpaper_morandi_05">#9BB5B0</color>
+    <color name="wallpaper_morandi_06">#A5A8B5</color>
+    <color name="wallpaper_morandi_07">#B5A8B0</color>
+    <color name="wallpaper_morandi_08">#C4A8A0</color>
+    <color name="wallpaper_morandi_09">#D0B5A0</color>
+    <color name="wallpaper_morandi_10">#E0C4A0</color>
+    <color name="wallpaper_morandi_11">#B8C4A8</color>
+    <color name="wallpaper_morandi_12">#A8C4B8</color>
+    <color name="wallpaper_morandi_13">#A8B8C4</color>
+    <color name="wallpaper_morandi_14">#B8A8C4</color>
+    <color name="wallpaper_morandi_15">#C4A8B8</color>
+</resources>

@@ -3,11 +3,11 @@ package com.skyinit.pomodorotimer.data.repository;
 import android.content.Context;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.AppContainer;
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.TestApp;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.util.AppExecutors;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,17 +17,17 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+/**
+ * Guest / Registered 账户流回归：冷启动为 Guest，注册登录后可恢复，登出/删除回到 Guest。
+ */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, application = TestApp.class)
 public class AccountManagerFlowTest {
@@ -36,17 +36,17 @@ public class AccountManagerFlowTest {
     private static final long CALLBACK_TIMEOUT_MS = 10_000L;
 
     private Context context;
-    private App app;
     private AccountManager accountManager;
 
     @Before
-    public void setUp() throws InterruptedException {
+    public void setUp() {
         context = org.robolectric.RuntimeEnvironment.getApplication();
-        app = (App) context;
+        App app = (App) context;
         assertTrue(app.isUserDataInitialized());
         accountManager = AccountManager.getInstance(context);
-        assertTrue(accountManager.hasActiveProfile());
-        assertTrue(accountManager.isLocalProfile());
+        assertFalse("Cold start should be Guest", accountManager.hasActiveSession());
+        assertFalse(accountManager.isLoggedIn());
+        assertNull(accountManager.getCurrentUserId());
     }
 
     @After
@@ -55,14 +55,14 @@ public class AccountManagerFlowTest {
     }
 
     @Test
-    public void register_upgradeLocalProfile_succeeds() throws InterruptedException {
-        String localUserId = accountManager.requireActiveUserId();
-
+    public void register_fromGuest_createsLoggedInAccount() throws InterruptedException {
         User registered = awaitRegister("Tester", VALID_PASSWORD);
         assertNotNull(registered);
-        assertEquals(localUserId, registered.userId);
+        assertNotNull(registered.userId);
+        assertFalse(registered.userId.isEmpty());
+        assertTrue(accountManager.isLoggedIn());
+        assertTrue(accountManager.hasActiveSession());
         assertTrue(accountManager.isRegistered());
-        assertEquals(User.ACCOUNT_TYPE_REGISTERED, registered.accountType);
     }
 
     @Test
@@ -70,12 +70,12 @@ public class AccountManagerFlowTest {
         String registeredUserId = awaitRegister("LoginUser", VALID_PASSWORD).userId;
 
         awaitLogout();
-        assertTrue(accountManager.isLocalProfile());
-        assertNotEquals(registeredUserId, accountManager.requireActiveUserId());
+        assertFalse(accountManager.hasActiveSession());
+        assertNull(accountManager.getCurrentUserId());
 
         User loggedIn = awaitLogin(registeredUserId, VALID_PASSWORD);
-        assertEquals(registeredUserId, loggedIn.userId);
-        assertTrue(accountManager.isRegistered());
+        assertTrue(registeredUserId.equals(loggedIn.userId));
+        assertTrue(accountManager.isLoggedIn());
     }
 
     @Test
@@ -101,17 +101,17 @@ public class AccountManagerFlowTest {
         awaitCallback(latch);
         assertNotNull(error.get());
         assertFalse(error.get().isEmpty());
-        assertTrue(accountManager.isLocalProfile());
+        assertFalse(accountManager.hasActiveSession());
     }
 
     @Test
-    public void deleteCurrentAccount_createsFreshLocalProfile() throws InterruptedException {
+    public void deleteCurrentAccount_returnsToGuest() throws InterruptedException {
         awaitRegister("DeleteMe", VALID_PASSWORD);
         String registeredUserId = accountManager.requireActiveUserId();
 
         awaitDeleteAccount();
-        assertTrue(accountManager.isLocalProfile());
-        assertNotEquals(registeredUserId, accountManager.requireActiveUserId());
+        assertFalse(accountManager.hasActiveSession());
+        assertNull(accountManager.getCurrentUserId());
 
         AtomicReference<User> deletedCheck = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
@@ -124,32 +124,27 @@ public class AccountManagerFlowTest {
     }
 
     @Test
-    public void register_whenAlreadyRegistered_failsOnMainThread() {
+    public void register_whenAlreadyLoggedIn_fails() throws InterruptedException {
         AtomicReference<String> error = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
 
-        try {
-            awaitRegister("First", VALID_PASSWORD);
-            accountManager.register("Second", VALID_PASSWORD, VALID_PASSWORD,
-                    null, null, new AccountManager.RegisterCallback() {
-                        @Override
-                        public void onSuccess(User user) {
-                            fail("Should not register twice");
-                            latch.countDown();
-                        }
+        awaitRegister("First", VALID_PASSWORD);
+        accountManager.register("Second", VALID_PASSWORD, VALID_PASSWORD,
+                null, null, new AccountManager.RegisterCallback() {
+                    @Override
+                    public void onSuccess(User user) {
+                        fail("Should not register while logged in");
+                        latch.countDown();
+                    }
 
-                        @Override
-                        public void onError(String message) {
-                            error.set(message);
-                            latch.countDown();
-                        }
-                    });
-            awaitCallback(latch);
-            assertNotNull(error.get());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            fail(e.getMessage());
-        }
+                    @Override
+                    public void onError(String message) {
+                        error.set(message);
+                        latch.countDown();
+                    }
+                });
+        awaitCallback(latch);
+        assertNotNull(error.get());
     }
 
     private User awaitRegister(String nickname, String password) throws InterruptedException {

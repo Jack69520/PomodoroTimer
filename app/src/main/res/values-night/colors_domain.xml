@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="todo_overdue_text">#EF9A9A</color>
+    <color name="todo_overdue_container">#33EF9A9A</color>
+    <color name="todo_due_today">#90CAF9</color>
+    <color name="todo_priority_low">#81C784</color>
+    <color name="todo_priority_medium">#FFB74D</color>
+    <color name="todo_priority_high">#E57373</color>
+    <color name="todo_priority_urgent">#CE93D8</color>
+    <color name="todo_item_border">@color/stroke_subtle</color>
+
+    <color name="task_cat_default_bg">#D4E4F4</color>
+    <color name="task_cat_default_border">#A8C4DC</color>
+    <color name="task_cat_default_text">#3A5878</color>
+    <color name="task_cat_work_bg">#F8D4C4</color>
+    <color name="task_cat_work_border">#E8B0A0</color>
+    <color name="task_cat_work_text">#8B4838</color>
+    <color name="task_cat_study_bg">#C4DCF4</color>
+    <color name="task_cat_study_border">#98B8D8</color>
+    <color name="task_cat_study_text">#385878</color>
+    <color name="task_cat_life_bg">#CCE8C4</color>
+    <color name="task_cat_life_border">#A0D0A0</color>
+    <color name="task_cat_life_text">#3E7038</color>
+    <color name="task_cat_sports_bg">#F8E0B8</color>
+    <color name="task_cat_sports_border">#E8C890</color>
+    <color name="task_cat_sports_text">#9A6820</color>
+    <color name="task_cat_entertainment_bg">#E0CCF0</color>
+    <color name="task_cat_entertainment_border">#B8A0D0</color>
+    <color name="task_cat_entertainment_text">#604878</color>
+    <color name="task_cat_other_bg">#E0D4C8</color>
+    <color name="task_cat_other_border">#B8A898</color>
+    <color name="task_cat_other_text">#585040</color>
+
+    <color name="chart_grid">#33FFFFFF</color>
+    <color name="chart_week_bar">@color/brand</color>
+    <color name="chart_hourly_bar">#FF5BA4D9</color>
+    <color name="chart_pause_bar">#FFB39DDB</color>
+    <color name="chart_marker_bg">#E641CD9D</color>
+    <color name="chart_marker_text">@color/absolute_white</color>
+    <color name="stats_hero_accent">@color/brand_container</color>
+    <color name="stats_insight_bg">#1F2A2A2A</color>
+
+    <color name="session_status_completed">#FF81C784</color>
+    <color name="session_status_failed">#FFEF9A9A</color>
+    <color name="session_status_incomplete">#FFFFCC80</color>
+    <color name="calendar_indicator_completed">@color/brand</color>
+    <color name="calendar_indicator_failed">#FFEF5350</color>
+    <color name="calendar_indicator_incomplete">#FFFFB74D</color>
+</resources>

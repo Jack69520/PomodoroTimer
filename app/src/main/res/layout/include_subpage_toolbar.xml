@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 子页顶栏：容器吃状态栏 inset，Toolbar 本体 56dp，无阴影描边 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/subpage_toolbar_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/subpage_toolbar"
+        style="@style/MainToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="12dp"
+        app:navigationIcon="@drawable/ic_back"
+        app:titleCentered="false"
+        app:titleTextAppearance="@style/AppActionBarTitle" />
+</FrameLayout>

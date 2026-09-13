@@ -68,6 +68,15 @@ public class TimerSettingsRepository {
                 settings -> settings.autoBlockDuringPomodoro = enabled);
     }
 
+    public boolean isLockScreenFullscreenEnabled() {
+        return pomodoroSettingsRepository.getSettings().lockScreenFullscreenEnabled;
+    }
+
+    public void setLockScreenFullscreenEnabled(boolean enabled) {
+        pomodoroSettingsRepository.applyUpdate(
+                settings -> settings.lockScreenFullscreenEnabled = enabled);
+    }
+
     public long resetToDefault() {
         return setDefaultStudyTimeMs(UserPomodoroSettings.DEFAULT_STUDY_TIME_MS);
     }

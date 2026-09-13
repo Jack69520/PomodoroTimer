@@ -4,6 +4,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.Nullable;
+
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.dao.PomodoroSessionDao;
 import com.skyinit.pomodorotimer.data.dao.SessionAppBlockRecordDao;
@@ -374,6 +376,34 @@ public class StatisticsRepository {
         AppExecutors.getInstance().diskIo(() -> {
             int count = sessionDao.getTotalCompletedCountForUser(userId);
             mainHandler.post(() -> callback.onCountReceived(count));
+        });
+    }
+
+    /**
+     * 「我的」页迷你统计：同一次 diskIo 内读取累计完成次数与累计时长，保证两项一致。
+     * 无活跃档案时回调 (0, 0)。回调投递到主线程。
+     */
+    public void getProfileSummary(@Nullable ProfileSummaryCallback callback) {
+        if (callback == null) {
+            return;
+        }
+        if (!accountManager.hasActiveProfile()) {
+            mainHandler.post(() -> callback.onSummaryReceived(0, 0L));
+            return;
+        }
+        final String userId = accountManager.requireActiveUserId();
+        AppExecutors.getInstance().diskIo(() -> {
+            int count = 0;
+            long durationMs = 0L;
+            try {
+                count = sessionDao.getTotalCompletedCountForUser(userId);
+                durationMs = Math.max(0L, sessionDao.getTotalCompletedDurationForUser(userId));
+            } catch (Exception e) {
+                AppLog.e("StatisticsRepository", "Failed to load profile summary", e);
+            }
+            final int safeCount = Math.max(0, count);
+            final long safeDuration = durationMs;
+            mainHandler.post(() -> callback.onSummaryReceived(safeCount, safeDuration));
         });
     }
 
@@ -755,6 +785,10 @@ public class StatisticsRepository {
 
     public interface TotalCountCallback {
         void onCountReceived(int count);
+    }
+
+    public interface ProfileSummaryCallback {
+        void onSummaryReceived(int totalCompletedCount, long totalFocusDurationMs);
     }
 
     public interface DashboardCallback {

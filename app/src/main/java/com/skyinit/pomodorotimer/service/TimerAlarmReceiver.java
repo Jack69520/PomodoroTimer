@@ -23,7 +23,11 @@ public class TimerAlarmReceiver extends BroadcastReceiver {
         AppLog.d(TAG, "Alarm received: " + action);
         if (TimerService.ACTION_SESSION_COMPLETE.equals(action)
                 || TimerService.ACTION_PAUSE_TIMEOUT.equals(action)) {
-            TimerServiceLauncher.deliverAction(context, action);
+            Intent serviceIntent = new Intent(context, TimerService.class);
+            serviceIntent.setAction(action);
+            int generation = intent.getIntExtra(TimerAlarmScheduler.EXTRA_GENERATION, -1);
+            serviceIntent.putExtra(TimerAlarmScheduler.EXTRA_GENERATION, generation);
+            TimerServiceLauncher.deliverAction(context, serviceIntent);
         }
     }
 }

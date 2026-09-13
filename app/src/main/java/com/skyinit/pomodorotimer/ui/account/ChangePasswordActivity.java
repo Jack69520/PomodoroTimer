@@ -1,37 +1,38 @@
 package com.skyinit.pomodorotimer.ui.account;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.model.FormFieldError;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
+
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.lifecycle.ViewModelProvider;
 
-public class ChangePasswordActivity extends BaseActivity {
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
+public class ChangePasswordActivity extends SubpageActivity {
     private ChangePasswordViewModel viewModel;
 
-    private EditText etOldPassword;
-    private EditText etNewPassword;
-    private EditText etConfirmPassword;
-    private Button btnSubmit;
+    private TextInputLayout tilOldPassword;
+    private TextInputLayout tilNewPassword;
+    private TextInputLayout tilConfirmPassword;
+    private TextInputEditText etOldPassword;
+    private TextInputEditText etNewPassword;
+    private TextInputEditText etConfirmPassword;
+    private MaterialButton btnSubmit;
     private TextView tvTip;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_change_password);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(R.string.title_change_password));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+        setContentWithSubpageChrome(R.layout.activity_change_password, R.string.title_change_password);
 
         App app = (App) getApplication();
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
@@ -43,6 +44,9 @@ public class ChangePasswordActivity extends BaseActivity {
     }
 
     private void initViews() {
+        tilOldPassword = findViewById(R.id.til_old_password);
+        tilNewPassword = findViewById(R.id.til_new_password);
+        tilConfirmPassword = findViewById(R.id.til_confirm_password);
         etOldPassword = findViewById(R.id.et_old_password);
         etNewPassword = findViewById(R.id.et_new_password);
         etConfirmPassword = findViewById(R.id.et_confirm_password);
@@ -71,16 +75,19 @@ public class ChangePasswordActivity extends BaseActivity {
         if (error == null) {
             return;
         }
+        clearFieldErrors();
+        tvTip.setVisibility(View.GONE);
         switch (error.field) {
             case FormFieldError.FIELD_OLD_PASSWORD:
-                etOldPassword.setError(error.message);
+                tilOldPassword.setError(error.message);
                 etOldPassword.requestFocus();
                 break;
             case FormFieldError.FIELD_NEW_PASSWORD:
+                tilNewPassword.setError(error.message);
                 etNewPassword.requestFocus();
                 break;
             case FormFieldError.FIELD_CONFIRM_PASSWORD:
-                etConfirmPassword.setError(error.message);
+                tilConfirmPassword.setError(error.message);
                 etConfirmPassword.requestFocus();
                 break;
             case FormFieldError.FIELD_TIP:
@@ -93,11 +100,25 @@ public class ChangePasswordActivity extends BaseActivity {
         }
     }
 
+    private void clearFieldErrors() {
+        tilOldPassword.setError(null);
+        tilNewPassword.setError(null);
+        tilConfirmPassword.setError(null);
+    }
+
     private void setupClickListeners() {
-        btnSubmit.setOnClickListener(v -> viewModel.updatePassword(
-                etOldPassword.getText().toString(),
-                etNewPassword.getText().toString(),
-                etConfirmPassword.getText().toString()));
+        btnSubmit.setOnClickListener(v -> {
+            clearFieldErrors();
+            tvTip.setVisibility(View.GONE);
+            viewModel.updatePassword(
+                    textOf(etOldPassword),
+                    textOf(etNewPassword),
+                    textOf(etConfirmPassword));
+        });
+    }
+
+    private static String textOf(TextInputEditText editText) {
+        return editText.getText() != null ? editText.getText().toString() : "";
     }
 
     @Override

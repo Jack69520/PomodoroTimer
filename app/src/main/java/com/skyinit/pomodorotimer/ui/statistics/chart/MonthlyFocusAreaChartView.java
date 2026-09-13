@@ -136,7 +136,7 @@ public class MonthlyFocusAreaChartView extends View {
 
     public void applyThemeColors() {
         Context context = getContext();
-        lineColor = ContextCompat.getColor(context, R.color.primary);
+        lineColor = ContextCompat.getColor(context, R.color.brand);
         labelColor = ContextCompat.getColor(context, R.color.text_secondary);
         gridColor = ContextCompat.getColor(context, R.color.chart_grid);
         markerBgColor = ContextCompat.getColor(context, R.color.chart_marker_bg);

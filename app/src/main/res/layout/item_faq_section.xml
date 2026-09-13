@@ -30,7 +30,7 @@
             android:layout_height="22dp"
             android:layout_marginEnd="10dp"
             android:contentDescription="@null"
-            app:tint="@color/primary" />
+            app:tint="@color/brand" />
 
         <TextView
             android:id="@+id/faq_section_title"
@@ -67,7 +67,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/divider"
+        android:background="@color/stroke_subtle"
         android:layout_marginBottom="4dp" />
 
     <LinearLayout

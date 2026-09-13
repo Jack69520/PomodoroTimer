@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="comp_link">@color/brand</color>
+    <color name="comp_tab_indicator">@color/brand</color>
+    <color name="comp_chip_selected">@color/brand</color>
+    <color name="comp_input_stroke">@color/stroke_subtle</color>
+    <color name="comp_input_fill">@color/surface_page</color>
+    <color name="comp_button_primary">@color/brand</color>
+    <color name="comp_button_on_primary">@color/on_brand</color>
+    <color name="comp_selection_check">@color/brand</color>
+
+    <color name="comp_alert_extend">#FFFF9800</color>
+    <color name="comp_alert_break">#FF4CAF50</color>
+    <color name="comp_alert_complete">#FF2196F3</color>
+
+    <color name="comp_home_control_primary">@color/brand</color>
+    <color name="comp_home_control_on_primary">@color/on_brand</color>
+    <color name="comp_home_control_secondary">#2A3833</color>
+    <color name="comp_home_control_on_secondary">#D5E4DE</color>
+    <color name="comp_home_control_ripple">#33000000</color>
+    <color name="comp_home_control_ripple_soft">#33FFFFFF</color>
+    <color name="comp_home_control_secondary_stroke">#3A4A45</color>
+    <color name="comp_home_phase_dot">@color/brand</color>
+    <color name="comp_home_timer_display">#F2F7F5</color>
+    <color name="comp_home_timer_stage_start">#1A2421</color>
+    <color name="comp_home_timer_stage_center">#17201D</color>
+    <color name="comp_home_timer_stage_end">#141C1A</color>
+
+    <color name="comp_timer_bg_start">#12243A</color>
+    <color name="comp_timer_bg_center">#103027</color>
+    <color name="comp_timer_bg_end">#0D1E33</color>
+
+    <color name="comp_consent_bg_start">#1B2C27</color>
+    <color name="comp_consent_bg_end">#15545F</color>
+    <color name="comp_consent_card_stroke">#3341CD9D</color>
+
+    <color name="comp_avatar_background">#FF404040</color>
+    <color name="comp_avatar_border">#FF555555</color>
+    <color name="comp_avatar_icon">#FFAAAAAA</color>
+</resources>

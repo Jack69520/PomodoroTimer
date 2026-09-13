@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.provider.Settings;
 
 import androidx.annotation.NonNull;
@@ -15,8 +16,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 /**
- * 设置页系统权限检测与跳转。特殊权限（精确闹钟 / 使用情况 / 悬浮窗）走系统设置页；
- * 其余运行时权限可先 request，失败后再打开应用详情。
+ * 设置页系统权限检测与跳转。
+ * <ul>
+ *   <li>运行时权限：优先系统授权弹窗；永久拒绝等无法再弹框时，Intent 到应用详情/权限相关设置页兜底。</li>
+ *   <li>特殊权限（精确闹钟 / 电池优化 / 使用情况 / 悬浮窗，以及 API 33 以下通知）：走对应系统授权页或弹窗。</li>
+ * </ul>
  */
 public final class SettingsPermissionHelper {
 
@@ -30,6 +34,8 @@ public final class SettingsPermissionHelper {
         PHOTOS_VIDEOS,
         CAMERA,
         EXACT_ALARM,
+        /** 忽略电池优化（Doze / 后台限制） */
+        BATTERY_OPTIMIZATION,
         /** 应用屏蔽：使用情况访问 */
         USAGE_STATS_BLOCKING,
         /** 应用屏蔽：悬浮窗 */
@@ -53,6 +59,9 @@ public final class SettingsPermissionHelper {
                 return true;
             case EXACT_ALARM:
                 return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
+            case BATTERY_OPTIMIZATION:
+                // minSdk 28，Doze 白名单 API 自 23 起可用
+                return true;
             case USAGE_STATS_BLOCKING:
             case OVERLAY_BLOCKING:
                 return true;
@@ -78,6 +87,8 @@ public final class SettingsPermissionHelper {
                 return hasRuntimePermission(context, Manifest.permission.CAMERA);
             case EXACT_ALARM:
                 return ExactAlarmPermissionHelper.canScheduleExactAlarms(context);
+            case BATTERY_OPTIMIZATION:
+                return isIgnoringBatteryOptimizations(context);
             case USAGE_STATS_BLOCKING:
                 return PermissionUtils.hasUsageStatsPermission(context);
             case OVERLAY_BLOCKING:
@@ -113,10 +124,11 @@ public final class SettingsPermissionHelper {
         }
     }
 
-    /** 是否只能通过系统设置页授权（无法弹出运行时权限对话框）。 */
+    /** 是否只能通过系统设置页/专用 Intent 授权（无法弹出运行时权限对话框）。 */
     public static boolean requiresSettingsIntent(@NonNull Kind kind) {
         switch (kind) {
             case EXACT_ALARM:
+            case BATTERY_OPTIMIZATION:
             case USAGE_STATS_BLOCKING:
             case OVERLAY_BLOCKING:
                 return true;
@@ -133,6 +145,9 @@ public final class SettingsPermissionHelper {
      * @return true 表示已成功发起跳转
      */
     public static boolean openPermissionSettings(@NonNull Activity activity, @NonNull Kind kind) {
+        if (kind == Kind.BATTERY_OPTIMIZATION) {
+            return openBatteryOptimizationSettings(activity);
+        }
         try {
             Intent intent = createSettingsIntent(activity, kind);
             activity.startActivity(intent);
@@ -147,6 +162,32 @@ public final class SettingsPermissionHelper {
         }
     }
 
+    /**
+     * 电池优化：优先系统「忽略电池优化」快速授权弹窗；失败则打开电池优化列表，再兜底应用详情。
+     */
+    private static boolean openBatteryOptimizationSettings(@NonNull Activity activity) {
+        try {
+            Intent request = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            request.setData(Uri.parse("package:" + activity.getPackageName()));
+            activity.startActivity(request);
+            return true;
+        } catch (Exception ignored) {
+            // 部分机型或永久拒绝后不再支持快速弹窗
+        }
+        try {
+            activity.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            return true;
+        } catch (Exception ignored) {
+            // continue
+        }
+        try {
+            activity.startActivity(createAppDetailsIntent(activity));
+            return true;
+        } catch (Exception fallback) {
+            return false;
+        }
+    }
+
     @NonNull
     public static Intent createSettingsIntent(@NonNull Context context, @NonNull Kind kind) {
         switch (kind) {
@@ -157,6 +198,10 @@ public final class SettingsPermissionHelper {
                     return exact;
                 }
                 break;
+            case BATTERY_OPTIMIZATION:
+                Intent battery = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                battery.setData(Uri.parse("package:" + context.getPackageName()));
+                return battery;
             case USAGE_STATS_BLOCKING:
                 return new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
             case OVERLAY_BLOCKING:
@@ -185,6 +230,9 @@ public final class SettingsPermissionHelper {
 
     /**
      * 是否应直接打开设置页（用户曾拒绝且系统不再弹出授权框）。
+     * <p>
+     * 判定依赖 {@link #wasRequestedBefore}：须在真正 {@code requestPermissions} /
+     * {@code launch} 系统授权框之后再 {@link #markRequested}，否则首次点击会被误判为永久拒绝。
      */
     public static boolean shouldOpenSettingsDirectly(
             @NonNull Activity activity,
@@ -205,6 +253,9 @@ public final class SettingsPermissionHelper {
         return !showRationale && wasRequestedBefore(activity, permission);
     }
 
+    /**
+     * 标记已向系统发起过运行时授权请求。仅在即将 launch 系统授权框时调用。
+     */
     public static void markRequested(@NonNull Context context, @NonNull String permission) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
@@ -215,6 +266,11 @@ public final class SettingsPermissionHelper {
     public static boolean wasRequestedBefore(@NonNull Context context, @NonNull String permission) {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getBoolean(keyRequested(permission), false);
+    }
+
+    public static boolean isIgnoringBatteryOptimizations(@NonNull Context context) {
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        return pm != null && pm.isIgnoringBatteryOptimizations(context.getPackageName());
     }
 
     private static boolean hasRuntimePermission(@NonNull Context context, @NonNull String permission) {

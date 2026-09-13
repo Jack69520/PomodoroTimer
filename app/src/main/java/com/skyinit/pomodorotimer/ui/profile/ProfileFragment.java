@@ -1,73 +1,83 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.data.model.ProfileUiState;
-import com.skyinit.pomodorotimer.data.repository.SettingsManager;
-import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
-import com.skyinit.pomodorotimer.ui.account.AccountActivity;
-import com.skyinit.pomodorotimer.util.AppLog;
-import com.skyinit.pomodorotimer.util.PermissionUtils;
-import com.skyinit.pomodorotimer.R;
-import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.os.Build;
+import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.Spinner;
-import java.io.File;
-import android.widget.Switch;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.content.res.Configuration;
 
+import com.google.android.material.button.MaterialButton;
+import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.BaseActivity;
+import com.skyinit.pomodorotimer.MainActivity;
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.model.ProfileAvatarImage;
+import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
+import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
+import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
+import com.skyinit.pomodorotimer.util.AppLog;
+
+/**
+ * 「我的」页：渲染 {@link ProfileUiState}、消费 {@link ProfileEffect}，业务经 Intent 交给 ViewModel。
+ */
 public class ProfileFragment extends Fragment {
-    private TextView countText;
+
     private ProfileViewModel viewModel;
-    
-    // 账户相关变量
-    private LinearLayout accountSection;
+
+    private View accountSection;
     private ImageView accountAvatar;
     private TextView accountNickname;
     private TextView accountId;
-
-    // 应用屏蔽相关变量
-    private Switch appBlockingSwitch;
+    private TextView accountSignature;
+    private View statsSummarySection;
+    private TextView countText;
+    private TextView durationText;
+    private SwitchCompat appBlockingSwitch;
     private TextView appBlockingDescription;
-    private Button btnAppBlockingSettings;
-    private static final int REQUEST_USAGE_STATS = 1001;
-    private static final int REQUEST_OVERLAY_PERMISSION = 1002;
-    private static final int REQUEST_QUERY_ALL_PACKAGES = 1003;
+    private MaterialButton btnAppBlockingSettings;
+    private View btnSettings;
+    private View btnDevLab;
+    private View dividerBeforeDevLab;
+    private View btnFaq;
+    private View btnAbout;
 
+    private boolean suppressSwitchCallback;
+    @Nullable
+    private String currentAvatarPath;
+
+    private final AppBlockingEnabler.Host blockingHost = new AppBlockingEnabler.Host() {
+        @Override
+        public Activity getActivity() {
+            return requireActivity();
+        }
+
+        @Override
+        public void onBlockingEnabled() {
+            if (!isAdded() || viewModel == null) {
+                return;
+            }
+            viewModel.dispatch(ProfileIntent.blockingExternalResult(true));
+        }
+
+        @Override
+        public void onBlockingEnableFailed() {
+            if (!isAdded() || viewModel == null) {
+                return;
+            }
+            viewModel.dispatch(ProfileIntent.blockingExternalResult(false));
+        }
+    };
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -77,375 +87,274 @@ public class ProfileFragment extends Fragment {
                 .get(ProfileViewModel.class);
     }
 
-
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_profile, container, false);
-
-        // 添加设置按钮
-        LinearLayout settingsButton = view.findViewById(R.id.btn_settings);
-        settingsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), SettingsActivity.class);
-            startActivity(intent);
-            // 添加简单的进入动画
-            getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
-
-        LinearLayout devLabButton = view.findViewById(R.id.btn_dev_lab);
-        devLabButton.setOnClickListener(v -> showDevLabConfirmDialog());
-
-        // 添加关于按钮
-        LinearLayout aboutButton = view.findViewById(R.id.btn_about);
-        aboutButton.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), AboutActivity.class);
-            startActivity(intent);
-            // 添加简单的进入动画
-            getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
-
-        // 添加常见问题按钮
-        LinearLayout faqButton = view.findViewById(R.id.btn_faq);
-        faqButton.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), FAQActivity.class);
-            startActivity(intent);
-            getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
-
-        // 初始化应用屏蔽功能
-        initAppBlockingFeatures(view);
-        
-        // 初始化账户功能
-        initAccountFeatures(view);
-
-        return view;
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_profile, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        countText = view.findViewById(R.id.count_text);
-        
-        viewModel.getTotalCompletedCount().observe(getViewLifecycleOwner(), count -> {
-            if (countText == null) {
-                return;
-            }
-            if (count != null && count > 0) {
-                countText.setVisibility(View.VISIBLE);
-                countText.setText(getString(R.string.profile_label_total_focus, count));
-            } else {
-                countText.setVisibility(View.GONE);
-            }
-        });
-
-        viewModel.getProfileUiState().observe(getViewLifecycleOwner(), this::bindProfileUiState);
-        viewModel.refresh();
+        bindViews(view);
+        setupClicks();
+        observeViewModel();
+        viewModel.dispatch(ProfileIntent.refresh());
     }
 
-    private void bindProfileUiState(ProfileUiState state) {
-        if (state == null || accountNickname == null) {
-            return;
-        }
-        accountNickname.setText(state.nickname);
-        accountId.setText(state.idLabel);
-        if (state.hasAvatar) {
-            loadUserAvatar(state.avatarPath);
-            accountAvatar.setOnClickListener(v -> openAvatarPreview(state.avatarPath));
-        } else {
-            accountAvatar.setImageResource(R.drawable.ic_default_avatar);
-            accountAvatar.setOnClickListener(null);
-        }
-    }
-
-    private SettingsManager getSettings() {
-        return viewModel.getSettingsManager();
-    }
-
-
-
-
-    // 应用屏蔽功能相关方法
-    private void initAppBlockingFeatures(View view) {
-        appBlockingSwitch = view.findViewById(R.id.app_blocking_switch);
-        appBlockingDescription = view.findViewById(R.id.app_blocking_description);
-        btnAppBlockingSettings = view.findViewById(R.id.btn_app_blocking_settings);
-
-        // 根据权限状态设置初始状态
-        updateAppBlockingUI();
-
-        // 设置开关监听器
-        appBlockingSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                checkAndRequestPermissions();
-            } else {
-                getSettings().setAppBlockingEnabled(false);
-                updateAppBlockingUI();
-                stopAppBlockingService();
-            }
-        });
-
-        // 设置管理按钮监听器
-        btnAppBlockingSettings.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), AppBlockingManagementActivity.class);
-            startActivity(intent);
-            // 添加简单的进入动画
-            getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
-
-    }
-
-    private void updateAppBlockingUI() {
-        boolean hasAllPermissions = PermissionUtils.hasAllAppBlockingPermissions(requireContext());
-        boolean isEnabled = hasAllPermissions && getSettings().isAppBlockingEnabled();
-        
-        // 如果权限丢失但设置仍为启用，则关闭设置
-        if (!hasAllPermissions && getSettings().isAppBlockingEnabled()) {
-            getSettings().setAppBlockingEnabled(false);
-            stopAppBlockingService();
-            isEnabled = false;
-        }
-        
-        // 根据权限状态设置开关状态
-        appBlockingSwitch.setChecked(isEnabled);
-        btnAppBlockingSettings.setVisibility(isEnabled ? View.VISIBLE : View.GONE);
-        
-        if (isEnabled) {
-            appBlockingDescription.setText(R.string.blocking_description_enabled);
-        } else if (!hasAllPermissions) {
-            appBlockingDescription.setText(R.string.blocking_description_need_permission);
-        } else {
-            appBlockingDescription.setText(R.string.blocking_description_default);
-        }
-    }
-
-    private void checkAndRequestPermissions() {
-        if (PermissionUtils.hasAllAppBlockingPermissions(requireContext())) {
-            enableAppBlocking();
-        } else {
-            showPermissionDialog();
-        }
-    }
-
-    private void showPermissionDialog() {
-        String missingPermissions = PermissionUtils.getMissingPermissionDescription(requireContext());
-        
-        new AlertDialog.Builder(requireContext())
-            .setTitle(R.string.common_dialog_permission_title)
-            .setMessage(getString(R.string.blocking_dialog_permission_message, missingPermissions))
-            .setPositiveButton(R.string.confirm, (dialog, which) -> requestPermissions())
-            .setNegativeButton(R.string.cancel, (dialog, which) -> {
-                appBlockingSwitch.setChecked(false);
-            })
-            .show();
-    }
-
-    private void requestPermissions() {
-        if (!PermissionUtils.hasUsageStatsPermission(requireContext())) {
-            PermissionUtils.requestUsageStatsPermission(requireActivity(), REQUEST_USAGE_STATS);
-        } else if (!PermissionUtils.hasOverlayPermission(requireContext())) {
-            PermissionUtils.requestOverlayPermission(requireActivity(), REQUEST_OVERLAY_PERMISSION);
-        } else if (!PermissionUtils.hasQueryAllPackagesPermission(requireContext())) {
-            PermissionUtils.requestQueryAllPackagesPermission(requireActivity(), REQUEST_QUERY_ALL_PACKAGES);
-        } else {
-            enableAppBlocking();
-        }
-    }
-
-    private void enableAppBlocking() {
-        viewModel.setAppBlockingEnabled(true);
-        updateAppBlockingUI();
-        AppBlockingServiceUtils.startStandaloneBlocking(requireContext());
-        Toast.makeText(getContext(), R.string.blocking_toast_enabled, Toast.LENGTH_SHORT).show();
-    }
-    
-    /**
-     * 检查并同步服务状态
-     */
-    private void checkAndSyncServiceStatus() {
-        AppBlockingServiceUtils.syncStandaloneServiceStatus(requireContext());
-    }
-
-    private void startAppBlockingService() {
-        AppBlockingServiceUtils.startStandaloneBlocking(requireContext());
-    }
-
-    private void stopAppBlockingService() {
-        AppBlockingServiceUtils.stopStandaloneBlocking(requireContext());
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == REQUEST_USAGE_STATS || 
-            requestCode == REQUEST_OVERLAY_PERMISSION || 
-            requestCode == REQUEST_QUERY_ALL_PACKAGES) {
-            
-            // 延迟检查权限，给用户时间完成授权
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (PermissionUtils.hasAllAppBlockingPermissions(requireContext())) {
-                    enableAppBlocking();
-                } else {
-                    appBlockingSwitch.setChecked(false);
-                    Toast.makeText(getContext(), R.string.blocking_toast_permission_failed, Toast.LENGTH_LONG).show();
-                }
-            }, 1000);
-        }
-    }
-
-    private void showDevLabConfirmDialog() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.title_dev_lab)
-                .setMessage(R.string.blocking_dialog_dev_lab_message)
-                .setPositiveButton(R.string.confirm, (dialog, which) -> {
-                    Intent intent = new Intent(getActivity(), DevLabActivity.class);
-                    startActivity(intent);
-                    // 添加简单的进入动画
-                    getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-    
-    // 初始化账户功能
-    private void initAccountFeatures(View view) {
+    private void bindViews(@NonNull View view) {
         accountSection = view.findViewById(R.id.account_section);
         accountAvatar = view.findViewById(R.id.account_avatar);
         accountNickname = view.findViewById(R.id.account_nickname);
         accountId = view.findViewById(R.id.account_id);
-        
-        // 设置账户区域点击事件
-        accountSection.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), AccountActivity.class);
-            startActivity(intent);
-            getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        accountSignature = view.findViewById(R.id.account_signature);
+        statsSummarySection = view.findViewById(R.id.stats_summary_section);
+        countText = view.findViewById(R.id.count_text);
+        durationText = view.findViewById(R.id.duration_text);
+        appBlockingSwitch = view.findViewById(R.id.app_blocking_switch);
+        appBlockingDescription = view.findViewById(R.id.app_blocking_description);
+        btnAppBlockingSettings = view.findViewById(R.id.btn_app_blocking_settings);
+        btnSettings = view.findViewById(R.id.btn_settings);
+        btnDevLab = view.findViewById(R.id.btn_dev_lab);
+        dividerBeforeDevLab = view.findViewById(R.id.divider_before_dev_lab);
+        btnFaq = view.findViewById(R.id.btn_faq);
+        btnAbout = view.findViewById(R.id.btn_about);
+    }
+
+    private void setupClicks() {
+        accountSection.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openAccount()));
+
+        statsSummarySection.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openStats()));
+
+        btnSettings.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openSettings()));
+        btnDevLab.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openDevLab()));
+        btnFaq.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openFaq()));
+        btnAbout.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openAbout()));
+
+        btnAppBlockingSettings.setOnClickListener(v ->
+                viewModel.dispatch(ProfileIntent.openManageBlocking()));
+
+        appBlockingSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallback) {
+                return;
+            }
+            viewModel.dispatch(ProfileIntent.toggleBlocking(isChecked));
         });
-
-        // 初始化功能按钮的对比色（在统一圆角背景基础上加色调）
-        updateFunctionButtonColors(view);
-    }
-    
-    @Override
-    public void onResume() {
-        super.onResume();
-        viewModel.refresh();
-        // 更新应用屏蔽功能UI状态（检查权限变化）
-        if (appBlockingSwitch != null) {
-            updateAppBlockingUI();
-            // 同步服务状态
-            checkAndSyncServiceStatus();
-        }
-        // 应用主题背景
-        applyThemeToFragment();
-        // 重新应用按钮对比色，防止主题变化后颜色过近
-        if (getView() != null) {
-            updateFunctionButtonColors(getView());
-        }
     }
 
-    // 根据当前主题颜色动态为功能按钮分配对比明显的背景色
-    private void updateFunctionButtonColors(View root) {
-        try {
-            SettingsManager settingsManager = getSettings();
-            int themeColorRes = settingsManager.getThemeColor();
-            int themeColor = getResources().getColor(themeColorRes);
+    private void observeViewModel() {
+        viewModel.getUiState().observe(getViewLifecycleOwner(), this::render);
+        viewModel.getAvatarImage().observe(getViewLifecycleOwner(), this::bindAvatar);
+        viewModel.getEffects().observe(getViewLifecycleOwner(), this::handleEffect);
+    }
 
-            // 计算4个与主题色区分明显的色相（+120/+180/+240/+300）
-            float[] hsv = new float[3];
-            android.graphics.Color.colorToHSV(themeColor, hsv);
-            float baseHue = hsv[0];
-            float s = Math.max(0.35f, hsv[1]);
-            float v = Math.max(0.75f, hsv[2]);
+    private void render(@Nullable ProfileUiState state) {
+        if (state == null || accountNickname == null) {
+            return;
+        }
 
-            int[] candidateColors = new int[] {
-                    android.graphics.Color.HSVToColor(new float[]{(baseHue + 120f) % 360f, s, v}),
-                    android.graphics.Color.HSVToColor(new float[]{(baseHue + 180f) % 360f, s, v}),
-                    android.graphics.Color.HSVToColor(new float[]{(baseHue + 240f) % 360f, s, v}),
-                    android.graphics.Color.HSVToColor(new float[]{(baseHue + 300f) % 360f, s, v})
-            };
+        accountNickname.setText(state.nickname);
+        if (state.idLabel == null || state.idLabel.isEmpty()) {
+            accountId.setVisibility(View.GONE);
+        } else {
+            accountId.setVisibility(View.VISIBLE);
+            accountId.setText(state.idLabel);
+        }
 
-            int[] btnIds = new int[] { R.id.btn_settings, R.id.btn_dev_lab, R.id.btn_about, R.id.btn_faq };
+        accountSignature.setText(state.signatureText);
+        accountSignature.setAlpha(state.hasSignature ? 1f : 0.65f);
 
-            for (int i = 0; i < btnIds.length; i++) {
-                View btn = root.findViewById(btnIds[i]);
-                if (btn == null) continue;
-                int color = candidateColors[i % candidateColors.length];
-                androidx.core.view.ViewCompat.setBackgroundTintList(btn,
-                        android.content.res.ColorStateList.valueOf(color));
-                btn.setElevation(6f);
+        currentAvatarPath = state.hasAvatar ? state.avatarPath : null;
+        if (state.hasAvatar) {
+            accountAvatar.setClickable(true);
+            accountAvatar.setFocusable(true);
+            accountAvatar.setOnClickListener(v ->
+                    viewModel.dispatch(ProfileIntent.openAvatarPreview()));
+        } else {
+            accountAvatar.setImageResource(R.drawable.ic_default_avatar);
+            accountAvatar.setOnClickListener(null);
+            accountAvatar.setClickable(false);
+            accountAvatar.setFocusable(false);
+        }
+
+        accountSection.setEnabled(state.accountSectionEnabled);
+        accountSection.setClickable(state.accountSectionEnabled);
+
+        if (state.statsReady) {
+            countText.setText(getString(R.string.profile_label_total_focus, state.totalCompletedCount));
+            durationText.setText(formatDuration(state.totalFocusDurationMs));
+        } else {
+            countText.setText(R.string.profile_stats_placeholder);
+            durationText.setText(R.string.profile_stats_placeholder);
+        }
+        statsSummarySection.setEnabled(state.statsClickable);
+        statsSummarySection.setClickable(state.statsClickable);
+        statsSummarySection.setAlpha(state.statsClickable ? 1f : 0.55f);
+
+        appBlockingDescription.setText(state.blockingDescriptionRes);
+        boolean showManage = state.blockingChecked && state.manageBlockingEnabled;
+        btnAppBlockingSettings.setVisibility(showManage ? View.VISIBLE : View.GONE);
+        btnAppBlockingSettings.setEnabled(showManage);
+        btnAppBlockingSettings.setAlpha(1f);
+
+        appBlockingSwitch.setEnabled(state.blockingToggleEnabled);
+        suppressSwitchCallback = true;
+        appBlockingSwitch.setChecked(state.blockingChecked);
+        suppressSwitchCallback = false;
+
+        int devLabVisibility = state.devLabVisible ? View.VISIBLE : View.GONE;
+        btnDevLab.setVisibility(devLabVisibility);
+        dividerBeforeDevLab.setVisibility(devLabVisibility);
+    }
+
+    private void bindAvatar(@Nullable ProfileAvatarImage image) {
+        if (accountAvatar == null) {
+            return;
+        }
+        if (image == null || image.bitmap == null) {
+            if (currentAvatarPath == null) {
+                accountAvatar.setImageResource(R.drawable.ic_default_avatar);
             }
-        } catch (Exception e) {
-            AppLog.w("ProfileFragment", "Failed to apply profile button colors", e);
+            return;
         }
+        if (currentAvatarPath == null || !currentAvatarPath.equals(image.path)) {
+            return;
+        }
+        accountAvatar.setImageBitmap(image.bitmap);
     }
-    
-    // 加载用户头像（圆形显示）
-    private void loadUserAvatar(String avatarPath) {
-        try {
-            File avatarFile = new File(avatarPath);
-            if (avatarFile.exists()) {
-                Bitmap bitmap = BitmapFactory.decodeFile(avatarPath);
-                if (bitmap != null) {
-                    Bitmap circular = createCircularBitmap(bitmap);
-                    accountAvatar.setImageBitmap(circular);
-                    return;
+
+    private void handleEffect(@Nullable ProfileEffect effect) {
+        if (effect == null || !isAdded()) {
+            return;
+        }
+        switch (effect.type) {
+            case SHOW_TOAST:
+                Toast.makeText(requireContext(), effect.toastRes,
+                        effect.toastLong ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
+                break;
+            case START_ACTIVITY:
+                if (effect.activityClass != null) {
+                    openActivity(effect.activityClass);
                 }
-            }
-        } catch (Exception e) {
-            AppLog.w("ProfileFragment", "Failed to load avatar, using default", e);
+                break;
+            case NAVIGATE_TO_STATISTICS:
+                Activity activity = getActivity();
+                if (activity instanceof MainActivity) {
+                    ((MainActivity) activity).navigateToStatisticsTab();
+                }
+                break;
+            case REQUEST_ENABLE_BLOCKING:
+                AppBlockingEnabler.tryEnable(requireActivity(), blockingHost);
+                break;
+            case OPEN_IMAGE_PREVIEW:
+                openAvatarPreview(effect.imagePath);
+                break;
+            case SHOW_DEV_LAB_CONFIRM:
+                showDevLabConfirmDialog();
+                break;
+            case REQUIRE_AUTH:
+                // 访客拨开开关后若状态尚未回刷，关闭弹窗前强制复位，避免 UI 卡在开启。
+                if (appBlockingSwitch != null && appBlockingSwitch.isChecked()) {
+                    suppressSwitchCallback = true;
+                    appBlockingSwitch.setChecked(false);
+                    suppressSwitchCallback = false;
+                }
+                com.skyinit.pomodorotimer.ui.auth.AuthGate.show(requireActivity());
+                break;
+            default:
+                break;
         }
-        accountAvatar.setImageResource(R.drawable.ic_default_avatar);
     }
 
-    // 生成圆形位图
-    private Bitmap createCircularBitmap(Bitmap source) {
-        try {
-            int size = Math.min(source.getWidth(), source.getHeight());
-            Bitmap output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            android.graphics.Canvas canvas = new android.graphics.Canvas(output);
-            android.graphics.Paint paint = new android.graphics.Paint();
-            paint.setAntiAlias(true);
-            float radius = size / 2f;
-            android.graphics.Path path = new android.graphics.Path();
-            path.addCircle(radius, radius, radius, android.graphics.Path.Direction.CCW);
-            canvas.save();
-            canvas.clipPath(path);
-            int left = (size - source.getWidth()) / 2;
-            int top = (size - source.getHeight()) / 2;
-            canvas.drawBitmap(source, left, top, paint);
-            canvas.restore();
-            return output;
-        } catch (Exception e) {
-            return source;
+    /**
+     * 由 {@link MainActivity} 在权限页返回或快捷方式启用后回调。
+     *
+     * @param success true=启用成功，false=失败；null=仅刷新状态（无 Toast）
+     */
+    public void onExternalBlockingChanged(@Nullable Boolean success) {
+        if (viewModel == null) {
+            return;
+        }
+        if (success == null) {
+            viewModel.onBlockingExternalChanged();
+        } else {
+            viewModel.dispatch(ProfileIntent.blockingExternalResult(success));
         }
     }
 
-    // 打开头像原图预览
-    private void openAvatarPreview(String avatarPath) {
+    /** 兼容旧调用：仅刷新，不弹 Toast。 */
+    public void onExternalBlockingChanged() {
+        onExternalBlockingChanged(null);
+    }
+
+    private void openActivity(@NonNull Class<? extends Activity> activityClass) {
+        Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
+        startActivity(new Intent(activity, activityClass));
+        activity.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+    }
+
+    private void openAvatarPreview(@Nullable String avatarPath) {
+        if (avatarPath == null || avatarPath.isEmpty()) {
+            return;
+        }
         try {
-            Intent intent = new Intent(getActivity(), ImagePreviewActivity.class);
+            Intent intent = new Intent(requireActivity(), ImagePreviewActivity.class);
             intent.putExtra("image_path", avatarPath);
             startActivity(intent);
-            if (getActivity() != null) {
-                getActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-            }
+            requireActivity().overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         } catch (Exception e) {
             AppLog.w("ProfileFragment", "Failed to open avatar preview", e);
         }
     }
 
+    private void showDevLabConfirmDialog() {
+        ModernPromptDialog.builder(requireContext())
+                .icon(R.drawable.ic_lab)
+                .accent(ModernPromptDialog.Accent.BRAND)
+                .title(R.string.title_dev_lab)
+                .message(R.string.blocking_dialog_dev_lab_message)
+                .primary(R.string.confirm, () -> openActivity(DevLabActivity.class))
+                .tertiary(R.string.cancel, null)
+                .show();
+    }
+
+    private String formatDuration(long durationMs) {
+        long minutes = Math.max(0L, durationMs) / (1000L * 60L);
+        long hours = minutes / 60L;
+        minutes = minutes % 60L;
+        if (hours > 0L) {
+            return getString(R.string.format_duration_hours_minutes, hours, minutes);
+        }
+        return getString(R.string.format_duration_minutes, minutes);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        viewModel.dispatch(ProfileIntent.refresh());
+        AppBlockingServiceUtils.syncStandaloneServiceStatus(requireContext());
+        applyThemeToFragment();
+    }
+
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        // 当配置变化时（如深色模式切换），重新应用主题
         applyThemeToFragment();
     }
-    
+
     private void applyThemeToFragment() {
         if (getActivity() instanceof BaseActivity) {
-            BaseActivity baseActivity = (BaseActivity) getActivity();
-            baseActivity.applyTheme();
+            ((BaseActivity) getActivity()).applyTheme();
         }
     }
-
 }

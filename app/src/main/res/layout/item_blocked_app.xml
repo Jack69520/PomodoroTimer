@@ -4,19 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardBackgroundColor="@color/background_card"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="1dp"
-    app:strokeColor="@color/border_light"
-    app:strokeWidth="1dp">
+    android:layout_marginBottom="6dp"
+    app:cardBackgroundColor="@color/surface_card"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="12dp">
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp">
 
         <ImageView
             android:id="@+id/app_icon"
@@ -51,7 +51,7 @@
                 android:id="@+id/app_package"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
                 android:ellipsize="middle"
                 android:maxLines="1"
                 android:textColor="@color/text_hint"
@@ -61,7 +61,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="5dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -91,7 +91,7 @@
                     android:maxLines="1"
                     android:paddingHorizontal="7dp"
                     android:paddingVertical="3dp"
-                    android:textColor="@color/primary"
+                    android:textColor="@color/brand"
                     android:textSize="10sp"
                     android:visibility="gone"
                     tools:text="厂商预装"
@@ -106,7 +106,7 @@
                     android:paddingHorizontal="7dp"
                     android:paddingVertical="3dp"
                     android:text="@string/app_type_system_critical"
-                    android:textColor="@color/error"
+                    android:textColor="@color/semantic_error"
                     android:textSize="10sp"
                     android:visibility="gone"
                     tools:visibility="visible" />

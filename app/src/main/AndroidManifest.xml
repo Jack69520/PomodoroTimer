@@ -7,6 +7,8 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 专注勿扰：出现在系统「勿扰/通知策略访问」列表并允许 setInterruptionFilter -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -22,6 +24,9 @@
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         tools:targetApi="31" />
+    <!-- 忽略电池优化：降低系统杀后台导致计时中断的概率 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- 应用屏蔽功能权限 -->
@@ -72,7 +77,21 @@
             android:exported="true"
             android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.onboarding.FirstRegisterActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar" />
 
         <service
             android:name=".service.TimerService"
@@ -99,16 +118,39 @@
             android:name=".service.TimerAlarmReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".service.TimerBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <!-- 计时器专属页面，允许横屏；其它页面默认竖屏（MainActivity上已锁定） -->
         <activity
             android:name=".ui.home.TimerActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.PomodoroTimer.NoActionBar" />
 
+        <!-- 锁屏专用计时页：仅展示 + 长按解锁 -->
+        <activity
+            android:name=".ui.home.LockScreenTimerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="fullSensor"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            tools:targetApi="27" />
+
         <activity
             android:name=".ui.home.SimpleTodoEditActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -117,7 +159,7 @@
 
         <activity
             android:name=".ui.home.CollectionTodoEditActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -126,7 +168,7 @@
 
         <activity
             android:name=".ui.profile.AboutActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <!-- 禁用底部导航栏 -->
             <meta-data
@@ -136,7 +178,7 @@
 
         <activity
             android:name=".ui.profile.LegalDocumentActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -145,7 +187,7 @@
 
         <activity
             android:name=".ui.profile.OpenSourceLicensesActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -154,7 +196,7 @@
 
         <activity
             android:name=".ui.profile.AppBlockingManagementActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -163,7 +205,7 @@
 
         <activity
             android:name=".ui.calendar.SessionBlockRecordsActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -172,7 +214,7 @@
 
         <activity
             android:name=".ui.profile.AppCategoryEditActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -181,7 +223,7 @@
 
         <activity
             android:name=".ui.profile.DevLabActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -189,26 +231,80 @@
         </activity>
 
         <activity
-            android:name=".ui.profile.SettingsActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:name=".ui.settings.SettingsActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
         <activity
+            android:name=".ui.settings.ThemeColorSettingsActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.settings.SettingsActivity" />
+        </activity>
+        <activity
+            android:name=".ui.settings.PomodoroSettingsActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.settings.SettingsActivity" />
+        </activity>
+        <activity
+            android:name=".ui.settings.SystemPermissionsActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.settings.SettingsActivity" />
+        </activity>
+        <activity
+            android:name=".ui.account.AccountSecurityActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false"
+            android:parentActivityName=".ui.settings.SettingsActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.settings.SettingsActivity" />
+        </activity>
+        <activity
             android:name=".ui.profile.FAQActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false" />
 
         <!-- 账户相关Activity -->
         <activity
             android:name=".ui.account.AccountActivity"
-            android:theme="@style/Theme.PomodoroTimer"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
             android:exported="false">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.EditNicknameActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountActivity" />
+        </activity>
+
+        <activity
+            android:name=".ui.account.EditSignatureActivity"
+            android:theme="@style/Theme.PomodoroTimer.NoActionBar"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".ui.account.AccountActivity" />
         </activity>
 
         <activity
@@ -223,10 +319,11 @@
         <activity
             android:name=".ui.account.ChangePasswordActivity"
             android:theme="@style/Theme.PomodoroTimer.NoActionBar"
-            android:exported="false">
+            android:exported="false"
+            android:parentActivityName=".ui.account.AccountSecurityActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".ui.account.AccountActivity" />
+                android:value=".ui.account.AccountSecurityActivity" />
         </activity>
 
         <activity

@@ -5,22 +5,16 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.skyinit.pomodorotimer.data.entity.TodoItem;
 import com.skyinit.pomodorotimer.data.model.TimerUiState;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.data.repository.TimerSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.TimerStateRepository;
 import com.skyinit.pomodorotimer.service.TimerService;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 /**
- * 首页 ViewModel：聚合计时状态、待办列表与控制按钮逻辑。
- * <p>
- * 计时数据以 {@link com.skyinit.pomodorotimer.data.repository.TimerStateRepository} 为单一数据源，
- * 通过 {@link #syncFromService(TimerService)} 与前台服务对齐；待办列表由 Fragment 侧 Room LiveData 注入。
+ * 首页 ViewModel：聚合计时状态与控制按钮逻辑（待办由 {@link com.skyinit.pomodorotimer.ui.home.todo.HomeTodoViewModel} 负责）。
  */
 public class HomeViewModel extends ViewModel {
     /** 控制按钮状态：开始 / 暂停 / 继续 */
@@ -38,7 +32,6 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<Integer> sessionType = new MutableLiveData<>(0);
     private final MutableLiveData<String> timerDisplayText;
     private final MutableLiveData<Integer> controlButtonState = new MutableLiveData<>(CONTROL_START);
-    private final MutableLiveData<List<TodoItem>> todos = new MutableLiveData<>(new ArrayList<>());
     private final MediatorLiveData<TimerUiState> timerStateBridge = new MediatorLiveData<>();
 
     public HomeViewModel(TimerSettingsRepository timerSettings,
@@ -87,12 +80,8 @@ public class HomeViewModel extends ViewModel {
         return controlButtonState;
     }
 
-    public LiveData<List<TodoItem>> getTodos() {
-        return todos;
-    }
-
     public boolean isLoggedIn() {
-        return sessionRepository.isRegistered();
+        return sessionRepository.isLoggedIn();
     }
 
     /** 供 Activity/Fragment 绑定后一次性同步服务状态到 Repository。 */
@@ -139,10 +128,6 @@ public class HomeViewModel extends ViewModel {
         timerMillis.setValue(defaultMs);
         timerDisplayText.setValue(formatTimerText(defaultMs, 0, defaultMs));
         updateControlState(defaultMs, false, false, 0);
-    }
-
-    public void setTodos(List<TodoItem> list) {
-        todos.setValue(list == null ? new ArrayList<>() : list);
     }
 
     public String formatTimerText(long millis) {

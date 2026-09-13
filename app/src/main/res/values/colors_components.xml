@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Component tokens: default to brand; independently tunable -->
+    <color name="comp_link">@color/brand</color>
+    <color name="comp_tab_indicator">@color/brand</color>
+    <color name="comp_chip_selected">@color/brand</color>
+    <color name="comp_input_stroke">@color/stroke_subtle</color>
+    <color name="comp_input_fill">@color/surface_card</color>
+    <color name="comp_button_primary">@color/brand</color>
+    <color name="comp_button_on_primary">@color/on_brand</color>
+    <color name="comp_selection_check">@color/brand</color>
+
+    <color name="comp_alert_extend">#FFFF9800</color>
+    <color name="comp_alert_break">#FF4CAF50</color>
+    <color name="comp_alert_complete">#FF2196F3</color>
+
+    <!-- Home timer controls (independent; defaults follow brand) -->
+    <color name="comp_home_control_primary">@color/brand</color>
+    <color name="comp_home_control_on_primary">@color/on_brand</color>
+    <color name="comp_home_control_secondary">#D7E6DF</color>
+    <color name="comp_home_control_on_secondary">#2A4A40</color>
+    <color name="comp_home_control_ripple">#33FFFFFF</color>
+    <color name="comp_home_control_ripple_soft">#1A41CD9D</color>
+    <color name="comp_home_control_secondary_stroke">#331B3A32</color>
+    <color name="comp_home_phase_dot">@color/brand</color>
+    <color name="comp_home_timer_display">#152823</color>
+    <color name="comp_home_timer_stage_start">#F2F8F5</color>
+    <color name="comp_home_timer_stage_center">#EAF4EF</color>
+    <color name="comp_home_timer_stage_end">#E3F0EA</color>
+
+    <!-- Timer immersive page gradient -->
+    <color name="comp_timer_bg_start">#D6E5FF</color>
+    <color name="comp_timer_bg_center">#C7F0E1</color>
+    <color name="comp_timer_bg_end">#B7E6D6</color>
+
+    <!-- Consent -->
+    <color name="comp_consent_bg_start">#E8F8F2</color>
+    <color name="comp_consent_bg_end">#D6E5FF</color>
+    <color name="comp_consent_card_stroke">#1AEEEEEE</color>
+
+    <!-- Avatar / account chrome -->
+    <color name="comp_avatar_background">#FFE9ECEF</color>
+    <color name="comp_avatar_border">#FFDEE2E6</color>
+    <color name="comp_avatar_icon">#FF6C757D</color>
+</resources>

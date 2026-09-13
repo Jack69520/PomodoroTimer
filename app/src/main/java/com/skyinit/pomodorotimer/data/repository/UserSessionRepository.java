@@ -1,33 +1,44 @@
 package com.skyinit.pomodorotimer.data.repository;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.skyinit.pomodorotimer.data.entity.User;
 
 /**
- * 可观察的用户会话层：对外暴露活跃档案 LiveData，UI 与 ViewModel 应通过本类访问账户状态。
+ * 可观察的用户会话层：Guest 时 activeUser 为 null。
  */
 public final class UserSessionRepository {
 
     private final AccountManager accountManager;
     private final UserPomodoroSettingsRepository pomodoroSettingsRepository;
+    private final UserAppBlockingRepository userAppBlockingRepository;
     private final AccountOperationGuard accountOperationGuard;
     private final MutableLiveData<User> activeUser = new MutableLiveData<>();
     private final MutableLiveData<Integer> sessionVersion = new MutableLiveData<>(0);
 
     public UserSessionRepository(AccountManager accountManager,
                                  UserPomodoroSettingsRepository pomodoroSettingsRepository,
+                                 UserAppBlockingRepository userAppBlockingRepository,
                                  AccountOperationGuard accountOperationGuard) {
         this.accountManager = accountManager;
         this.pomodoroSettingsRepository = pomodoroSettingsRepository;
+        this.userAppBlockingRepository = userAppBlockingRepository;
         this.accountOperationGuard = accountOperationGuard;
         accountManager.setActiveUserListener((user, sessionSwitched) -> {
             activeUser.postValue(user);
             if (sessionSwitched) {
+                pomodoroSettingsRepository.clearCycleCountOnSessionSwitch();
                 pomodoroSettingsRepository.invalidateCache();
                 pomodoroSettingsRepository.warmCache();
+                userAppBlockingRepository.clearCache();
+                if (user != null) {
+                    // Warm blocking cache asynchronously after switch
+                    com.skyinit.pomodorotimer.util.AppExecutors.getInstance().diskIo(
+                            () -> userAppBlockingRepository.warmForUser(user.userId));
+                }
                 accountOperationGuard.onActiveAccountSwitched();
                 Integer current = sessionVersion.getValue();
                 sessionVersion.postValue(current == null ? 1 : current + 1);
@@ -35,11 +46,13 @@ public final class UserSessionRepository {
         });
     }
 
-    /** 冷启动在应用初始化完成后调用，同步初始活跃档案。 */
     public void syncFromAccountManager() {
+        activeUser.postValue(accountManager.getCurrentUser());
         User user = accountManager.getCurrentUser();
         if (user != null) {
-            activeUser.postValue(user);
+            userAppBlockingRepository.warmForUser(user.userId);
+        } else {
+            userAppBlockingRepository.clearCache();
         }
     }
 
@@ -47,9 +60,6 @@ public final class UserSessionRepository {
         return activeUser;
     }
 
-    /**
-     * 活跃档案切换时递增（登出、登录、注销等）；资料就地更新不递增。
-     */
     public LiveData<Integer> getSessionVersion() {
         return sessionVersion;
     }
@@ -59,20 +69,29 @@ public final class UserSessionRepository {
         return accountManager.requireActiveUserId();
     }
 
+    @Nullable
     public User getCurrentUser() {
         return accountManager.getCurrentUser();
     }
 
+    public boolean hasActiveSession() {
+        return accountManager.hasActiveSession();
+    }
+
+    /** @deprecated 使用 {@link #hasActiveSession()} */
+    @Deprecated
     public boolean hasActiveProfile() {
-        return accountManager.hasActiveProfile();
+        return hasActiveSession();
     }
 
-    public boolean isLocalProfile() {
-        return accountManager.isLocalProfile();
+    public boolean isLoggedIn() {
+        return accountManager.isLoggedIn();
     }
 
+    /** @deprecated 使用 {@link #isLoggedIn()} */
+    @Deprecated
     public boolean isRegistered() {
-        return accountManager.isRegistered();
+        return isLoggedIn();
     }
 
     public boolean isForcePasswordReset() {

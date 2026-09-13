@@ -2,23 +2,28 @@ package com.skyinit.pomodorotimer.ui.home;
 
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.TodoItem;
+import com.skyinit.pomodorotimer.domain.todo.RecurrenceType;
 
 import android.content.Context;
 import android.content.Intent;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.Switch;
+import android.widget.ImageButton;
+import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+
+import com.google.android.material.chip.ChipGroup;
 
 /**
- * 普通待办的新增/编辑页。
+ * 普通待办编辑：重复 Chip + 番茄步进器。
  */
 public class SimpleTodoEditActivity extends BaseTaskEditActivity {
 
-    private EditText estimatedPomodorosInput;
-    private Switch recurringSwitch;
-    private Spinner recurrenceSpinner;
+    private TextView estimatedPomodorosView;
+    private ImageButton pomodoroMinus;
+    private ImageButton pomodoroPlus;
+    @Nullable
+    private ChipGroup recurrenceChipGroup;
+    private int estimatedPomodoros = 1;
 
     public static Intent createIntent(Context context, int taskId) {
         return buildIntent(context, SimpleTodoEditActivity.class, taskId);
@@ -50,39 +55,79 @@ public class SimpleTodoEditActivity extends BaseTaskEditActivity {
 
     @Override
     protected void bindSpecificViews() {
-        estimatedPomodorosInput = findViewById(R.id.edit_estimated_pomodoros);
-        recurringSwitch = findViewById(R.id.recurring_switch);
-        recurrenceSpinner = findViewById(R.id.recurrence_spinner);
+        estimatedPomodorosView = findViewById(R.id.edit_estimated_pomodoros);
+        pomodoroMinus = findViewById(R.id.btn_pomodoro_minus);
+        pomodoroPlus = findViewById(R.id.btn_pomodoro_plus);
+        recurrenceChipGroup = findViewById(R.id.recurrence_chip_group);
 
-        String[] recurrenceOptions = {
-                getString(R.string.recurrence_daily),
-                getString(R.string.recurrence_weekly),
-                getString(R.string.recurrence_monthly)
-        };
-        ArrayAdapter<String> recurrenceAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, recurrenceOptions);
-        recurrenceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        recurrenceSpinner.setAdapter(recurrenceAdapter);
+        pomodoroMinus.setOnClickListener(v -> setEstimatedPomodoros(estimatedPomodoros - 1));
+        pomodoroPlus.setOnClickListener(v -> setEstimatedPomodoros(estimatedPomodoros + 1));
+        setEstimatedPomodoros(1);
+    }
 
-        recurringSwitch.setOnCheckedChangeListener((buttonView, isChecked) ->
-                recurrenceSpinner.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+    private void setEstimatedPomodoros(int value) {
+        estimatedPomodoros = Math.max(1, Math.min(99, value));
+        if (estimatedPomodorosView != null) {
+            estimatedPomodorosView.setText(String.valueOf(estimatedPomodoros));
+        }
+        if (pomodoroMinus != null) {
+            pomodoroMinus.setEnabled(estimatedPomodoros > 1);
+        }
+        if (pomodoroPlus != null) {
+            pomodoroPlus.setEnabled(estimatedPomodoros < 99);
+        }
     }
 
     @Override
     protected void applySpecificTaskToUi(TodoItem task) {
-        estimatedPomodorosInput.setText(String.valueOf(Math.max(1, task.estimatedPomodoros)));
+        setEstimatedPomodoros(Math.max(1, task.estimatedPomodoros));
+        int type = RecurrenceType.isValid(task.recurrenceType)
+                ? task.recurrenceType
+                : RecurrenceType.NONE;
+        setRecurrenceSelection(type);
     }
 
     @Override
     protected void collectSpecificFields(TodoItem task) {
-        try {
-            task.estimatedPomodoros = Integer.parseInt(
-                    estimatedPomodorosInput.getText().toString().trim());
-        } catch (NumberFormatException e) {
-            task.estimatedPomodoros = 1;
+        task.estimatedPomodoros = estimatedPomodoros;
+        task.recurrenceType = getSelectedRecurrence();
+    }
+
+    private int getSelectedRecurrence() {
+        if (recurrenceChipGroup == null) {
+            return RecurrenceType.NONE;
         }
-        viewModel.setRecurringOptions(
-                recurringSwitch.isChecked(),
-                recurrenceSpinner.getSelectedItemPosition());
+        int checked = recurrenceChipGroup.getCheckedChipId();
+        if (checked == R.id.chip_recurrence_daily) {
+            return RecurrenceType.DAILY;
+        }
+        if (checked == R.id.chip_recurrence_weekly) {
+            return RecurrenceType.WEEKLY;
+        }
+        if (checked == R.id.chip_recurrence_monthly) {
+            return RecurrenceType.MONTHLY;
+        }
+        return RecurrenceType.NONE;
+    }
+
+    private void setRecurrenceSelection(int recurrenceType) {
+        if (recurrenceChipGroup == null) {
+            return;
+        }
+        int chipId = R.id.chip_recurrence_none;
+        switch (recurrenceType) {
+            case RecurrenceType.DAILY:
+                chipId = R.id.chip_recurrence_daily;
+                break;
+            case RecurrenceType.WEEKLY:
+                chipId = R.id.chip_recurrence_weekly;
+                break;
+            case RecurrenceType.MONTHLY:
+                chipId = R.id.chip_recurrence_monthly;
+                break;
+            default:
+                break;
+        }
+        recurrenceChipGroup.check(chipId);
     }
 }

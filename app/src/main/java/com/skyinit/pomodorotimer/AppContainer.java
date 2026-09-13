@@ -7,16 +7,15 @@ import com.skyinit.pomodorotimer.data.repository.AccountOperationGuard;
 import com.skyinit.pomodorotimer.data.repository.BlockedAppRepository;
 import com.skyinit.pomodorotimer.data.repository.DataBackupRepository;
 import com.skyinit.pomodorotimer.data.repository.DataBackupRepositoryImpl;
-import com.skyinit.pomodorotimer.data.repository.RecurringTaskManager;
+import com.skyinit.pomodorotimer.data.repository.DevLabRepository;
 import com.skyinit.pomodorotimer.data.repository.SessionBlockRecordRepository;
 import com.skyinit.pomodorotimer.data.repository.SessionRepository;
 import com.skyinit.pomodorotimer.data.repository.SettingsManager;
 import com.skyinit.pomodorotimer.data.repository.StatisticsRepository;
 import com.skyinit.pomodorotimer.data.repository.TimerSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.TimerStateRepository;
-import com.skyinit.pomodorotimer.data.repository.TodoRepository;
-import com.skyinit.pomodorotimer.data.repository.TaskRepository;
-import com.skyinit.pomodorotimer.data.repository.TodoFilterManager;
+import com.skyinit.pomodorotimer.data.repository.TodoWorkspaceRepository;
+import com.skyinit.pomodorotimer.data.repository.UserAppBlockingRepository;
 import com.skyinit.pomodorotimer.data.repository.UserPomodoroSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.ui.ViewModelFactory;
@@ -34,18 +33,17 @@ public final class AppContainer {
     private final AccountManager accountManager;
     private final UserSessionRepository userSessionRepository;
     private final UserPomodoroSettingsRepository userPomodoroSettingsRepository;
+    private final UserAppBlockingRepository userAppBlockingRepository;
     private final TimerSettingsRepository timerSettingsRepository;
     private final TimerStateRepository timerStateRepository;
     private final AccountOperationGuard accountOperationGuard;
     private final StatisticsRepository statisticsRepository;
     private final SessionRepository sessionRepository;
-    private final TodoFilterManager todoFilterManager;
-    private final TodoRepository todoRepository;
-    private final TaskRepository taskRepository;
-    private final RecurringTaskManager recurringTaskManager;
+    private final TodoWorkspaceRepository todoWorkspaceRepository;
     private final DataBackupRepository dataBackupRepository;
     private final BlockedAppRepository blockedAppRepository;
     private final SessionBlockRecordRepository sessionBlockRecordRepository;
+    private final DevLabRepository devLabRepository;
     private final ViewModelFactory viewModelFactory;
 
     public AppContainer(Context context) {
@@ -53,23 +51,21 @@ public final class AppContainer {
         database = AppDatabase.getDatabase(appContext);
         settingsManager = new SettingsManager(appContext);
         accountManager = AccountManager.getInstance(appContext);
-        userPomodoroSettingsRepository = new UserPomodoroSettingsRepository(database, accountManager);
+        userPomodoroSettingsRepository = new UserPomodoroSettingsRepository(settingsManager);
+        userAppBlockingRepository = new UserAppBlockingRepository(database, accountManager);
         timerSettingsRepository = new TimerSettingsRepository(userPomodoroSettingsRepository);
         timerStateRepository = new TimerStateRepository(timerSettingsRepository);
         accountManager.setTimerStateRepository(timerStateRepository);
-        accountOperationGuard = new AccountOperationGuard(appContext, settingsManager, timerStateRepository);
+        accountOperationGuard = new AccountOperationGuard(
+                appContext, userAppBlockingRepository, timerStateRepository);
         userSessionRepository = new UserSessionRepository(
-                accountManager, userPomodoroSettingsRepository, accountOperationGuard);
+                accountManager,
+                userPomodoroSettingsRepository,
+                userAppBlockingRepository,
+                accountOperationGuard);
         statisticsRepository = new StatisticsRepository(appContext, accountManager);
         sessionRepository = new SessionRepository(database.pomodoroSessionDao(), accountManager);
-        todoFilterManager = new TodoFilterManager(appContext);
-        todoRepository = new TodoRepository(
-                database.todoDao(),
-                accountManager,
-                todoFilterManager
-        );
-        taskRepository = new TaskRepository(appContext, accountManager);
-        recurringTaskManager = new RecurringTaskManager(appContext);
+        todoWorkspaceRepository = new TodoWorkspaceRepository(appContext, accountManager);
         dataBackupRepository = new DataBackupRepositoryImpl(appContext);
         blockedAppRepository = new BlockedAppRepository(
                 appContext,
@@ -79,6 +75,7 @@ public final class AppContainer {
         sessionBlockRecordRepository = new SessionBlockRecordRepository(
                 database.sessionAppBlockRecordDao()
         );
+        devLabRepository = new DevLabRepository(appContext);
         viewModelFactory = new ViewModelFactory(this);
     }
 
@@ -127,6 +124,10 @@ public final class AppContainer {
         return userPomodoroSettingsRepository;
     }
 
+    public UserAppBlockingRepository getUserAppBlockingRepository() {
+        return userAppBlockingRepository;
+    }
+
     public TimerSettingsRepository getTimerSettingsRepository() {
         return timerSettingsRepository;
     }
@@ -147,20 +148,8 @@ public final class AppContainer {
         return sessionRepository;
     }
 
-    public TodoFilterManager getTodoFilterManager() {
-        return todoFilterManager;
-    }
-
-    public TodoRepository getTodoRepository() {
-        return todoRepository;
-    }
-
-    public TaskRepository getTaskRepository() {
-        return taskRepository;
-    }
-
-    public RecurringTaskManager getRecurringTaskManager() {
-        return recurringTaskManager;
+    public TodoWorkspaceRepository getTodoWorkspaceRepository() {
+        return todoWorkspaceRepository;
     }
 
     public DataBackupRepository getDataBackupRepository() {
@@ -173,6 +162,10 @@ public final class AppContainer {
 
     public SessionBlockRecordRepository getSessionBlockRecordRepository() {
         return sessionBlockRecordRepository;
+    }
+
+    public DevLabRepository getDevLabRepository() {
+        return devLabRepository;
     }
 
     public ViewModelFactory getViewModelFactory() {

@@ -2,7 +2,7 @@ package com.skyinit.pomodorotimer.ui.home;
 
 import com.skyinit.pomodorotimer.data.entity.SubTask;
 import com.skyinit.pomodorotimer.data.entity.TodoItem;
-import com.skyinit.pomodorotimer.data.repository.TaskRepository;
+import com.skyinit.pomodorotimer.data.repository.TodoWorkspaceRepository;
 
 import android.content.Context;
 
@@ -23,10 +23,10 @@ public final class SubTaskTimerPickerDialog {
 
     public static void show(Context context,
                             TodoItem collection,
-                            TaskRepository taskRepository,
+                            TodoWorkspaceRepository workspace,
                             Listener listener) {
-        taskRepository.runOnDisk(() -> {
-            List<SubTask> subtasks = taskRepository.getSubtasksSync(collection.id);
+        workspace.runOnDisk(() -> {
+            List<SubTask> subtasks = workspace.getSubtasksSync(collection.id);
             List<SubTask> available = new ArrayList<>();
             for (SubTask subTask : subtasks) {
                 if (!subTask.completed) {

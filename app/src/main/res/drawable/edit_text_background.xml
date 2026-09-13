@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="@color/white" />
+    <solid android:color="@color/comp_input_fill" />
     <corners android:radius="24dp" />
     <stroke
         android:width="1dp"
-        android:color="#E0E0E0" />
+        android:color="@color/comp_input_stroke" />
 </shape>

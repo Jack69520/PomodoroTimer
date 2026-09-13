@@ -1,201 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:scrollbars="none">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/subpage_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="40dp"
-        android:padding="12dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="none">
 
-        <!-- 注册表单 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
             android:orientation="vertical"
-            android:background="@drawable/account_section_background"
-            android:padding="12dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="32dp">
 
-            <!-- 账户昵称输入 -->
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/account_label_account_nickname"
-                android:textSize="16sp"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="8dp"/>
-
-            <EditText
-                android:id="@+id/et_nickname"
+                style="@style/AuthFormSubtitle"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/edit_text_background"
-                android:padding="12dp"
-                android:hint="@string/account_error_nickname_required"
-                android:textSize="16sp"
-                android:inputType="text"
-                android:maxLength="20"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- 密码输入 -->
-            <TextView
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/account_label_password"
-                android:textSize="16sp"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="8dp"/>
+                android:text="@string/auth_register_subtitle" />
 
-            <RelativeLayout
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_nickname"
+                style="@style/AuthTextInputLayout"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/edit_text_background"
-                android:layout_marginBottom="8dp">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="@string/account_label_account_nickname"
+                app:helperText="@string/first_register_hint_nickname"
+                app:helperTextEnabled="true">
 
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_nickname"
+                    style="@style/AuthTextInputEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
+                    android:inputType="textPersonName|textNoSuggestions"
+                    android:maxLength="20"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_password"
+                style="@style/AuthTextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/account_label_password"
+                app:endIconMode="password_toggle"
+                app:helperText="@string/account_hint_password_requirements"
+                app:helperTextEnabled="true">
+
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_password"
+                    style="@style/AuthTextInputEditText"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="12dp"
-                    android:paddingEnd="48dp"
-                    android:hint="@string/account_error_password_required"
-                    android:textSize="16sp"
-                    android:maxLength="16"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
                     android:inputType="textPassword"
-                    android:background="@null"/>
+                    android:maxLength="16"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-                <ImageView
-                    android:id="@+id/iv_password_toggle"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="12dp"
-                    android:src="@drawable/ic_eye_off"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="4dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
-
-            </RelativeLayout>
-
-            <!-- 密码要求提示 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/account_hint_password_requirements"
-                android:textSize="12sp"
-                android:textColor="@color/text_hint"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- 确认密码输入 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/account_label_confirm_password"
-                android:textSize="16sp"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="8dp"/>
-
-            <RelativeLayout
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_confirm_password"
+                style="@style/AuthTextInputLayout"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/edit_text_background"
-                android:layout_marginBottom="16dp">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/account_label_confirm_password"
+                app:endIconMode="password_toggle">
 
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_confirm_password"
+                    style="@style/AuthTextInputEditText"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="12dp"
-                    android:paddingEnd="48dp"
-                    android:hint="@string/account_hint_reenter_password"
-                    android:textSize="16sp"
-                    android:maxLength="16"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
                     android:inputType="textPassword"
-                    android:background="@null"/>
+                    android:maxLength="16"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-                <ImageView
-                    android:id="@+id/iv_confirm_password_toggle"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="12dp"
-                    android:src="@drawable/ic_eye_off"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="4dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
-
-            </RelativeLayout>
-
-            <!-- 个性化签名输入 -->
-            <TextView
-                android:layout_width="wrap_content"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_signature"
+                style="@style/AuthTextInputLayout"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/account_label_signature_optional"
-                android:textSize="16sp"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginTop="12dp"
+                android:hint="@string/account_label_signature_optional">
 
-            <EditText
-                android:id="@+id/et_signature"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/edit_text_background"
-                android:padding="12dp"
-                android:hint="@string/account_hint_signature"
-                android:textSize="16sp"
-                android:inputType="text"
-                android:maxLength="50"
-                android:layout_marginBottom="24dp"/>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_signature"
+                    style="@style/AuthTextInputEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="text"
+                    android:maxLength="50"
+                    android:maxLines="2" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 注册按钮 -->
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_register"
+                style="@style/AuthPrimaryButton"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="@string/account_btn_register"
-                android:textSize="16sp"
-                android:background="@drawable/button_blue_background"
-                android:textColor="@color/white"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/account_btn_register" />
 
-            <!-- 登录提示 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center">
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/account_prompt_has_account"
-                    android:textSize="14sp"
-                    android:textColor="@color/text_secondary"/>
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
 
-                <TextView
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/tv_go_login"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:minHeight="48dp"
                     android:text="@string/account_action_go_login"
-                    android:textSize="14sp"
-                    android:textColor="@color/primary"
-                    android:background="?attr/selectableItemBackground"
-                    android:padding="8dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
-
+                    android:textAllCaps="false"
+                    android:textColor="@color/brand" />
             </LinearLayout>
-
         </LinearLayout>
-
-    </LinearLayout>
-
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

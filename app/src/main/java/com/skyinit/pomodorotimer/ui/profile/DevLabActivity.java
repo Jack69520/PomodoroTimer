@@ -1,393 +1,279 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.util.SystemInfoUtils;
-import com.skyinit.pomodorotimer.R;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import com.skyinit.pomodorotimer.util.AppLog;
-import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import com.google.android.material.button.MaterialButton;
+import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
+import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
+import com.skyinit.pomodorotimer.ui.profile.devlab.DevLabEffect;
+import com.skyinit.pomodorotimer.ui.profile.devlab.DevLabIntent;
+import com.skyinit.pomodorotimer.ui.profile.devlab.DevLabLogAdapter;
+import com.skyinit.pomodorotimer.ui.profile.devlab.DevLabUiState;
+import com.skyinit.pomodorotimer.ui.profile.devlab.DevLabViewModel;
 
-public class DevLabActivity extends BaseActivity {
-    private static final String TAG = "DevLabActivity";
-    
-    private TextView tvAppInfo;
-    private TextView tvDeviceInfo;
-    private TextView tvStorageInfo;
-    private TextView tvMemoryInfo;
-    private RecyclerView rvLogs;
+/**
+ * 开发实验室：薄 UI 层，仅观察 {@link DevLabViewModel} 状态与副作用。
+ */
+public class DevLabActivity extends SubpageActivity {
+
+    private DevLabViewModel viewModel;
+    private DevLabLogAdapter logAdapter;
+
+    private TextView tvAppInfoError;
+    private View layoutAppInfoRows;
+    private TextView tvAppName;
+    private TextView tvVersionName;
+    private TextView tvVersionCode;
+
+    private TextView tvDeviceName;
+    private TextView tvDeviceModel;
+    private TextView tvDeviceBrand;
+    private TextView tvLanguage;
+    private TextView tvAndroidVersion;
+    private TextView tvApiLevel;
+
+    private MaterialButton btnRefreshResources;
+    private SwitchCompat switchAutoUpdate;
+    private ProgressBar progressStorage;
+    private TextView tvStorageSummary;
+    private ProgressBar progressStorageLoading;
+    private ProgressBar progressMemory;
+    private TextView tvMemorySummary;
+    private ProgressBar progressMemoryLoading;
+
+    private MaterialButton btnRefreshLogs;
+    private MaterialButton btnClearLogs;
+    private TextView tvLogCount;
     private Spinner spLogFilter;
-    private Button btnRefreshLogs;
-    private Button btnClearLogs;
-    private Button btnRefreshStorage;
-    private Button btnRefreshMemory;
-    private Switch switchAutoUpdate;
-    
-    private LogAdapter logAdapter;
-    private List<LogEntry> logEntries = new ArrayList<>();
-    private String currentFilter;
-    
-    private static final int LOG_LEVEL_INFO = 0;
-    private static final int LOG_LEVEL_ERROR = 1;
-    private static final int LOG_LEVEL_WARN = 2;
-    private static final int LOG_LEVEL_DEBUG = 3;
-    
-    // 动态更新相关
-    private Handler updateHandler = new Handler(Looper.getMainLooper());
-    private Runnable updateRunnable;
-    private static final long UPDATE_INTERVAL = 5000; // 5秒更新一次
-    private boolean isAutoUpdateEnabled = false;
+    private RecyclerView rvLogs;
+    private TextView tvLogsEmpty;
+    private ProgressBar progressLogsLoading;
 
-    private void setupToolbar() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(R.string.title_dev_lab));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
-    }
+    private boolean suppressAutoUpdateCallback;
+    private boolean suppressFilterCallback;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_dev_lab);
-        setupToolbar();
-        
-        initViews();
-        setupLogFilter();
-        loadAppInfo();
-        loadDeviceInfo();
-        loadStorageInfo();
-        loadMemoryInfo();
-        loadLogs();
+        setContentWithSubpageChrome(R.layout.activity_dev_lab, R.string.title_dev_lab);
+
+        viewModel = new ViewModelProvider(
+                this,
+                ((App) getApplication()).getContainer().getViewModelFactory()
+        ).get(DevLabViewModel.class);
+
+        bindViews();
+        setupLogsList();
+        setupFilter();
+        setupActions();
+
+        viewModel.getUiState().observe(this, this::render);
+        viewModel.getEffects().observe(this, this::handleEffect);
+        viewModel.dispatch(DevLabIntent.bootstrap());
     }
-    
-    private void initViews() {
-        tvAppInfo = findViewById(R.id.tv_app_info);
-        tvDeviceInfo = findViewById(R.id.tv_device_info);
-        tvStorageInfo = findViewById(R.id.tv_storage_info);
-        tvMemoryInfo = findViewById(R.id.tv_memory_info);
-        rvLogs = findViewById(R.id.rv_logs);
-        spLogFilter = findViewById(R.id.sp_log_filter);
+
+    private void bindViews() {
+        tvAppInfoError = findViewById(R.id.tv_app_info_error);
+        layoutAppInfoRows = findViewById(R.id.layout_app_info_rows);
+        tvAppName = findViewById(R.id.tv_app_name);
+        tvVersionName = findViewById(R.id.tv_version_name);
+        tvVersionCode = findViewById(R.id.tv_version_code);
+
+        tvDeviceName = findViewById(R.id.tv_device_name);
+        tvDeviceModel = findViewById(R.id.tv_device_model);
+        tvDeviceBrand = findViewById(R.id.tv_device_brand);
+        tvLanguage = findViewById(R.id.tv_language);
+        tvAndroidVersion = findViewById(R.id.tv_android_version);
+        tvApiLevel = findViewById(R.id.tv_api_level);
+
+        btnRefreshResources = findViewById(R.id.btn_refresh_resources);
+        switchAutoUpdate = findViewById(R.id.switch_auto_update);
+        progressStorage = findViewById(R.id.progress_storage);
+        tvStorageSummary = findViewById(R.id.tv_storage_summary);
+        progressStorageLoading = findViewById(R.id.progress_storage_loading);
+        progressMemory = findViewById(R.id.progress_memory);
+        tvMemorySummary = findViewById(R.id.tv_memory_summary);
+        progressMemoryLoading = findViewById(R.id.progress_memory_loading);
+
         btnRefreshLogs = findViewById(R.id.btn_refresh_logs);
         btnClearLogs = findViewById(R.id.btn_clear_logs);
-        btnRefreshStorage = findViewById(R.id.btn_refresh_storage);
-        btnRefreshMemory = findViewById(R.id.btn_refresh_memory);
-        switchAutoUpdate = findViewById(R.id.switch_auto_update);
-        
-        // 设置日志列表
-        logAdapter = new LogAdapter(logEntries);
-        rvLogs.setLayoutManager(new LinearLayoutManager(this));
-        rvLogs.setAdapter(logAdapter);
-        
-        // 设置按钮监听器
-        btnRefreshLogs.setOnClickListener(v -> loadLogs());
-        btnClearLogs.setOnClickListener(v -> clearLogs());
-        btnRefreshStorage.setOnClickListener(v -> loadStorageInfo());
-        btnRefreshMemory.setOnClickListener(v -> loadMemoryInfo());
-        
-        // 设置自动更新开关监听器
-        switchAutoUpdate.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            isAutoUpdateEnabled = isChecked;
-            if (isChecked) {
-                startAutoUpdate();
-                addLogEntry(logLevel(LOG_LEVEL_INFO),
-                        getString(R.string.dev_lab_log_category_auto_update),
-                        getString(R.string.dev_lab_log_auto_update_enabled));
-            } else {
-                stopAutoUpdate();
-                addLogEntry(logLevel(LOG_LEVEL_INFO),
-                        getString(R.string.dev_lab_log_category_auto_update),
-                        getString(R.string.dev_lab_log_auto_update_disabled));
-            }
-            filterLogs();
-        });
+        tvLogCount = findViewById(R.id.tv_log_count);
+        spLogFilter = findViewById(R.id.sp_log_filter);
+        rvLogs = findViewById(R.id.rv_logs);
+        tvLogsEmpty = findViewById(R.id.tv_logs_empty);
+        progressLogsLoading = findViewById(R.id.progress_logs_loading);
     }
-    
-    private void setupLogFilter() {
-        String[] filterOptions = getResources().getStringArray(R.array.dev_lab_log_levels);
-        currentFilter = filterOptions[0];
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
-            android.R.layout.simple_spinner_item, filterOptions);
+
+    private void setupLogsList() {
+        logAdapter = new DevLabLogAdapter();
+        rvLogs.setLayoutManager(new LinearLayoutManager(this));
+        rvLogs.setItemAnimator(null);
+        rvLogs.setAdapter(logAdapter);
+        rvLogs.setNestedScrollingEnabled(true);
+    }
+
+    private void setupFilter() {
+        String[] options = getResources().getStringArray(R.array.dev_lab_log_levels);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, options);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spLogFilter.setAdapter(adapter);
-        
-        spLogFilter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+        spLogFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                currentFilter = filterOptions[position];
-                filterLogs();
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (suppressFilterCallback) {
+                    return;
+                }
+                viewModel.dispatch(DevLabIntent.setFilterIndex(position));
             }
-            
+
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
         });
     }
-    
-    private void loadAppInfo() {
-        try {
-            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-            String appName = getString(R.string.app_name);
-            String versionName = packageInfo.versionName;
-            int versionCode = packageInfo.versionCode;
-            
-            String appInfo = getString(
-                R.string.dev_lab_format_app_info,
-                appName, versionName, versionCode
-            );
-            
-            tvAppInfo.setText(appInfo);
-        } catch (PackageManager.NameNotFoundException e) {
-            tvAppInfo.setText(R.string.dev_lab_error_app_info);
-            AppLog.e(TAG, "Error getting app info", e);
-        }
-    }
-    
-    private void loadDeviceInfo() {
-        String deviceName = Build.MODEL;
-        String deviceModel = Build.MODEL;
-        String deviceBrand = Build.BRAND;
-        String language = Locale.getDefault().getDisplayLanguage();
-        String androidVersion = Build.VERSION.RELEASE;
-        String fullApiLevel = formatFullApiLevel();
-        
-        String deviceInfo = getString(
-            R.string.dev_lab_format_device_info,
-            deviceName, deviceModel, deviceBrand, language, androidVersion, fullApiLevel
-        );
-        
-        tvDeviceInfo.setText(deviceInfo);
-    }
 
-    /** Android 16+ 使用 SDK_INT_FULL 区分 36.0 / 36.1 等小版本；更低版本回退为主版本 + .0 */
-    private static String formatFullApiLevel() {
-        if (Build.VERSION.SDK_INT >= 36) {
-            int sdkFull = Build.VERSION.SDK_INT_FULL;
-            int major = sdkFull / 100_000;
-            int minor = sdkFull % 100_000;
-            return String.format(Locale.US, "%d.%d", major, minor);
-        }
-        return String.format(Locale.US, "%d.0", Build.VERSION.SDK_INT);
-    }
-    
-    private void loadStorageInfo() {
-        try {
-            String appStorage = SystemInfoUtils.getAppStorageSize(this);
-            String totalStorage = SystemInfoUtils.getTotalStorageSize();
-            String usedStorage = SystemInfoUtils.getUsedStorageSize();
-            String storagePercentage = SystemInfoUtils.getStorageUsagePercentage();
-            
-            String storageInfo = getString(
-                R.string.dev_lab_format_storage_info,
-                appStorage, totalStorage, usedStorage, storagePercentage
-            );
-            
-            tvStorageInfo.setText(storageInfo);
-            
-            addLogEntry(logLevel(LOG_LEVEL_INFO),
-                    getString(R.string.dev_lab_log_category_storage),
-                    getString(R.string.dev_lab_log_storage_updated));
-        } catch (Exception e) {
-            tvStorageInfo.setText(R.string.dev_lab_error_storage_info);
-            addLogEntry(logLevel(LOG_LEVEL_ERROR),
-                    getString(R.string.dev_lab_log_category_storage),
-                    getString(R.string.dev_lab_log_storage_failed, e.getMessage()));
-            AppLog.e(TAG, "Error loading storage info", e);
-        }
-    }
-    
-    private void loadMemoryInfo() {
-        try {
-            String appMemory = SystemInfoUtils.getAppMemoryUsage(this);
-            String totalMemory = SystemInfoUtils.getTotalMemorySize();
-            String usedMemory = SystemInfoUtils.getUsedMemorySize(this);
-            String memoryPercentage = SystemInfoUtils.getMemoryUsagePercentage(this);
-            
-            String memoryInfo = getString(
-                R.string.dev_lab_format_memory_info,
-                appMemory, totalMemory, usedMemory, memoryPercentage
-            );
-            
-            tvMemoryInfo.setText(memoryInfo);
-            
-            addLogEntry(logLevel(LOG_LEVEL_INFO),
-                    getString(R.string.dev_lab_log_category_memory),
-                    getString(R.string.dev_lab_log_memory_updated));
-        } catch (Exception e) {
-            tvMemoryInfo.setText(R.string.dev_lab_error_memory_info);
-            addLogEntry(logLevel(LOG_LEVEL_ERROR),
-                    getString(R.string.dev_lab_log_category_memory),
-                    getString(R.string.dev_lab_log_memory_failed, e.getMessage()));
-            AppLog.e(TAG, "Error loading memory info", e);
-        }
-    }
-    
-    private void loadLogs() {
-        logEntries.clear();
+    private void setupActions() {
+        btnRefreshResources.setOnClickListener(v ->
+                viewModel.dispatch(DevLabIntent.refreshResources()));
+        btnRefreshLogs.setOnClickListener(v ->
+                viewModel.dispatch(DevLabIntent.refreshLogs()));
+        btnClearLogs.setOnClickListener(v ->
+                viewModel.dispatch(DevLabIntent.requestClearLogs()));
 
-        addLogEntry(logLevel(LOG_LEVEL_INFO),
-                getString(R.string.dev_lab_log_category_app_start),
-                getString(R.string.dev_lab_log_app_start));
-
-        int logcatCount = 0;
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder("logcat", "-d", "-v", "time");
-            Process process = processBuilder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            String packageName = getPackageName();
-            while ((line = reader.readLine()) != null && logcatCount < 50) {
-                if (line.contains("PomodoroTimer") || line.contains(packageName)) {
-                    String level = logLevel(LOG_LEVEL_INFO);
-                    if (line.contains(" E/")) {
-                        level = logLevel(LOG_LEVEL_ERROR);
-                    } else if (line.contains(" W/")) {
-                        level = logLevel(LOG_LEVEL_WARN);
-                    } else if (line.contains(" D/")) {
-                        level = logLevel(LOG_LEVEL_DEBUG);
-                    } else if (line.contains(" I/")) {
-                        level = logLevel(LOG_LEVEL_INFO);
-                    }
-
-                    addLogEntry(level,
-                            getString(R.string.dev_lab_log_system),
-                            line);
-                    logcatCount++;
-                }
+        switchAutoUpdate.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressAutoUpdateCallback) {
+                return;
             }
-            reader.close();
-        } catch (IOException e) {
-            addLogEntry(logLevel(LOG_LEVEL_ERROR),
-                    getString(R.string.dev_lab_log_category_log_read),
-                    getString(R.string.dev_lab_log_read_failed, e.getMessage()));
+            viewModel.dispatch(DevLabIntent.setAutoUpdate(isChecked));
+        });
+    }
+
+    private void render(@Nullable DevLabUiState state) {
+        if (state == null || isFinishing() || isDestroyed()) {
+            return;
         }
 
-        if (logcatCount == 0 && logEntries.size() == 1) {
-            addLogEntry(logLevel(LOG_LEVEL_INFO),
-                    getString(R.string.dev_lab_log_category_log_read),
-                    getString(R.string.dev_lab_log_empty));
+        tvAppInfoError.setVisibility(state.appInfoError ? View.VISIBLE : View.GONE);
+        layoutAppInfoRows.setVisibility(state.appInfoError ? View.GONE : View.VISIBLE);
+        tvAppName.setText(state.appName);
+        tvVersionName.setText(state.versionName);
+        tvVersionCode.setText(String.valueOf(state.versionCode));
+
+        tvDeviceName.setText(state.deviceName);
+        tvDeviceModel.setText(state.deviceModel);
+        tvDeviceBrand.setText(state.deviceBrand);
+        tvLanguage.setText(state.language);
+        tvAndroidVersion.setText(state.androidVersion);
+        tvApiLevel.setText(state.apiLevel);
+
+        if (switchAutoUpdate.isChecked() != state.autoUpdateEnabled) {
+            suppressAutoUpdateCallback = true;
+            switchAutoUpdate.setChecked(state.autoUpdateEnabled);
+            suppressAutoUpdateCallback = false;
         }
 
-        filterLogs();
-    }
-    
-    private void addLogEntry(String level, String tag, String message) {
-        LogEntry entry = new LogEntry();
-        entry.timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-        entry.level = level;
-        entry.tag = tag;
-        entry.message = message;
-        logEntries.add(entry);
-    }
-    
-    private void filterLogs() {
-        List<LogEntry> filteredEntries = new ArrayList<>();
-        
-        for (LogEntry entry : logEntries) {
-            if (getString(R.string.common_filter_all).equals(currentFilter)
-                    || entry.level.equals(currentFilter)) {
-                filteredEntries.add(entry);
-            }
+        boolean resourcesBusy = state.storageLoading || state.memoryLoading;
+        btnRefreshResources.setEnabled(!resourcesBusy);
+        progressStorageLoading.setVisibility(state.storageLoading ? View.VISIBLE : View.GONE);
+        progressMemoryLoading.setVisibility(state.memoryLoading ? View.VISIBLE : View.GONE);
+
+        progressStorage.setProgress(state.storagePercent);
+        if (state.storageError) {
+            tvStorageSummary.setText(R.string.dev_lab_error_storage_info);
+        } else {
+            tvStorageSummary.setText(getString(
+                    R.string.dev_lab_runtime_summary,
+                    state.appStorage,
+                    state.usedStorage,
+                    state.totalStorage,
+                    state.storagePercentText
+            ));
         }
-        
-        logAdapter.updateLogs(filteredEntries);
+
+        progressMemory.setProgress(state.memoryPercent);
+        if (state.memoryError) {
+            tvMemorySummary.setText(R.string.dev_lab_error_memory_info);
+        } else {
+            tvMemorySummary.setText(getString(
+                    R.string.dev_lab_runtime_summary,
+                    state.appMemory,
+                    state.usedMemory,
+                    state.totalMemory,
+                    state.memoryPercentText
+            ));
+        }
+
+        btnRefreshLogs.setEnabled(!state.logsLoading);
+        btnClearLogs.setEnabled(!state.logsLoading && state.totalLogCount > 0);
+        progressLogsLoading.setVisibility(state.logsLoading ? View.VISIBLE : View.GONE);
+
+        if (spLogFilter.getSelectedItemPosition() != state.filterIndex) {
+            suppressFilterCallback = true;
+            spLogFilter.setSelection(state.filterIndex, false);
+            suppressFilterCallback = false;
+        }
+
+        tvLogCount.setText(getString(R.string.dev_lab_log_count_format,
+                state.visibleLogs.size(), state.totalLogCount));
+        logAdapter.submitList(state.visibleLogs);
+        boolean empty = !state.logsLoading && state.visibleLogs.isEmpty();
+        tvLogsEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        rvLogs.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
     }
-    
-    private void clearLogs() {
-        logEntries.clear();
-        logAdapter.updateLogs(logEntries);
-        Toast.makeText(this, R.string.dev_lab_toast_logs_cleared, Toast.LENGTH_SHORT).show();
-    }
-    
-    private void startAutoUpdate() {
-        updateRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (isAutoUpdateEnabled && !isFinishing()) {
-                    // 更新存储和内存信息
-                    loadStorageInfo();
-                    loadMemoryInfo();
-                    
-                    // 添加自动更新日志
-                    addLogEntry(logLevel(LOG_LEVEL_DEBUG),
-                            getString(R.string.dev_lab_log_category_auto_update),
-                            getString(R.string.dev_lab_log_auto_refresh));
-                    filterLogs();
-                    
-                    // 安排下次更新
-                    updateHandler.postDelayed(this, UPDATE_INTERVAL);
-                }
-            }
-        };
-        updateHandler.postDelayed(updateRunnable, UPDATE_INTERVAL);
-    }
-    
-    private void stopAutoUpdate() {
-        if (updateRunnable != null) {
-            updateHandler.removeCallbacks(updateRunnable);
+
+    private void handleEffect(@Nullable DevLabEffect effect) {
+        if (effect == null || isFinishing() || isDestroyed()) {
+            return;
+        }
+        switch (effect.type) {
+            case TOAST:
+                Toast.makeText(this, effect.messageRes, Toast.LENGTH_SHORT).show();
+                break;
+            case SHOW_CLEAR_CONFIRM:
+                ModernPromptDialog.builder(this)
+                        .icon(R.drawable.ic_info)
+                        .accent(ModernPromptDialog.Accent.DANGER)
+                        .title(R.string.dev_lab_clear_confirm_title)
+                        .message(R.string.dev_lab_clear_confirm_message)
+                        .primaryDanger(R.string.dev_lab_btn_clear,
+                                () -> viewModel.dispatch(DevLabIntent.confirmClearLogs()))
+                        .tertiary(R.string.cancel, null)
+                        .show();
+                break;
+            default:
+                break;
         }
     }
-    
+
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (isAutoUpdateEnabled) {
-            startAutoUpdate();
+    protected void onStart() {
+        super.onStart();
+        if (viewModel != null) {
+            viewModel.dispatch(DevLabIntent.setPageVisible(true));
         }
     }
-    
+
     @Override
-    protected void onPause() {
-        super.onPause();
-        stopAutoUpdate();
-    }
-    
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        stopAutoUpdate();
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish();
-            return true;
+    protected void onStop() {
+        if (viewModel != null) {
+            viewModel.dispatch(DevLabIntent.setPageVisible(false));
         }
-        return super.onOptionsItemSelected(item);
-    }
-    
-    private String logLevel(int index) {
-        return getResources().getStringArray(R.array.dev_lab_log_levels)[index];
-    }
-    
-    // 日志条目类
-    public static class LogEntry {
-        public String timestamp;
-        public String level;
-        public String tag;
-        public String message;
+        super.onStop();
     }
 }

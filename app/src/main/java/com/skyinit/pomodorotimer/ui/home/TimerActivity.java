@@ -23,7 +23,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageView;
-import android.util.Log;
 import androidx.activity.OnBackPressedCallback;
 
 import androidx.annotation.Nullable;
@@ -31,6 +30,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
@@ -39,20 +42,6 @@ import android.content.res.Configuration;
  * 计时器专属页面：仅包含计时显示与控制按钮。
  */
 public class TimerActivity extends AppCompatActivity implements PauseReasonDialog.PauseReasonListener {
-    private static final int[] TIMER_BACKGROUND_RES_IDS = {
-            R.drawable.timerbackgroundimage_1,
-            R.drawable.timerbackgroundimage_2,
-            R.drawable.timerbackgroundimage_3,
-            R.drawable.timerbackgroundimage_4,
-            R.drawable.timerbackgroundimage_5,
-            R.drawable.timerbackgroundimage_6,
-            R.drawable.timerbackgroundimage_7,
-            R.drawable.timerbackgroundimage_8,
-            R.drawable.timerbackgroundimage_9,
-            R.drawable.timerbackgroundimage_10,
-            R.drawable.timerbackgroundimage_11,
-            R.drawable.timerbackgroundimage_12
-    };
 
     private TextView timerText;
     private TextView taskTitleText;
@@ -74,6 +63,28 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
     };
 
+    private void applyTimerWindowInsets() {
+        View content = findViewById(R.id.timer_content);
+        if (content == null) {
+            return;
+        }
+        final int initialLeft = content.getPaddingLeft();
+        final int initialTop = content.getPaddingTop();
+        final int initialRight = content.getPaddingRight();
+        final int initialBottom = content.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(content, (view, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(
+                    initialLeft + bars.left,
+                    initialTop + bars.top,
+                    initialRight + bars.right,
+                    initialBottom + bars.bottom);
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(content);
+    }
+
     private final ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -84,6 +95,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             maybeStartOnEnter();
             viewModel.syncFromService(timerService);
             updateUIFromState(viewModel.getTimerState().getValue());
+            timerService.notifyTimerUiResumed();
         }
 
         @Override
@@ -96,7 +108,9 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_timer);
+        applyTimerWindowInsets();
 
         App app = (App) getApplication();
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
@@ -116,7 +130,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE);
 
         // 随机背景：进入页面时尝试设置图片背景（失败则回退为渐变）
-        maybeSetRandomBackgroundImage();
+        TimerBackgroundHelper.applyRandomBackground(this, bgImageView);
 
         // 统一拦截系统返回键（包括手势返回）
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -146,10 +160,17 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
                     dialog.show(getSupportFragmentManager(), "pause_reason_dialog");
                 } else {
                     Toast.makeText(this, getString(R.string.timer_toast_max_pause_reached), Toast.LENGTH_SHORT).show();
+                    updateControls(viewModel.getTimerState().getValue());
                 }
             } else if (timerService.isPaused()) {
                 sendAction(TimerService.ACTION_RESUME);
             } else {
+                // 防止 LiveData 与 binder 短暂不同步时误发 START，清零 pauseCount
+                if (state != null && (state.running || state.paused)) {
+                    viewModel.syncFromService(timerService);
+                    updateControls(viewModel.getTimerState().getValue());
+                    return;
+                }
                 sendAction(TimerService.ACTION_START);
             }
         });
@@ -158,10 +179,17 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             if (timerService == null) return;
             TimerUiState state = viewModel.getTimerState().getValue();
             if (state != null && state.isBreakSession() && state.running) {
-                sendAction(TimerService.ACTION_END_BREAK);
-                vibrateShort();
-                Toast.makeText(this, getString(R.string.timer_toast_break_ended), Toast.LENGTH_SHORT).show();
-                navigateHome();
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.timer_confirm_end_break_title)
+                        .setMessage(R.string.timer_confirm_end_break_message)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.timer_end_break, (d, w) -> {
+                            sendAction(TimerService.ACTION_END_BREAK);
+                            vibrateShort();
+                            Toast.makeText(this, getString(R.string.timer_toast_break_ended), Toast.LENGTH_SHORT).show();
+                            navigateHome();
+                        })
+                        .show();
                 return;
             }
             if (state != null && state.awaitingPostBreakChoice) {
@@ -171,11 +199,34 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
                 navigateHome();
                 return;
             }
-            sendAction(TimerService.ACTION_RESET);
-            vibrateShort();
-            Toast.makeText(this, getString(R.string.timer_toast_timer_ended), Toast.LENGTH_SHORT).show();
-            navigateHome();
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.timer_confirm_reset_title)
+                    .setMessage(R.string.timer_confirm_reset_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.stop_button, (d, w) -> {
+                        sendAction(TimerService.ACTION_RESET);
+                        vibrateShort();
+                        Toast.makeText(this, getString(R.string.timer_toast_timer_ended), Toast.LENGTH_SHORT).show();
+                        navigateHome();
+                    })
+                    .show();
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (timerService != null) {
+            timerService.notifyTimerUiResumed();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        if (timerService != null) {
+            timerService.notifyTimerUiStopped(isChangingConfigurations());
+        }
+        super.onStop();
     }
 
     @Override
@@ -187,18 +238,8 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             AppLog.w("TimerActivity", "Receiver already unregistered", e);
         }
         if (bgImageView != null) {
-            try {
-                android.graphics.drawable.Drawable drawable = bgImageView.getDrawable();
-                bgImageView.setImageDrawable(null);
-                if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
-                    android.graphics.Bitmap bitmap = ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap();
-                    if (bitmap != null && !bitmap.isRecycled()) {
-                        bitmap.recycle();
-                    }
-                }
-            } catch (Exception e) {
-                AppLog.w("TimerActivity", "Failed to recycle background bitmap", e);
-            }
+            TimerBackgroundHelper.recycle(bgImageView);
+            bgImageView = null;
         }
         if (timerService != null) {
             viewModel.syncFromService(timerService);
@@ -301,6 +342,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
         if (viewModel.shouldShowPostBreakActions(state)) {
             primaryButton.setText(R.string.timer_start_next_pomodoro);
+            primaryButton.setEnabled(true);
             primaryButton.setVisibility(View.VISIBLE);
             secondaryButton.setText(R.string.timer_end_session);
             secondaryButton.setVisibility(View.VISIBLE);
@@ -313,17 +355,25 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             return;
         }
         if (state.running) {
-            primaryButton.setText(R.string.pause_button);
-            primaryButton.setVisibility(View.VISIBLE);
+            // 与通知栏一致：达暂停上限后不再提供暂停入口
+            if (state.isStudySession() && !state.canPause) {
+                primaryButton.setVisibility(View.GONE);
+            } else {
+                primaryButton.setText(R.string.pause_button);
+                primaryButton.setEnabled(true);
+                primaryButton.setVisibility(View.VISIBLE);
+            }
             secondaryButton.setText(R.string.stop_button);
             secondaryButton.setVisibility(View.VISIBLE);
         } else if (state.paused) {
             primaryButton.setText(R.string.resume_button);
+            primaryButton.setEnabled(true);
             primaryButton.setVisibility(View.VISIBLE);
             secondaryButton.setText(R.string.stop_button);
             secondaryButton.setVisibility(View.VISIBLE);
         } else if (viewModel.shouldShowIdleStudyControls(state)) {
             primaryButton.setText(R.string.start_button);
+            primaryButton.setEnabled(true);
             primaryButton.setVisibility(View.VISIBLE);
             secondaryButton.setText(R.string.stop_button);
             secondaryButton.setVisibility(View.VISIBLE);
@@ -333,72 +383,14 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
     }
 
-    private void maybeSetRandomBackgroundImage() {
-        if (bgImageView == null || TIMER_BACKGROUND_RES_IDS.length == 0) {
-            return;
-        }
-        try {
-            int resId = TIMER_BACKGROUND_RES_IDS[new java.util.Random().nextInt(TIMER_BACKGROUND_RES_IDS.length)];
-            if (loadBackgroundImage(resId)) {
-                bgImageView.setVisibility(View.VISIBLE);
-            } else {
-                Log.w("TimerActivity", "Failed to load timer background, using gradient fallback. resId=" + resId);
-                bgImageView.setImageDrawable(null);
-                bgImageView.setVisibility(View.GONE);
-            }
-        } catch (Throwable t) {
-            Log.e("TimerActivity", "Error setting timer background, using gradient fallback.", t);
-            bgImageView.setImageDrawable(null);
-            bgImageView.setVisibility(View.GONE);
-        }
-    }
-
-    /**
-     * 使用静态资源 ID + ImageDecoder 加载 WebP 背景，避免 getIdentifier 在资源收缩后失效，
-     * 以及 BitmapFactory 对 WebP 做 bounds 预检时常失败的问题。
-     */
-    private boolean loadBackgroundImage(int resId) {
-        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-        int targetW = Math.max(dm.widthPixels, 1);
-        int targetH = Math.max(dm.heightPixels, 1);
-        try {
-            android.graphics.ImageDecoder.Source source =
-                    android.graphics.ImageDecoder.createSource(getResources(), resId);
-            android.graphics.Bitmap bitmap = android.graphics.ImageDecoder.decodeBitmap(source,
-                    (decoder, info, src) -> {
-                        decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
-                        int iw = info.getSize().getWidth();
-                        int ih = info.getSize().getHeight();
-                        if (iw <= 0 || ih <= 0) {
-                            return;
-                        }
-                        float scale = Math.min((float) targetW / iw, (float) targetH / ih);
-                        if (scale < 1f) {
-                            decoder.setTargetSize(
-                                    Math.max(1, Math.round(iw * scale)),
-                                    Math.max(1, Math.round(ih * scale))
-                            );
-                        }
-                    });
-            if (bitmap != null) {
-                bgImageView.setImageBitmap(bitmap);
-                return true;
-            }
-        } catch (Exception e) {
-            Log.w("TimerActivity", "ImageDecoder failed for resId=" + resId, e);
-        }
-        try {
-            bgImageView.setImageResource(resId);
-            return bgImageView.getDrawable() != null;
-        } catch (Exception e) {
-            Log.w("TimerActivity", "setImageResource failed for resId=" + resId, e);
-            return false;
-        }
-    }
-
     // 暂停原因选择回调
     @Override
     public void onReasonSelected(String reason) {
+        if (timerService != null && !timerService.canPause()) {
+            Toast.makeText(this, getString(R.string.timer_toast_max_pause_reached), Toast.LENGTH_SHORT).show();
+            updateControls(viewModel.getTimerState().getValue());
+            return;
+        }
         Intent intent = new Intent(this, TimerService.class);
         intent.setAction(TimerService.ACTION_PAUSE_WITH_REASON);
         intent.putExtra("pause_reason", reason);
@@ -408,12 +400,6 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
     @Override
     public void resumeTimer() {
         TimerServiceLauncher.deliverAction(this, TimerService.ACTION_RESUME);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        // 允许后台继续运行（例如打开白名单应用），不再强制失败
     }
 
     @Override

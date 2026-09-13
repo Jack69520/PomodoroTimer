@@ -1,75 +1,72 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.AppDatabase;
-import com.skyinit.pomodorotimer.R;
-import com.skyinit.pomodorotimer.data.dao.BlockedAppDao;
-import com.skyinit.pomodorotimer.data.entity.BlockedApp;
-import com.skyinit.pomodorotimer.data.repository.AccountManager;
-import com.skyinit.pomodorotimer.util.AppCategory;
-import com.skyinit.pomodorotimer.util.AppCategoryClassifier;
-import com.skyinit.pomodorotimer.util.AppExecutors;
-import com.skyinit.pomodorotimer.util.AppLog;
-
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.ViewModelProvider;
 
-public class AppCategoryEditActivity extends BaseActivity {
+import com.google.android.material.button.MaterialButton;
+import com.skyinit.pomodorotimer.AppContainer;
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.entity.BlockedApp;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
+import com.skyinit.pomodorotimer.util.AppCategory;
+
+/**
+ * 应用分类编辑页：仅渲染状态与转发意图。
+ */
+public class AppCategoryEditActivity extends SubpageActivity {
 
     public static final String EXTRA_PACKAGE_NAME = "package_name";
-
-    private static final String TAG = "AppCategoryEdit";
 
     private ImageView appIcon;
     private TextView appNameText;
     private TextView appPackageText;
     private TextView currentCategoryText;
     private Spinner categorySpinner;
-    private Button btnSave;
-    private Button btnResetAuto;
+    private MaterialButton btnSave;
+    private MaterialButton btnResetAuto;
 
-    private BlockedAppDao blockedAppDao;
-    private String activeUserId;
-    private String packageName;
-    private BlockedApp blockedApp;
+    private AppCategoryEditViewModel viewModel;
+    private boolean syncingSpinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_app_category_edit);
+        setContentWithSubpageChrome(R.layout.activity_app_category_edit,
+                R.string.blocking_category_edit_title);
 
-        packageName = getIntent().getStringExtra(EXTRA_PACKAGE_NAME);
+        String packageName = getIntent().getStringExtra(EXTRA_PACKAGE_NAME);
         if (packageName == null || packageName.isEmpty()) {
             Toast.makeText(this, R.string.blocking_toast_invalid_app, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        setupToolbar();
         initViews();
-        blockedAppDao = AppDatabase.getDatabase(this).blockedAppDao();
-        activeUserId = AccountManager.getInstance(this).requireActiveUserId();
-        loadApp();
-    }
 
-    private void setupToolbar() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(R.string.blocking_category_edit_title);
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+        AppContainer container = AppContainer.getInstance(this);
+        String activeUserId = container.getAccountManager().requireActiveUserId();
+        viewModel = new ViewModelProvider(
+                this,
+                container.getViewModelFactory().createAppCategoryEditFactory(activeUserId, packageName)
+        ).get(AppCategoryEditViewModel.class);
+
+        setupSpinner();
+        observeViewModel();
+        viewModel.load();
     }
 
     private void initViews() {
@@ -81,56 +78,103 @@ public class AppCategoryEditActivity extends BaseActivity {
         btnSave = findViewById(R.id.btn_save);
         btnResetAuto = findViewById(R.id.btn_reset_auto);
 
+        btnSave.setOnClickListener(v -> viewModel.saveManual());
+        btnResetAuto.setOnClickListener(v -> viewModel.restoreAuto());
+    }
+
+    private void setupSpinner() {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, AppCategory.ASSIGNABLE);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         categorySpinner.setAdapter(adapter);
-
-        btnSave.setOnClickListener(v -> saveManualCategory());
-        btnResetAuto.setOnClickListener(v -> resetToAutoCategory());
-    }
-
-    private void loadApp() {
-        AppExecutors.getInstance().diskIo(() -> {
-            try {
-                blockedApp = blockedAppDao.getBlockedAppByPackage(activeUserId, packageName);
-                if (blockedApp == null) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, R.string.blocking_toast_app_not_found, Toast.LENGTH_SHORT).show();
-                        finish();
-                    });
+        categorySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (syncingSpinner) {
                     return;
                 }
-
-                runOnUiThread(() -> bindApp(blockedApp));
-            } catch (Exception e) {
-                AppLog.e(TAG, "Failed to load app", e);
-                runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.blocking_toast_load_failed, Toast.LENGTH_SHORT).show();
-                    finish();
-                });
+                viewModel.selectCategory(AppCategory.ASSIGNABLE[position]);
             }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
-    private void bindApp(BlockedApp app) {
+    private void observeViewModel() {
+        viewModel.getUiState().observe(this, this::render);
+        viewModel.getEffects().observe(this, this::handleEffect);
+    }
+
+    private void render(AppCategoryEditViewModel.UiState state) {
+        if (state == null) {
+            return;
+        }
+        boolean busy = state.loading || state.saving;
+        btnSave.setEnabled(!busy);
+        categorySpinner.setEnabled(!busy);
+
+        BlockedApp app = state.app;
+        if (app == null) {
+            btnResetAuto.setEnabled(false);
+            return;
+        }
+
         appNameText.setText(app.appName);
         appPackageText.setText(app.packageName);
         currentCategoryText.setText(app.category);
         currentCategoryText.setBackgroundResource(AppCategory.getBackgroundRes(app.category));
-
         setAppIcon(app.packageName);
 
+        btnResetAuto.setEnabled(!busy && app.categoryManual);
+
+        String selected = state.selectedCategory != null ? state.selectedCategory : app.category;
         int selection = 0;
         for (int i = 0; i < AppCategory.ASSIGNABLE.length; i++) {
-            if (AppCategory.ASSIGNABLE[i].equals(app.category)) {
+            if (AppCategory.ASSIGNABLE[i].equals(selected)) {
                 selection = i;
                 break;
             }
         }
-        categorySpinner.setSelection(selection);
+        if (categorySpinner.getSelectedItemPosition() != selection) {
+            syncingSpinner = true;
+            categorySpinner.setSelection(selection);
+            syncingSpinner = false;
+        }
+    }
 
-        btnResetAuto.setEnabled(app.categoryManual);
+    private void handleEffect(AppCategoryEditViewModel.Effect effect) {
+        if (effect == null || effect.code == null) {
+            return;
+        }
+        switch (effect.code) {
+            case "NOT_FOUND":
+                Toast.makeText(this, R.string.blocking_toast_app_not_found, Toast.LENGTH_SHORT).show();
+                break;
+            case "LOAD_FAILED":
+                Toast.makeText(this, R.string.blocking_toast_load_failed, Toast.LENGTH_SHORT).show();
+                break;
+            case "SAVED":
+                Toast.makeText(this, R.string.blocking_toast_category_saved, Toast.LENGTH_SHORT).show();
+                break;
+            case "SAVE_FAILED":
+                Toast.makeText(this, R.string.blocking_toast_save_failed, Toast.LENGTH_SHORT).show();
+                break;
+            case "RESTORED":
+                Toast.makeText(this, R.string.blocking_toast_auto_category_restored, Toast.LENGTH_SHORT).show();
+                break;
+            case "RESTORE_FAILED":
+                Toast.makeText(this, R.string.blocking_toast_restore_failed, Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                break;
+        }
+        if (effect.finishOk) {
+            if ("SAVED".equals(effect.code) || "RESTORED".equals(effect.code)) {
+                setResult(RESULT_OK);
+            }
+            finish();
+        }
     }
 
     private void setAppIcon(String pkg) {
@@ -144,56 +188,6 @@ public class AppCategoryEditActivity extends BaseActivity {
         }
     }
 
-    private void saveManualCategory() {
-        String newCategory = (String) categorySpinner.getSelectedItem();
-        if (newCategory == null) {
-            finish();
-            return;
-        }
-        if (newCategory.equals(blockedApp.category) && blockedApp.categoryManual) {
-            finish();
-            return;
-        }
-
-        AppExecutors.getInstance().diskIo(() -> {
-            try {
-                blockedAppDao.updateCategory(activeUserId, packageName, newCategory, true);
-                runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.blocking_toast_category_saved, Toast.LENGTH_SHORT).show();
-                    setResult(RESULT_OK);
-                    finish();
-                });
-            } catch (Exception e) {
-                AppLog.e(TAG, "Failed to save category", e);
-                runOnUiThread(() ->
-                        Toast.makeText(this, R.string.blocking_toast_save_failed, Toast.LENGTH_SHORT).show());
-            }
-        });
-    }
-
-    private void resetToAutoCategory() {
-        AppExecutors.getInstance().diskIo(() -> {
-            try {
-                PackageManager pm = getPackageManager();
-                ApplicationInfo appInfo = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
-                String appName = pm.getApplicationLabel(appInfo).toString();
-                String autoCategory = AppCategoryClassifier.classify(packageName, appName, appInfo);
-
-                blockedAppDao.updateCategory(activeUserId, packageName, autoCategory, false);
-
-                runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.blocking_toast_auto_category_restored, Toast.LENGTH_SHORT).show();
-                    setResult(RESULT_OK);
-                    finish();
-                });
-            } catch (Exception e) {
-                AppLog.e(TAG, "Failed to reset category", e);
-                runOnUiThread(() ->
-                        Toast.makeText(this, R.string.blocking_toast_restore_failed, Toast.LENGTH_SHORT).show());
-            }
-        });
-    }
-
     public static Intent createIntent(android.content.Context context, String packageName) {
         Intent intent = new Intent(context, AppCategoryEditActivity.class);
         intent.putExtra(EXTRA_PACKAGE_NAME, packageName);
@@ -203,7 +197,7 @@ public class AppCategoryEditActivity extends BaseActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            getOnBackPressedDispatcher().onBackPressed();
             return true;
         }
         return super.onOptionsItemSelected(item);

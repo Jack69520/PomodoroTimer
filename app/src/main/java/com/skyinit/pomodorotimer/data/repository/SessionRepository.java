@@ -1,6 +1,7 @@
 package com.skyinit.pomodorotimer.data.repository;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.skyinit.pomodorotimer.data.dao.PomodoroSessionDao;
 import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
@@ -11,6 +12,7 @@ import android.os.Looper;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -48,12 +50,23 @@ public class SessionRepository {
     }
 
     public LiveData<List<PomodoroSession>> observeSessionsForDay(long dayStartMillis, long dayEndMillis) {
-        return sessionDao.getDisplayableSessionsByDateRange(
-                accountManager.requireActiveUserId(), dayStartMillis, dayEndMillis);
+        String userId = accountManager.getCurrentUserId();
+        if (userId == null || userId.isEmpty()) {
+            MutableLiveData<List<PomodoroSession>> empty = new MutableLiveData<>();
+            empty.setValue(Collections.emptyList());
+            return empty;
+        }
+        return sessionDao.getDisplayableSessionsByDateRange(userId, dayStartMillis, dayEndMillis);
     }
 
     public void loadHighlightedDates(int year, int month, HighlightDatesCallback callback) {
-        String userId = accountManager.requireActiveUserId();
+        String userId = accountManager.getCurrentUserId();
+        if (userId == null || userId.isEmpty()) {
+            if (callback != null) {
+                mainHandler.post(() -> callback.onDatesLoaded(new HashSet<>()));
+            }
+            return;
+        }
         Calendar start = Calendar.getInstance();
         start.set(year, month, 1, 0, 0, 0);
         start.set(Calendar.MILLISECOND, 0);

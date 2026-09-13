@@ -8,6 +8,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -26,11 +27,12 @@ public class BlockingPolicyEngineTest {
 
     @Test
     public void systemCriticalApps_areNeverBlocked() {
-        assertTrue(engine.isSystemCriticalApp("com.android.systemui"));
-        assertTrue(engine.isSystemCriticalApp("com.android.settings"));
+        assertTrue(engine.isCritical("com.android.systemui"));
+        assertTrue(engine.isCritical("com.android.settings"));
         assertFalse(engine.shouldBlockByDefault("com.android.systemui"));
         assertTrue(engine.shouldBeWhitelisted("com.android.systemui"));
         assertTrue(engine.isUnblockableApp("com.android.systemui"));
+        assertEquals(BlockingRole.CRITICAL, engine.resolveRole("com.android.systemui"));
     }
 
     @Test
@@ -61,7 +63,7 @@ public class BlockingPolicyEngineTest {
 
     @Test
     public void brandSystemApps_areIncludedInScan() {
-        assertTrue(engine.shouldIncludeSystemApp("com.xiaomi.market"));
+        assertTrue(engine.shouldIncludeInManagedList("com.xiaomi.market"));
         assertTrue(engine.shouldBlockByDefault("com.xiaomi.market"));
     }
 
@@ -87,7 +89,7 @@ public class BlockingPolicyEngineTest {
 
     @Test
     public void realmeAndNothingVendorPackages_includedInScan() {
-        assertTrue(engine.shouldIncludeSystemApp("com.realme.browser"));
-        assertTrue(engine.shouldIncludeSystemApp("com.nothing.launcher"));
+        assertTrue(engine.shouldIncludeInManagedList("com.realme.browser"));
+        assertTrue(engine.shouldIncludeInManagedList("com.nothing.launcher"));
     }
 }

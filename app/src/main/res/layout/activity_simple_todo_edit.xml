@@ -1,249 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 普通待办编辑：页根不设背景，透出 BaseActivity 主题色；两张分区卡 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:scrollbars="none"
-    android:padding="12dp">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/subpage_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="40dp"
-        android:layout_marginBottom="50dp">
-
-        <TextView
-            android:id="@+id/task_type_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/task_type_simple"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_secondary"
-            android:background="@color/skyblue"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_title"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/edit_title"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:hint="@string/task_hint_title"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_description"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/edit_description"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:hint="@string/task_hint_description"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="40dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical">
 
+            <!-- 卡片1：类型 + 标题 + 备注 -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginEnd="8dp">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="16dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_surface">
+
+                <TextView
+                    android:id="@+id/task_type_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_type_simple"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/brand"
+                    android:letterSpacing="0.04"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:background="@drawable/bg_task_type_label"
+                    android:layout_marginBottom="10dp" />
+
+                <EditText
+                    android:id="@+id/edit_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:hint="@string/task_hint_title_short"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@android:color/transparent"
+                    android:paddingVertical="6dp"
+                    android:inputType="textCapSentences"
+                    android:maxLines="3" />
+
+                <EditText
+                    android:id="@+id/edit_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="40dp"
+                    android:hint="@string/task_hint_description_short"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@android:color/transparent"
+                    android:paddingVertical="4dp"
+                    android:inputType="textMultiLine" />
+            </LinearLayout>
+
+            <!-- 卡片2：分类/优先级/截止/重复/番茄/标签（内部分区，不再套卡） -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@drawable/bg_settings_surface">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/task_label_category"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="6dp" />
 
                 <Spinner
                     android:id="@+id/edit_category"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@drawable/spinner_background" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="8dp">
+                    android:background="@drawable/bg_task_edit_field"
+                    android:paddingHorizontal="8dp"
+                    android:layout_marginBottom="16dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/task_label_priority"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
                     android:layout_marginBottom="8dp" />
 
-                <Spinner
-                    android:id="@+id/edit_priority"
+                <include layout="@layout/include_task_edit_priority_chips" />
+
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/spinner_background" />
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_label_due_date"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-            </LinearLayout>
+                <include layout="@layout/include_task_edit_due_chips" />
 
-        </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_recurring_title"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_estimated_pomodoros"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/recurrence_chip_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:selectionRequired="true"
+                    app:chipSpacingHorizontal="8dp"
+                    app:chipSpacingVertical="8dp">
 
-        <EditText
-            android:id="@+id/edit_estimated_pomodoros"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:hint="@string/layout_placeholder_pomodoro_count"
-            android:inputType="number"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_recurrence_none"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recurrence_none"
+                        android:checked="true"
+                        app:checkedIconVisible="false"
+                        app:chipMinHeight="36dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_tags"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_recurrence_daily"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recurrence_daily_short"
+                        app:checkedIconVisible="false"
+                        app:chipMinHeight="36dp" />
 
-        <EditText
-            android:id="@+id/edit_tags"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:hint="@string/task_hint_tags"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_recurrence_weekly"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recurrence_weekly_short"
+                        app:checkedIconVisible="false"
+                        app:chipMinHeight="36dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_due_date"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_recurrence_monthly"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recurrence_monthly_short"
+                        app:checkedIconVisible="false"
+                        app:chipMinHeight="36dp" />
+                </com.google.android.material.chip.ChipGroup>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
-
-            <EditText
-                android:id="@+id/edit_due_date"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:hint="@string/task_hint_due_date"
-                android:textSize="16sp"
-                android:background="@drawable/edit_text_background"
-                android:paddingHorizontal="16dp"
-                android:focusable="false"
-                android:clickable="true"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btn_clear_due_date"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:text="@string/common_btn_clear"
-                android:textSize="14sp"
-                android:background="@drawable/button_red_background"
-                android:textColor="@color/white"
-                android:paddingHorizontal="16dp" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="50dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_estimated_pomodoros"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="10dp" />
 
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_task_edit_stepper"
+                    android:paddingHorizontal="4dp"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageButton
+                        android:id="@+id/btn_pomodoro_minus"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/task_a11y_pomodoro_minus"
+                        android:src="@drawable/ic_remove"
+                        android:padding="8dp"
+                        app:tint="@color/text_secondary" />
 
                     <TextView
-                        android:layout_width="match_parent"
+                        android:id="@+id/edit_estimated_pomodoros"
+                        android:layout_width="48dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/task_recurring_title"
-                        android:textSize="16sp"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/task_recurring_hint"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary"
-                        android:layout_marginTop="2dp" />
-
+                    <ImageButton
+                        android:id="@+id/btn_pomodoro_plus"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/task_a11y_pomodoro_plus"
+                        android:src="@drawable/ic_add"
+                        android:padding="8dp"
+                        app:tint="@color/text_secondary" />
                 </LinearLayout>
 
-                <Switch
-                    android:id="@+id/recurring_switch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_label_tags"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="8dp" />
 
+                <EditText
+                    android:id="@+id/edit_tags"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="@string/task_hint_tags_short"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@drawable/bg_task_edit_field"
+                    android:paddingHorizontal="14dp"
+                    android:inputType="text" />
             </LinearLayout>
-
-            <Spinner
-                android:id="@+id/recurrence_spinner"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/spinner_background"
-                android:visibility="gone"
-                android:layout_marginBottom="8dp" />
-
         </LinearLayout>
-
-    </LinearLayout>
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

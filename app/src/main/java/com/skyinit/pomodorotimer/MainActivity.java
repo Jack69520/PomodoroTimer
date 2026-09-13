@@ -44,19 +44,23 @@ import androidx.navigation.ui.NavigationUI;
 
 import android.view.MenuItem;
 
-import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.AppInitializationRepository;
 import com.skyinit.pomodorotimer.data.repository.PrivacyConsentRepository;
-import com.skyinit.pomodorotimer.ui.bootstrap.AppBootstrapViewModel;
 import com.skyinit.pomodorotimer.data.repository.SettingsManager;
+import com.skyinit.pomodorotimer.ui.bootstrap.AppBootstrapViewModel;
 import com.skyinit.pomodorotimer.ui.consent.PrivacyConsentActivity;
+import com.skyinit.pomodorotimer.ui.onboarding.FirstRunNavigator;
+import com.skyinit.pomodorotimer.ui.theme.WallpaperCatalog;
+import com.skyinit.pomodorotimer.ui.theme.WallpaperThemeRepository;
 import com.skyinit.pomodorotimer.service.AppBlockingService;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
+import com.skyinit.pomodorotimer.ui.auth.AuthGate;
 import com.skyinit.pomodorotimer.ui.home.CollectionTodoEditActivity;
 import com.skyinit.pomodorotimer.ui.home.HomeFragment;
-import com.skyinit.pomodorotimer.ui.home.InterruptedSessionDialogHelper;
+import com.skyinit.pomodorotimer.ui.home.recovery.SessionRecoveryController;
 import com.skyinit.pomodorotimer.ui.home.SimpleTodoEditActivity;
+import com.skyinit.pomodorotimer.ui.profile.ProfileFragment;
 import com.skyinit.pomodorotimer.ui.home.TimerActivity;
 import com.skyinit.pomodorotimer.util.ColorContrastUtils;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
@@ -96,7 +100,7 @@ public class MainActivity extends BaseActivity {
             timerService = binder.getService();
             isBound = true;
             pushServiceToCurrentFragment();
-            showStartupDialogsIfNeeded();
+            SessionRecoveryController.onServiceReady(MainActivity.this);
         }
 
         @Override
@@ -141,7 +145,7 @@ public class MainActivity extends BaseActivity {
         if (topLevelBarColor != 0) {
             return topLevelBarColor;
         }
-        return ContextCompat.getColor(this, R.color.default_theme);
+        return ContextCompat.getColor(this, R.color.surface_page);
     }
 
     private void applyTopLevelToolbarStyle(int barColor) {
@@ -194,6 +198,10 @@ public class MainActivity extends BaseActivity {
     }
 
     private void showAddTodoMenu() {
+        if (!AppContainer.getInstance(this).getUserSessionRepository().isLoggedIn()) {
+            com.skyinit.pomodorotimer.ui.auth.AuthGate.show(this);
+            return;
+        }
         PopupMenu popup = new PopupMenu(this, mainToolbar, Gravity.END);
         popup.getMenu().add(0, 1, 0, R.string.add_todo_simple);
         popup.getMenu().add(0, 2, 1, R.string.add_todo_collection);
@@ -322,6 +330,10 @@ public class MainActivity extends BaseActivity {
             return;
         }
 
+        if (FirstRunNavigator.redirectIfIncomplete(this, getIntent())) {
+            return;
+        }
+
         taskEditLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> { /* 列表由 Room LiveData 自动刷新 */ });
@@ -394,21 +406,14 @@ public class MainActivity extends BaseActivity {
         applyBottomNavRipple(bottomNav);
         applyTheme();
         handleNavigationIntent(getIntent());
-        handleShortcutIntent(getIntent());
 
         checkAndRequestPermissions();
 
         TimerServiceLauncher.ensureRunning(this);
         bindService(new Intent(this, TimerService.class), connection, Context.BIND_AUTO_CREATE);
-    }
-
-    /** 启动后弹窗：优先处理中断番茄钟，否则在应用内说明精确闹钟（不自动跳转设置）。 */
-    private void showStartupDialogsIfNeeded() {
-        if (ActiveSessionStore.hasActiveSession(this)) {
-            InterruptedSessionDialogHelper.showIfNeeded(this);
-        } else {
-            ExactAlarmPermissionHelper.maybeShowInAppDialog(this);
-        }
+        // 先评估恢复，再处理快捷方式，避免与未完成会话竞态
+        SessionRecoveryController.bind(this);
+        handleShortcutIntent(getIntent());
     }
 
     private NavHostFragment getNavHostFragment() {
@@ -508,6 +513,12 @@ public class MainActivity extends BaseActivity {
 
         switch (shortcutAction) {
             case ShortcutActions.ACTION_START_FOCUS_25:
+                if (SessionRecoveryController.isBlockingShortcuts(this)) {
+                    return;
+                }
+                if (!ensureLoggedInForShortcut()) {
+                    return;
+                }
                 startFocus25FromShortcut();
                 break;
             case ShortcutActions.ACTION_VIEW_STATISTICS:
@@ -515,9 +526,15 @@ public class MainActivity extends BaseActivity {
                 break;
             case ShortcutActions.ACTION_ENABLE_BLOCKING:
                 navigateToTopLevelDestination(R.id.nav_profile);
+                if (!ensureLoggedInForShortcut()) {
+                    return;
+                }
                 // 等底部导航 / Fragment 事务落稳后再弹权限框，避免与导航竞态。
                 runOnUiThreadAfterNavSettled(() -> {
                     if (isFinishing() || isDestroyed()) {
+                        return;
+                    }
+                    if (!AppContainer.getInstance(this).getUserSessionRepository().isLoggedIn()) {
                         return;
                     }
                     AppBlockingEnabler.tryEnable(MainActivity.this, blockingEnablerHost);
@@ -526,6 +543,15 @@ public class MainActivity extends BaseActivity {
             default:
                 break;
         }
+    }
+
+    /** 快捷方式中的计时/屏蔽需注册账户；访客仅引导登录，不启动服务。 */
+    private boolean ensureLoggedInForShortcut() {
+        if (AppContainer.getInstance(this).getUserSessionRepository().isLoggedIn()) {
+            return true;
+        }
+        AuthGate.show(this);
+        return false;
     }
 
     private void startFocus25FromShortcut() {
@@ -634,14 +660,42 @@ public class MainActivity extends BaseActivity {
 
         @Override
         public void onBlockingEnabled() {
-            Toast.makeText(MainActivity.this, R.string.blocking_toast_enabled, Toast.LENGTH_SHORT).show();
+            if (!notifyProfileBlockingChanged(true)) {
+                Toast.makeText(MainActivity.this, R.string.blocking_toast_enabled, Toast.LENGTH_SHORT).show();
+            }
         }
 
         @Override
         public void onBlockingEnableFailed() {
-            Toast.makeText(MainActivity.this, R.string.blocking_toast_permission_failed, Toast.LENGTH_LONG).show();
+            if (!notifyProfileBlockingChanged(false)) {
+                Toast.makeText(MainActivity.this, R.string.blocking_toast_permission_failed, Toast.LENGTH_LONG).show();
+            }
         }
     };
+
+    /**
+     * 权限页返回或快捷方式启用后，同步「我的」页屏蔽开关。
+     *
+     * @return true 若已通知到 ProfileFragment（Toast 由 Fragment Effect 发出）
+     */
+    private boolean notifyProfileBlockingChanged(boolean success) {
+        NavHostFragment navHostFragment = getNavHostFragment();
+        if (navHostFragment == null) {
+            return false;
+        }
+        for (Fragment fragment : navHostFragment.getChildFragmentManager().getFragments()) {
+            if (fragment instanceof ProfileFragment && fragment.isAdded()) {
+                ((ProfileFragment) fragment).onExternalBlockingChanged(success);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 供「我的」页迷你统计跳转统计 Tab。 */
+    public void navigateToStatisticsTab() {
+        navigateToTopLevelDestination(R.id.nav_statistics);
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -650,7 +704,8 @@ public class MainActivity extends BaseActivity {
                 || requestCode == AppBlockingEnabler.REQUEST_OVERLAY_PERMISSION
                 || requestCode == AppBlockingEnabler.REQUEST_QUERY_ALL_PACKAGES) {
             new Handler(Looper.getMainLooper()).postDelayed(
-                    () -> AppBlockingEnabler.onPermissionActivityResult(this, blockingEnablerHost),
+                    () -> AppBlockingEnabler.onPermissionActivityResult(
+                            MainActivity.this, blockingEnablerHost, requestCode),
                     1000L);
         }
     }
@@ -740,15 +795,18 @@ public class MainActivity extends BaseActivity {
             applyBottomNavRipple(bottomNav);
             bottomNav.invalidate();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                SettingsManager settings = new SettingsManager(this);
-                int themeColor = settings.getThemeColor();
                 try {
-                    String resourceType = getResources().getResourceTypeName(themeColor);
-                    if ("color".equals(resourceType)) {
-                        getWindow().setNavigationBarColor(ContextCompat.getColor(this, themeColor));
+                    WallpaperCatalog.WallpaperOption option =
+                            new WallpaperThemeRepository(this).getSelectedOption();
+                    if (!option.gradient) {
+                        int color = WallpaperCatalog.isDefaultKey(option.key)
+                                ? ContextCompat.getColor(this, R.color.surface_page)
+                                : ContextCompat.getColor(this, option.resId);
+                        getWindow().setNavigationBarColor(color);
                     }
                 } catch (Exception e) {
-                    getWindow().setNavigationBarColor(ContextCompat.getColor(this, R.color.default_theme));
+                    getWindow().setNavigationBarColor(
+                            ContextCompat.getColor(this, R.color.surface_page));
                 }
             }
         }

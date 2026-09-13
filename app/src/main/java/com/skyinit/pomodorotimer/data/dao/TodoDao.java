@@ -11,6 +11,9 @@ import com.skyinit.pomodorotimer.data.entity.TodoItem;
 
 import java.util.List;
 
+/**
+ * 待办表数据访问。筛选与过期语义由领域层在内存完成，DAO 以全量观察为主。
+ */
 @Dao
 public interface TodoDao {
     @Insert
@@ -70,22 +73,13 @@ public interface TodoDao {
     @Query("UPDATE todos SET completedTime = :completedTime WHERE id = :id")
     void updateCompletedTime(int id, long completedTime);
 
+    /** 真正已完成且完成时间早于 cutoff 的任务（供三日清理）。 */
     @Query("SELECT * FROM todos WHERE userId = :userId AND completed = 1 AND completedTime > 0 AND completedTime < :cutoffTime")
     List<TodoItem> getCompletedTodosForDeletion(String userId, long cutoffTime);
 
     @Query("DELETE FROM todos WHERE userId = :userId AND completed = 1 AND completedTime > 0 AND completedTime < :cutoffTime")
     void deleteExpiredCompletedTodos(String userId, long cutoffTime);
 
-    @Query("SELECT * FROM todos WHERE userId = :userId AND completed = :completed ORDER BY " +
-           "CASE WHEN dueDate > 0 AND dueDate < :startOfTodayTime THEN 0 ELSE 1 END, " +
-           "priority DESC, " +
-           "CASE WHEN dueDate > 0 THEN dueDate ELSE 9999999999999 END ASC, " +
-           "createdTime DESC")
-    LiveData<List<TodoItem>> getTodosWithSmartSort(String userId, boolean completed, long startOfTodayTime);
-
-    @Query("SELECT * FROM todos WHERE userId = :userId AND completed = :completed AND dueDate BETWEEN :startTime AND :endTime ORDER BY priority DESC, dueDate ASC")
-    LiveData<List<TodoItem>> getTodosByDueDateRange(String userId, boolean completed, long startTime, long endTime);
-
-    @Query("SELECT * FROM todos WHERE userId = :userId AND completed = :completed AND priority = :priority AND dueDate BETWEEN :startTime AND :endTime ORDER BY dueDate ASC")
-    LiveData<List<TodoItem>> getTodosByPriorityAndDueDate(String userId, boolean completed, int priority, long startTime, long endTime);
+    @Query("SELECT COUNT(*) FROM todos WHERE userId = :userId AND isPinned = 1 AND completed = 0")
+    int countActivePinned(String userId);
 }

@@ -4,9 +4,9 @@
     <gradient
         android:type="linear"
         android:angle="270"
-        android:startColor="@color/timer_bg_start"
-        android:centerColor="@color/timer_bg_center"
-        android:endColor="@color/timer_bg_end"
+        android:startColor="@color/comp_timer_bg_start"
+        android:centerColor="@color/comp_timer_bg_center"
+        android:endColor="@color/comp_timer_bg_end"
         android:useLevel="false" />
 </shape>
 

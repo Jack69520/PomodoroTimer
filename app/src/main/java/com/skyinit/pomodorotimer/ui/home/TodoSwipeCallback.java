@@ -30,6 +30,17 @@ public class TodoSwipeCallback extends ItemTouchHelper.SimpleCallback {
     }
 
     @Override
+    public int getMovementFlags(@NonNull RecyclerView recyclerView,
+                                @NonNull RecyclerView.ViewHolder viewHolder) {
+        // 分区标题不可滑；具体可否滑由 Adapter 在 onSwiped 前再判
+        View foreground = viewHolder.itemView.findViewById(R.id.todo_item_container);
+        if (foreground == null) {
+            return makeMovementFlags(0, 0);
+        }
+        return makeMovementFlags(0, ItemTouchHelper.LEFT);
+    }
+
+    @Override
     public boolean onMove(@NonNull RecyclerView recyclerView,
                           @NonNull RecyclerView.ViewHolder viewHolder,
                           @NonNull RecyclerView.ViewHolder target) {

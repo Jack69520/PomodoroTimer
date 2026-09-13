@@ -1,242 +1,250 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 待办集编辑：页根透出主题色；标题卡 + 详情卡（含截止/子任务/标签） -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:scrollbars="none"
-    android:padding="12dp">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/subpage_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="40dp">
-
-        <TextView
-            android:id="@+id/task_type_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/task_type_collection"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_secondary"
-            android:background="@color/pink_01"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_collection_title"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/edit_title"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:hint="@string/task_hint_collection_title"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_collection_description"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/edit_description"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:hint="@string/task_hint_collection_description"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="40dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginEnd="8dp">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="16dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_settings_surface">
+
+                <TextView
+                    android:id="@+id/task_type_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_type_collection"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/brand"
+                    android:letterSpacing="0.04"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:background="@drawable/bg_task_type_label"
+                    android:layout_marginBottom="10dp" />
+
+                <EditText
+                    android:id="@+id/edit_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:hint="@string/task_hint_collection_title_short"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@android:color/transparent"
+                    android:paddingVertical="6dp"
+                    android:inputType="textCapSentences"
+                    android:maxLines="3" />
+
+                <EditText
+                    android:id="@+id/edit_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="40dp"
+                    android:hint="@string/task_hint_description_short"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@android:color/transparent"
+                    android:paddingVertical="4dp"
+                    android:inputType="textMultiLine" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@drawable/bg_settings_surface">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/task_label_category"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="6dp" />
 
                 <Spinner
                     android:id="@+id/edit_category"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@drawable/spinner_background" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="8dp">
+                    android:background="@drawable/bg_task_edit_field"
+                    android:paddingHorizontal="8dp"
+                    android:layout_marginBottom="16dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/task_label_priority"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
                     android:layout_marginBottom="8dp" />
 
-                <Spinner
-                    android:id="@+id/edit_priority"
+                <include layout="@layout/include_task_edit_priority_chips" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_label_due_date"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+
+                <include layout="@layout/include_task_edit_due_chips" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_subtasks_title"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="10dp" />
+
+                <TextView
+                    android:id="@+id/subtask_empty_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_subtasks_empty"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_hint"
+                    android:gravity="center"
+                    android:paddingVertical="12dp"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/subtask_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 输入与步进分开放在卡片面上，避免 stepper 叠在同色 field 上不可见 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:minHeight="52dp"
+                    android:layout_marginBottom="16dp">
+
+                    <EditText
+                        android:id="@+id/subtask_input"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minHeight="48dp"
+                        android:hint="@string/task_hint_subtask_short"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_hint"
+                        android:background="@drawable/bg_task_edit_field"
+                        android:paddingHorizontal="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:inputType="textCapSentences"
+                        android:imeOptions="actionDone" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="@drawable/bg_task_edit_stepper"
+                        android:paddingHorizontal="2dp"
+                        android:layout_marginEnd="4dp">
+
+                        <ImageButton
+                            android:id="@+id/btn_subtask_pomodoro_minus"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/task_a11y_pomodoro_minus"
+                            android:src="@drawable/ic_remove"
+                            android:padding="6dp"
+                            app:tint="@color/text_secondary" />
+
+                        <TextView
+                            android:id="@+id/subtask_pomodoro_input"
+                            android:layout_width="28dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="1"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <ImageButton
+                            android:id="@+id/btn_subtask_pomodoro_plus"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/task_a11y_pomodoro_plus"
+                            android:src="@drawable/ic_add"
+                            android:padding="6dp"
+                            app:tint="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/btn_add_subtask"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/task_add_subtask"
+                        android:src="@drawable/ic_check"
+                        android:padding="10dp"
+                        app:tint="@color/brand" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/task_label_tags"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/edit_tags"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@drawable/spinner_background" />
-
+                    android:hint="@string/task_hint_tags_short"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_hint"
+                    android:background="@drawable/bg_task_edit_field"
+                    android:paddingHorizontal="14dp"
+                    android:inputType="text" />
             </LinearLayout>
-
         </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_tags"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/edit_tags"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:hint="@string/task_hint_tags"
-            android:textSize="16sp"
-            android:background="@drawable/edit_text_background"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_label_due_date"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
-
-            <EditText
-                android:id="@+id/edit_due_date"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:hint="@string/task_hint_due_date"
-                android:textSize="16sp"
-                android:background="@drawable/edit_text_background"
-                android:paddingHorizontal="16dp"
-                android:focusable="false"
-                android:clickable="true"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btn_clear_due_date"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:text="@string/common_btn_clear"
-                android:textSize="14sp"
-                android:background="@drawable/button_red_background"
-                android:textColor="@color/white"
-                android:paddingHorizontal="16dp" />
-
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_subtasks_title"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/task_collection_subtask_hint"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="8dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/subtask_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <EditText
-                android:id="@+id/subtask_input"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginBottom="50dp"
-                android:hint="@string/task_subtask_hint"
-                android:textSize="16sp"
-                android:background="@drawable/edit_text_background"
-                android:paddingHorizontal="16dp"
-                android:layout_marginEnd="8dp" />
-
-            <EditText
-                android:id="@+id/subtask_pomodoro_input"
-                android:layout_width="56dp"
-                android:layout_height="48dp"
-                android:layout_marginBottom="50dp"
-                android:hint="@string/layout_placeholder_pomodoro_count"
-                android:inputType="number"
-                android:textSize="16sp"
-                android:gravity="center"
-                android:background="@drawable/edit_text_background"
-                android:layout_marginEnd="8dp" />
-
-            <Button
-                android:id="@+id/btn_add_subtask"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_marginBottom="50dp"
-                android:text="@string/task_add_subtask"
-                android:background="@drawable/button_green_background"
-                android:textColor="@color/text_primary"
-                android:paddingHorizontal="16dp" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

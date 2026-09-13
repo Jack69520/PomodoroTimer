@@ -1,15 +1,7 @@
 package com.skyinit.pomodorotimer.ui.home;
 
-import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.MainActivity;
-import com.skyinit.pomodorotimer.data.entity.TodoItem;
-import com.skyinit.pomodorotimer.data.repository.TaskRepository;
-import com.skyinit.pomodorotimer.data.repository.TodoCleanupManager;
-import com.skyinit.pomodorotimer.service.TimerService;
-import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
-import com.skyinit.pomodorotimer.R;
-
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.icu.text.SimpleDateFormat;
@@ -17,49 +9,86 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.MainActivity;
+import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.entity.SubTask;
+import com.skyinit.pomodorotimer.data.entity.TodoItem;
+import com.skyinit.pomodorotimer.domain.todo.DueDateTime;
+import com.skyinit.pomodorotimer.domain.todo.TodoFilterQuery;
+import com.skyinit.pomodorotimer.service.TimerService;
+import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
+import com.skyinit.pomodorotimer.ui.home.todo.HomeTodoEffect;
+import com.skyinit.pomodorotimer.ui.home.todo.HomeTodoIntent;
+import com.skyinit.pomodorotimer.ui.home.todo.HomeTodoUiState;
+import com.skyinit.pomodorotimer.ui.home.todo.HomeTodoViewModel;
+import com.skyinit.pomodorotimer.ui.home.todo.TodoListAdapter;
+
+import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 /**
- * 首页 Fragment：展示日期、计时器、待办列表与开始/暂停/重置控制。
+ * 首页 Fragment：计时舞台 + 待办工作台（时间分组）。
  * <p>
- * 职责拆分：{@link HomeTimerUiHelper} 处理时长选择与启动计时，
- * {@link HomeTodoController} 管理待办 CRUD 与滑动删除；计时状态通过 ViewModel LiveData 观察。
+ * 待办交互全部经 {@link HomeTodoViewModel#dispatch(HomeTodoIntent)}；
+ * 计时仍由 {@link HomeViewModel} + {@link HomeTimerUiHelper} 负责。
  */
 public class HomeFragment extends Fragment implements
         PauseReasonDialog.PauseReasonListener,
-        HomeTodoController.Host,
         HomeTimerUiHelper.Host {
 
-    private TaskRepository taskRepository;
     private ActivityResultLauncher<Intent> taskEditLauncher;
 
     private TextView dateText;
     private TextView timerText;
+    private TextView timerPhaseText;
     private Button controlButton;
     private Button resetButton;
 
     private HomeViewModel viewModel;
-    private HomeTodoController todoController;
+    private HomeTodoViewModel todoViewModel;
     private HomeTimerUiHelper timerUiHelper;
     private TimerService timerService;
+
+    private RecyclerView todoRecyclerView;
+    private View filterPanelRoot;
+    private LinearLayout filterHeader;
+    private LinearLayout filterContent;
+    private ImageView filterArrow;
+    private Spinner priorityFilterSpinner;
+    private Spinner dueDateFilterSpinner;
+    private Spinner categoryFilterSpinner;
+    private View clearFilterButton;
+    private TextView todoEmptyView;
+    private TodoListAdapter todoListAdapter;
+    private boolean filterSpinnersReady;
+
     private final TimerService.TimerListener timerListener = new TimerService.TimerListener() {
         @Override
         public void onTimerTick(long millisUntilFinished) {
-            // UI 由 TimerStateRepository → ViewModel → LiveData 驱动
         }
 
         @Override
@@ -75,39 +104,23 @@ public class HomeFragment extends Fragment implements
         }
     };
 
-    private TodoItem swipedItem;
-    private int swipedPosition = -1;
-    private boolean isDeleteDialogShowing;
-
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         App app = (App) requireActivity().getApplication();
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
                 .get(HomeViewModel.class);
-        taskRepository = app.getContainer().getTaskRepository();
+        todoViewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
+                .get(HomeTodoViewModel.class);
+        timerUiHelper = new HomeTimerUiHelper(this);
 
         taskEditLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
-                    if (result.getResultCode() == android.app.Activity.RESULT_OK) {
-                        todoController.refreshTodoList();
-                    }
+                    // 列表由 Room LiveData 自动刷新，无需手动 reload
                 });
 
-        TodoCleanupManager cleanupManager = new TodoCleanupManager(requireContext());
-        todoController = new HomeTodoController(
-                this,
-                cleanupManager,
-                app.getContainer().getTodoFilterManager(),
-                app.getContainer().getTodoRepository(),
-                app.getContainer().getTaskRepository()
-        );
-        timerUiHelper = new HomeTimerUiHelper(this);
-
-        if (app.getContainer().getSettingsManager().isAutoDeleteEnabled()) {
-            cleanupManager.performCleanup();
-        }
+        todoViewModel.dispatch(HomeTodoIntent.start());
     }
 
     @Nullable
@@ -125,18 +138,20 @@ public class HomeFragment extends Fragment implements
         if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
             dateText = view.findViewById(R.id.date_text);
             updateDateDisplay();
-            todoController.setPortraitVisibility(View.GONE);
+            setTodoPortraitVisibility(View.GONE);
         } else {
-            todoController.bindPortraitViews(view);
+            bindTodoWorkbench(view);
         }
 
         setupButtonListeners();
-        observeViewModel();
+        observeTimerViewModel();
+        observeTodoViewModel();
         return view;
     }
 
     private void bindCommonViews(View view) {
         timerText = view.findViewById(R.id.timer_text);
+        timerPhaseText = view.findViewById(R.id.timer_phase_text);
         controlButton = view.findViewById(R.id.control_button);
         resetButton = view.findViewById(R.id.reset_button);
 
@@ -149,8 +164,364 @@ public class HomeFragment extends Fragment implements
         });
     }
 
+    /** 绑定竖屏待办工作台：筛选 + 分组列表 + 左滑删除。 */
+    private void bindTodoWorkbench(View view) {
+        todoRecyclerView = view.findViewById(R.id.todo_list);
+        filterPanelRoot = view.findViewById(R.id.todo_filter_panel);
+        filterHeader = view.findViewById(R.id.filter_header);
+        filterContent = view.findViewById(R.id.filter_content);
+        filterArrow = view.findViewById(R.id.filter_arrow);
+        priorityFilterSpinner = view.findViewById(R.id.priority_filter_spinner);
+        dueDateFilterSpinner = view.findViewById(R.id.due_date_filter_spinner);
+        categoryFilterSpinner = view.findViewById(R.id.category_filter_spinner);
+        clearFilterButton = view.findViewById(R.id.btn_clear_filter);
+        todoEmptyView = view.findViewById(R.id.todo_empty_view);
+
+        if (filterHeader != null) {
+            filterHeader.setOnClickListener(v ->
+                    todoViewModel.dispatch(HomeTodoIntent.toggleFilterPanel()));
+        }
+        if (clearFilterButton != null) {
+            clearFilterButton.setOnClickListener(v ->
+                    todoViewModel.dispatch(HomeTodoIntent.clearFilters()));
+        }
+
+        setupFilterSpinners();
+        setupTodoRecycler();
+    }
+
+    private void setupTodoRecycler() {
+        if (todoRecyclerView == null) {
+            return;
+        }
+        todoListAdapter = new TodoListAdapter(new TodoListAdapter.Listener() {
+            @Override
+            public void onToggleComplete(@NonNull TodoItem todo, boolean checked) {
+                todoViewModel.dispatch(HomeTodoIntent.toggleComplete(todo.id));
+            }
+
+            @Override
+            public void onOpenEdit(@NonNull TodoItem todo) {
+                todoViewModel.dispatch(HomeTodoIntent.openEdit(todo));
+            }
+
+            @Override
+            public void onTogglePin(@NonNull TodoItem todo) {
+                todoViewModel.dispatch(HomeTodoIntent.togglePin(todo.id));
+            }
+
+            @Override
+            public void onStartTimer(@NonNull TodoItem todo) {
+                todoViewModel.dispatch(HomeTodoIntent.startTimer(todo));
+            }
+
+            @Override
+            public void onDueDateClick(@NonNull TodoItem todo) {
+                todoViewModel.dispatch(HomeTodoIntent.requestReschedule(todo.id));
+            }
+
+            @Override
+            public void onRescheduleToToday(@NonNull TodoItem todo) {
+                todoViewModel.dispatch(HomeTodoIntent.rescheduleToToday(todo.id));
+            }
+
+            @Override
+            public void onToggleCompletedSection() {
+                todoViewModel.dispatch(HomeTodoIntent.toggleCompletedSection());
+            }
+
+            @Override
+            public void onToggleCollectionExpand(@NonNull TodoItem collection) {
+                todoViewModel.dispatch(HomeTodoIntent.toggleCollectionExpand(collection.id));
+            }
+
+            @Override
+            public void onStartNextSubtask(@NonNull TodoItem collection) {
+                todoViewModel.dispatch(HomeTodoIntent.startNextSubtask(collection.id));
+            }
+
+            @Override
+            public void onToggleSubtaskComplete(@NonNull SubTask subTask, boolean checked) {
+                todoViewModel.dispatch(HomeTodoIntent.toggleSubtaskComplete(
+                        subTask.id, subTask.parentTaskId, checked));
+            }
+
+            @Override
+            public void onStartSubtaskTimer(@NonNull TodoItem parent, @NonNull SubTask subTask) {
+                todoViewModel.dispatch(HomeTodoIntent.startSubtaskTimer(parent, subTask));
+            }
+        });
+        todoRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        todoRecyclerView.setAdapter(todoListAdapter);
+        todoRecyclerView.setClipToPadding(false);
+        todoRecyclerView.setClipChildren(false);
+
+        ItemTouchHelper touchHelper = new ItemTouchHelper(new TodoSwipeCallback(position -> {
+            if (todoListAdapter == null) {
+                return;
+            }
+            TodoListAdapter.SwipeTarget target = todoListAdapter.getSwipeTarget(position);
+            if (target == null) {
+                todoListAdapter.notifyItemChanged(position);
+                return;
+            }
+            if (target.kind == TodoListAdapter.SwipeTarget.Kind.SUBTASK && target.subTask != null) {
+                todoViewModel.dispatch(HomeTodoIntent.swipeDeleteSubtask(target.subTask));
+            } else if (target.todo != null) {
+                todoViewModel.dispatch(HomeTodoIntent.swipeDelete(target.todo));
+            }
+            todoListAdapter.notifyItemChanged(position);
+        }));
+        touchHelper.attachToRecyclerView(todoRecyclerView);
+    }
+
+    private void setupFilterSpinners() {
+        if (priorityFilterSpinner == null || dueDateFilterSpinner == null || categoryFilterSpinner == null) {
+            return;
+        }
+        filterSpinnersReady = false;
+        ArrayAdapter<String> priorityAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.filter_priority_options));
+        priorityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        priorityFilterSpinner.setAdapter(priorityAdapter);
+
+        ArrayAdapter<String> dueAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.filter_due_date_options));
+        dueAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        dueDateFilterSpinner.setAdapter(dueAdapter);
+
+        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.filter_category_options));
+        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        categoryFilterSpinner.setAdapter(categoryAdapter);
+
+        AdapterView.OnItemSelectedListener listener = new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (!filterSpinnersReady) {
+                    return;
+                }
+                if (parent == priorityFilterSpinner) {
+                    TodoFilterQuery.PriorityFilter[] values = TodoFilterQuery.PriorityFilter.values();
+                    if (position >= 0 && position < values.length) {
+                        todoViewModel.dispatch(HomeTodoIntent.setPriorityFilter(values[position]));
+                    }
+                } else if (parent == dueDateFilterSpinner) {
+                    TodoFilterQuery.DueDateFilter[] values = TodoFilterQuery.DueDateFilter.values();
+                    if (position >= 0 && position < values.length) {
+                        todoViewModel.dispatch(HomeTodoIntent.setDueDateFilter(values[position]));
+                    }
+                } else if (parent == categoryFilterSpinner) {
+                    Object item = parent.getItemAtPosition(position);
+                    todoViewModel.dispatch(HomeTodoIntent.setCategoryFilter(
+                            item != null ? item.toString() : null));
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        };
+        priorityFilterSpinner.setOnItemSelectedListener(listener);
+        dueDateFilterSpinner.setOnItemSelectedListener(listener);
+        categoryFilterSpinner.setOnItemSelectedListener(listener);
+        filterSpinnersReady = true;
+    }
+
+    private void observeTodoViewModel() {
+        todoViewModel.getUiState().observe(getViewLifecycleOwner(), this::renderTodoState);
+        todoViewModel.getEffects().observe(getViewLifecycleOwner(), this::handleTodoEffect);
+    }
+
+    private void renderTodoState(@Nullable HomeTodoUiState state) {
+        if (state == null) {
+            return;
+        }
+        if (filterContent != null) {
+            filterContent.setVisibility(state.filterExpanded ? View.VISIBLE : View.GONE);
+        }
+        if (filterArrow != null) {
+            filterArrow.setRotation(state.filterExpanded ? 270f : 90f);
+        }
+        syncSpinnerSelection(priorityFilterSpinner, state.priorityFilter.ordinal());
+        syncSpinnerSelection(dueDateFilterSpinner, state.dueDateFilter.ordinal());
+        if (categoryFilterSpinner != null && state.categoryFilter != null) {
+            android.widget.SpinnerAdapter adapter = categoryFilterSpinner.getAdapter();
+            if (adapter instanceof ArrayAdapter) {
+                @SuppressWarnings("unchecked")
+                ArrayAdapter<String> stringAdapter = (ArrayAdapter<String>) adapter;
+                int idx = stringAdapter.getPosition(state.categoryFilter);
+                if (idx >= 0) {
+                    syncSpinnerSelection(categoryFilterSpinner, idx);
+                }
+            }
+        }
+        if (todoListAdapter != null) {
+            todoListAdapter.submit(state.rows, state.startOfToday);
+        }
+        if (todoEmptyView != null) {
+            boolean showEmpty = state.empty && !state.loading;
+            todoEmptyView.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
+            if (todoRecyclerView != null) {
+                todoRecyclerView.setVisibility(showEmpty ? View.GONE : View.VISIBLE);
+            }
+        }
+    }
+
+    private void syncSpinnerSelection(@Nullable Spinner spinner, int position) {
+        if (spinner == null || position < 0) {
+            return;
+        }
+        if (spinner.getSelectedItemPosition() != position) {
+            boolean wasReady = filterSpinnersReady;
+            filterSpinnersReady = false;
+            spinner.setSelection(position, false);
+            filterSpinnersReady = wasReady;
+        }
+    }
+
+    private void handleTodoEffect(@Nullable HomeTodoEffect effect) {
+        if (effect == null) {
+            return;
+        }
+        switch (effect.type) {
+            case NAVIGATE_EDIT:
+                if (effect.taskType == TodoItem.TYPE_COLLECTION) {
+                    taskEditLauncher.launch(
+                            CollectionTodoEditActivity.createIntent(requireContext(), effect.taskId));
+                } else {
+                    taskEditLauncher.launch(
+                            SimpleTodoEditActivity.createIntent(requireContext(), effect.taskId));
+                }
+                break;
+            case CONFIRM_DELETE:
+                showDeleteConfirm(effect.todo);
+                break;
+            case CONFIRM_DELETE_SUBTASK:
+                showDeleteSubtaskConfirm(effect.subTask);
+                break;
+            case SHOW_RESCHEDULE_SHEET:
+                showRescheduleSheet(effect.todoId);
+                break;
+            case TOAST_RES:
+                if (effect.resId != 0) {
+                    Toast.makeText(requireContext(), effect.resId, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case TOAST_TEXT:
+                if (effect.text != null) {
+                    Toast.makeText(requireContext(), effect.text, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case START_TIMER:
+                if (effect.todo != null) {
+                    timerUiHelper.showTaskTimePickerDialog(effect.todo);
+                }
+                break;
+            case START_SUBTASK_TIMER:
+                if (effect.todo != null && effect.subTask != null) {
+                    timerUiHelper.showSubTaskTimePickerDialog(effect.todo, effect.subTask);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void showDeleteConfirm(@Nullable TodoItem todo) {
+        if (todo == null) {
+            return;
+        }
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.common_dialog_hint_title)
+                .setMessage(R.string.home_dialog_delete_message)
+                .setPositiveButton(R.string.common_label_delete, (d, w) ->
+                        todoViewModel.dispatch(HomeTodoIntent.confirmDelete()))
+                .setNegativeButton(R.string.cancel, (d, w) ->
+                        todoViewModel.dispatch(HomeTodoIntent.cancelDelete()))
+                .setOnCancelListener(d ->
+                        todoViewModel.dispatch(HomeTodoIntent.cancelDelete()))
+                .show();
+    }
+
+    private void showDeleteSubtaskConfirm(@Nullable SubTask subTask) {
+        if (subTask == null) {
+            return;
+        }
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.common_dialog_hint_title)
+                .setMessage(R.string.todo_dialog_delete_subtask)
+                .setPositiveButton(R.string.common_label_delete, (d, w) ->
+                        todoViewModel.dispatch(HomeTodoIntent.confirmDeleteSubtask()))
+                .setNegativeButton(R.string.cancel, (d, w) ->
+                        todoViewModel.dispatch(HomeTodoIntent.cancelDeleteSubtask()))
+                .setOnCancelListener(d ->
+                        todoViewModel.dispatch(HomeTodoIntent.cancelDeleteSubtask()))
+                .show();
+    }
+
+    /** 改期：今天 / 明天 / 选日期。 */
+    private void showRescheduleSheet(int todoId) {
+        CharSequence[] items = new CharSequence[]{
+                getString(R.string.todo_reschedule_today),
+                getString(R.string.todo_reschedule_tomorrow),
+                getString(R.string.todo_reschedule_pick_date)
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.todo_reschedule_title)
+                .setItems(items, (dialog, which) -> {
+                    if (which == 0) {
+                        todoViewModel.dispatch(HomeTodoIntent.rescheduleToToday(todoId));
+                    } else if (which == 1) {
+                        todoViewModel.dispatch(HomeTodoIntent.rescheduleTo(
+                                todoId, DueDateTime.startOfDayOffset(1)));
+                    } else {
+                        showDatePickerForReschedule(todoId);
+                    }
+                })
+                .show();
+    }
+
+    private void showDatePickerForReschedule(int todoId) {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog dialog = new DatePickerDialog(
+                requireContext(),
+                (view, year, month, dayOfMonth) -> {
+                    calendar.set(year, month, dayOfMonth);
+                    long due = DueDateTime.startOfDay(calendar.getTimeInMillis());
+                    todoViewModel.dispatch(HomeTodoIntent.rescheduleTo(todoId, due));
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH));
+        // 允许改到今天及未来；过去日期无意义（过期应改期到今天起）
+        dialog.getDatePicker().setMinDate(DueDateTime.startOfToday());
+        dialog.show();
+    }
+
+    private void setTodoPortraitVisibility(int visibility) {
+        if (todoRecyclerView != null) {
+            todoRecyclerView.setVisibility(visibility);
+        }
+        if (filterPanelRoot != null) {
+            filterPanelRoot.setVisibility(visibility);
+        } else if (filterHeader != null) {
+            filterHeader.setVisibility(visibility);
+        }
+    }
+
     private void setupButtonListeners() {
         controlButton.setOnClickListener(v -> {
+            if (!viewModel.isLoggedIn()) {
+                com.skyinit.pomodorotimer.ui.auth.AuthGate.show(requireActivity());
+                return;
+            }
             Intent intent = new Intent(requireContext(), TimerActivity.class);
             boolean start = timerService == null || (!timerService.isRunning() && !timerService.isPaused());
             intent.putExtra("start", start);
@@ -159,7 +530,15 @@ public class HomeFragment extends Fragment implements
 
         resetButton.setOnClickListener(v -> {
             if (timerService != null && (timerService.isRunning() || timerService.isPaused())) {
-                Toast.makeText(requireContext(), R.string.home_toast_reset_while_running, Toast.LENGTH_SHORT).show();
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.timer_confirm_reset_title)
+                        .setMessage(R.string.timer_confirm_reset_message)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.stop_button, (d, w) -> {
+                            timerService.resetTimer();
+                            Toast.makeText(requireContext(), R.string.timer_toast_timer_ended, Toast.LENGTH_SHORT).show();
+                        })
+                        .show();
                 return;
             }
             viewModel.resetStudyTimeToDefault();
@@ -170,7 +549,7 @@ public class HomeFragment extends Fragment implements
         });
     }
 
-    private void observeViewModel() {
+    private void observeTimerViewModel() {
         viewModel.getTimerDisplayText().observe(getViewLifecycleOwner(), text -> {
             if (timerText != null && text != null) {
                 timerText.setText(text);
@@ -181,14 +560,47 @@ public class HomeFragment extends Fragment implements
             if (controlButton == null || state == null) {
                 return;
             }
-            if (state == HomeViewModel.CONTROL_PAUSE) {
-                controlButton.setText(R.string.pause_button);
-            } else if (state == HomeViewModel.CONTROL_RESUME) {
-                controlButton.setText(R.string.resume_button);
+            applyControlButtonAppearance(state);
+        });
+
+        viewModel.getTimerState().observe(getViewLifecycleOwner(), state -> {
+            if (timerPhaseText == null || state == null) {
+                return;
+            }
+            if (state.paused) {
+                timerPhaseText.setText(R.string.home_phase_paused);
+            } else if (state.running && state.isBreakSession()) {
+                timerPhaseText.setText(R.string.home_phase_break);
+            } else if (state.running) {
+                timerPhaseText.setText(R.string.home_phase_study);
             } else {
-                controlButton.setText(R.string.start_button);
+                timerPhaseText.setText(R.string.home_phase_idle);
             }
         });
+    }
+
+    private void applyControlButtonAppearance(int state) {
+        if (!(controlButton instanceof MaterialButton)) {
+            if (state == HomeViewModel.CONTROL_PAUSE) {
+                controlButton.setText(R.string.home_control_open);
+            } else if (state == HomeViewModel.CONTROL_RESUME) {
+                controlButton.setText(R.string.home_control_resume);
+            } else {
+                controlButton.setText(R.string.home_control_start);
+            }
+            return;
+        }
+        MaterialButton button = (MaterialButton) controlButton;
+        if (state == HomeViewModel.CONTROL_PAUSE) {
+            button.setText(R.string.home_control_open);
+            button.setIconResource(R.drawable.ic_pause);
+        } else if (state == HomeViewModel.CONTROL_RESUME) {
+            button.setText(R.string.home_control_resume);
+            button.setIconResource(R.drawable.ic_resume);
+        } else {
+            button.setText(R.string.home_control_start);
+            button.setIconResource(R.drawable.ic_resume);
+        }
     }
 
     @Override
@@ -208,6 +620,8 @@ public class HomeFragment extends Fragment implements
         updateDateDisplay();
         refreshTimerService();
         viewModel.refreshStudyTimeFromSettings();
+        // 跨日回来时重算分组边界
+        todoViewModel.dispatch(HomeTodoIntent.refreshDayBoundary());
     }
 
     @Override
@@ -215,16 +629,15 @@ public class HomeFragment extends Fragment implements
         super.onConfigurationChanged(newConfig);
         updateThemeColors();
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            todoController.setPortraitVisibility(View.GONE);
+            setTodoPortraitVisibility(View.GONE);
         } else {
-            todoController.setPortraitVisibility(View.VISIBLE);
+            setTodoPortraitVisibility(View.VISIBLE);
         }
         if (timerService != null) {
             viewModel.syncFromService(timerService);
         }
     }
 
-    /** 由 MainActivity 在 Service 绑定或页面切换时注入，并同步计时状态到 ViewModel。 */
     public void setTimerService(TimerService service) {
         if (timerService != null) {
             timerService.removeListener(timerListener);
@@ -263,11 +676,17 @@ public class HomeFragment extends Fragment implements
         if (dateText != null) {
             dateText.setTextColor(getResources().getColor(R.color.text_primary));
         }
-        todoController.refreshThemeColors();
+        if (todoListAdapter != null) {
+            todoListAdapter.notifyDataSetChanged();
+        }
     }
 
     @Override
     public void onReasonSelected(String reason) {
+        if (timerService != null && !timerService.canPause()) {
+            Toast.makeText(requireContext(), R.string.timer_toast_max_pause_reached, Toast.LENGTH_SHORT).show();
+            return;
+        }
         Intent intent = new Intent(requireContext(), TimerService.class);
         intent.setAction(TimerService.ACTION_PAUSE_WITH_REASON);
         intent.putExtra("pause_reason", reason);
@@ -285,74 +704,6 @@ public class HomeFragment extends Fragment implements
     }
 
     @Override
-    public LifecycleOwner getLifecycleOwner() {
-        return getViewLifecycleOwner();
-    }
-
-    @Override
-    public void onTodosChanged(List<TodoItem> todos) {
-        viewModel.setTodos(todos);
-    }
-
-    @Override
-    public void onRequestTaskEdit(TodoItem item) {
-        if (item.isCollection()) {
-            taskEditLauncher.launch(CollectionTodoEditActivity.editIntent(requireContext(), item));
-        } else {
-            taskEditLauncher.launch(SimpleTodoEditActivity.editIntent(requireContext(), item));
-        }
-    }
-
-    @Override
-    public void onRequestTaskTimer(TodoItem item) {
-        if (item.isCollection()) {
-            SubTaskTimerPickerDialog.show(
-                    requireContext(),
-                    item,
-                    taskRepository,
-                    (collection, subTask) -> timerUiHelper.showSubTaskTimePickerDialog(collection, subTask));
-        } else {
-            timerUiHelper.showTaskTimePickerDialog(item);
-        }
-    }
-
-    @Override
-    public void onRequestDeleteConfirm(TodoItem item, int swipedPositionArg) {
-        isDeleteDialogShowing = true;
-        swipedItem = item;
-        swipedPosition = swipedPositionArg;
-        final TodoItem pendingItem = item;
-        final int pendingPosition = swipedPositionArg;
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.common_dialog_hint_title)
-                .setMessage(R.string.home_dialog_delete_message)
-                .setPositiveButton(R.string.common_label_delete, (dialog, which) -> {
-                    todoController.deleteTodo(pendingItem);
-                    swipedItem = null;
-                    swipedPosition = -1;
-                    isDeleteDialogShowing = false;
-                })
-                .setNegativeButton(R.string.cancel, (dialog, which) -> {
-                    if (pendingItem != null && pendingPosition >= 0) {
-                        todoController.restoreSwipedItem(pendingItem, pendingPosition);
-                    }
-                    swipedItem = null;
-                    swipedPosition = -1;
-                    isDeleteDialogShowing = false;
-                })
-                .setOnDismissListener(dialog -> {
-                    if (swipedItem != null && swipedPosition >= 0) {
-                        todoController.restoreSwipedItem(swipedItem, swipedPosition);
-                        swipedItem = null;
-                        swipedPosition = -1;
-                    }
-                    isDeleteDialogShowing = false;
-                })
-                .show();
-    }
-
-    @Override
     public HomeViewModel getViewModel() {
         return viewModel;
     }
@@ -364,7 +715,6 @@ public class HomeFragment extends Fragment implements
 
     @Override
     public void onDefaultStudyTimeChanged(long millis) {
-        // ViewModel 已在 helper 内更新
     }
 
     @Override

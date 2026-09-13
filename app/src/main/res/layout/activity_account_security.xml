@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/subpage_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="32dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- 已登录：安全功能 -->
+            <LinearLayout
+                android:id="@+id/section_registered"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/SettingsSectionLabel"
+                    android:text="@string/account_security_section_credentials" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:background="@drawable/bg_settings_surface"
+                    android:orientation="vertical"
+                    android:paddingVertical="2dp">
+
+                    <LinearLayout
+                        android:id="@+id/row_change_password"
+                        style="@style/SettingsValueRow">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/account_btn_change_password_label"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            style="@style/ProfileMenuRowArrow"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_arrow_right"
+                            app:tint="@color/text_secondary" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/SettingsSectionLabel"
+                    android:text="@string/account_security_section_session" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:background="@drawable/bg_settings_surface"
+                    android:orientation="vertical"
+                    android:paddingVertical="2dp">
+
+                    <LinearLayout
+                        android:id="@+id/row_logout"
+                        style="@style/SettingsValueRow">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/account_btn_logout"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            style="@style/ProfileMenuRowArrow"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_arrow_right"
+                            app:tint="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:alpha="0.65"
+                        android:background="@drawable/bg_profile_divider" />
+
+                    <LinearLayout
+                        android:id="@+id/row_switch_account"
+                        style="@style/SettingsValueRow">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/account_switch_account"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            style="@style/ProfileMenuRowArrow"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_arrow_right"
+                            app:tint="@color/text_secondary" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/SettingsSectionLabel"
+                    android:text="@string/account_security_section_danger" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/bg_settings_surface"
+                    android:orientation="vertical"
+                    android:paddingVertical="2dp">
+
+                    <LinearLayout
+                        android:id="@+id/row_delete_account"
+                        style="@style/SettingsValueRow">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/account_btn_delete_account"
+                            android:textColor="@color/semantic_error"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            style="@style/ProfileMenuRowArrow"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_arrow_right"
+                            app:tint="@color/semantic_error" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 访客：引导登录/注册 -->
+            <LinearLayout
+                android:id="@+id/section_guest"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/account_security_guest_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/account_security_guest_message"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_register"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:minHeight="48dp"
+                    android:text="@string/account_upgrade_to_registered"
+                    android:textAllCaps="false"
+                    android:textColor="@color/on_brand"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/brand"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_login"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="48dp"
+                    android:text="@string/account_login_existing"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/surface_container"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

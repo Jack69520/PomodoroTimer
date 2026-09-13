@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TextInputLayout OutlinedBox：未聚焦态需显式给色，否则深色主题会落到近黑描边 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/text_hint" android:state_enabled="false" />
+    <item android:color="@color/brand" android:state_focused="true" />
+    <item android:color="@color/brand" android:state_hovered="true" />
+    <item android:color="@color/text_secondary" />
+</selector>

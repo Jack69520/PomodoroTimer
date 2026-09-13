@@ -1,150 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Timer gradient (light) -->
-    <color name="timer_bg_start">#D6E5FF</color>
-    <color name="timer_bg_center">#C7F0E1</color>
-    <color name="timer_bg_end">#B7E6D6</color>
-    <color name="red_600">#E53935</color>
-    <color name="blue_600">#1E88E5</color>
-    <color name="gray_700">#455A64</color>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="gray">#FFAAAAAA</color>
-    <color name="transparent">#00000000</color>
-    <color name="skyblue">#FF51CDFF</color>
-    <color name="lilac">#BA86CF</color>
-    <color name="pink_01">#ff99e9</color>
+<resources>
+    <!-- Absolute literals: never flip meaning in night -->
+    <color name="absolute_white">#FFFFFFFF</color>
+    <color name="absolute_black">#FF000000</color>
+    <color name="absolute_transparent">#00000000</color>
 
-    <color name="default_theme">#41CD9D</color>
-    <color name="default_theme_dark">#014971</color>
-    <color name="dark_background">#121212</color>
-    <color name="dark_text">#FFFFFF</color>
-    
-    <!-- 自适应背景颜色 -->
-    <color name="adaptive_background_light">#E8F5E8</color>  <!-- 浅绿色，不晃眼 -->
-    <color name="adaptive_background_dark">#1A3D1A</color>   <!-- 墨绿色 -->
+    <!-- Brand -->
+    <color name="brand">#FF41CD9D</color>
+    <color name="on_brand">@color/absolute_white</color>
+    <color name="brand_container">#1A41CD9D</color>
+    <color name="brand_container_strong">#3341CD9D</color>
 
-    <!-- 浅色模式下的语义化颜色 -->
-    <color name="text_primary">#FF000000</color>      <!-- 主要文字颜色：黑色 -->
-    <color name="text_secondary">#FF666666</color>   <!-- 次要文字颜色：深灰色 -->
-    <color name="text_hint">#FFAAAAAA</color>        <!-- 提示文字颜色：浅灰色 -->
-    <color name="background_card">#FFFFFFFF</color>   <!-- 卡片背景：白色 -->
-    <color name="background_surface">#FFFFFFFF</color> <!-- 表面背景：白色 -->
-    <color name="background_primary">#FFFFFFFF</color> <!-- 主要背景：白色 -->
-    <color name="background_secondary">#FFF5F5F5</color> <!-- 次要背景：浅灰色 -->
-    <color name="todo_item_background">#FFF5F5F5</color> <!-- 待办卡片：统一浅色不透明 -->
-    <color name="todo_item_border">#FFE8E8E8</color>      <!-- 待办卡片边框 -->
-    <color name="bottom_nav_ripple">#0A000000</color> <!-- 底部导航点击涟漪：浅色模式 -->
-    <color name="divider">#FFE0E0E0</color>           <!-- 分割线颜色：浅灰色 -->
-    <color name="border_light">#FFE0E0E0</color>      <!-- 浅色边框 -->
-    <color name="primary">#FF41CD9D</color>           <!-- 主色调：绿色 -->
-    <color name="consent_bg_start">#E8F8F2</color>
-    <color name="consent_bg_end">#D6E5FF</color>
-    <color name="consent_card_stroke">#1A41CD9D</color>
-    <color name="error">#FFF44336</color>            <!-- 错误提示颜色：红色 -->
-    
-    <!-- AlertActivity按钮颜色 -->
-    <color name="theme_orange">#FFFF9800</color>      <!-- 橙色：延长按钮 -->
-    <color name="theme_green">#FF4CAF50</color>       <!-- 绿色：休息按钮 -->
-    <color name="theme_blue">#FF2196F3</color>        <!-- 蓝色：完成按钮 -->
+    <!-- Surface hierarchy (card base: #FFFFFF light) -->
+    <color name="surface_card">#FFFFFFFF</color>
+    <color name="surface_page">#FFF5F5F5</color>
+    <color name="surface_container">#FFF5F5F5</color>
+    <color name="surface_container_high">#FFEEEEEE</color>
+    <color name="stroke_subtle">#FFE0E0E0</color>
 
-    <!-- 10种柔和主题色 -->
-    <color name="theme1">#FFCCCF</color>
-    <color name="theme2">#FFD4B2</color>
-    <color name="theme3">#FFDAC1</color>
-    <color name="theme4">#E2F0CB</color>
-    <color name="theme5">#B5EAD7</color>
-    <color name="theme6">#C7CEEA</color>
-    <color name="theme7">#F8B195</color>
-    <color name="theme8">#F67280</color>
-    <color name="theme9">#C06C84</color>
-    <color name="theme10">#6C5B7B</color>
-    <!-- 10种中国美学主题色 -->
-    <color name="theme11">#1D5D45</color>
-    <color name="theme12">#7A8D9C</color>
-    <color name="theme13">#BB5C45</color>
-    <color name="theme14">#E8F1F5</color>
-    <color name="theme15">#F0D3A7</color>
-    <color name="theme16">#B7D7A2</color>
-    <color name="theme17">#EA9DB4</color>
-    <color name="theme18">#D8A868</color>
-    <color name="theme19">#CF5C48</color>
-    <color name="theme20">#E0CDCF</color>
-    
-    <!-- 莫兰迪色系主题色 - 柔和、低饱和度、高灰度 -->
-    <color name="morandi1">#D4C4B0</color>    <!-- 莫兰迪米色 -->
-    <color name="morandi2">#C8B5A7</color>    <!-- 莫兰迪灰褐色 -->
-    <color name="morandi3">#B8A99A</color>    <!-- 莫兰迪暖灰 -->
-    <color name="morandi4">#A8B5A0</color>    <!-- 莫兰迪灰绿 -->
-    <color name="morandi5">#9BB5B0</color>    <!-- 莫兰迪灰蓝绿 -->
-    <color name="morandi6">#A5A8B5</color>    <!-- 莫兰迪灰蓝 -->
-    <color name="morandi7">#B5A8B0</color>    <!-- 莫兰迪灰紫 -->
-    <color name="morandi8">#C4A8A0</color>    <!-- 莫兰迪灰粉 -->
-    <color name="morandi9">#D0B5A0</color>    <!-- 莫兰迪暖米 -->
-    <color name="morandi10">#E0C4A0</color>   <!-- 莫兰迪浅米 -->
-    <color name="morandi11">#B8C4A8</color>   <!-- 莫兰迪橄榄绿 -->
-    <color name="morandi12">#A8C4B8</color>   <!-- 莫兰迪薄荷绿 -->
-    <color name="morandi13">#A8B8C4</color>   <!-- 莫兰迪雾蓝 -->
-    <color name="morandi14">#B8A8C4</color>   <!-- 莫兰迪薰衣草 -->
-    <color name="morandi15">#C4A8B8</color>   <!-- 莫兰迪玫瑰灰 -->
-    
-    <!-- 账户相关颜色 -->
-    <color name="account_section_bg">#FFF8F9FA</color>      <!-- 账户区域背景 -->
-    <color name="account_section_border">#FFE9ECEF</color>  <!-- 账户区域边框 -->
-    <color name="avatar_background">#FFE9ECEF</color>       <!-- 头像背景 -->
-    <color name="avatar_border">#FFDEE2E6</color>          <!-- 头像边框 -->
-    <color name="avatar_icon">#FF6C757D</color>            <!-- 头像图标颜色 -->
+    <!-- Text -->
+    <color name="text_primary">#FF000000</color>
+    <color name="text_secondary">#FF666666</color>
+    <color name="text_hint">#FFAAAAAA</color>
+    <color name="text_on_brand">@color/on_brand</color>
 
-    <!-- App Shortcuts 品牌色（取自应用图标） -->
-    <color name="shortcut_brand_primary">#EC4C2D</color>
-    <color name="shortcut_brand_mid">#CF341D</color>
-    <color name="shortcut_brand_dark">#C32D1A</color>
-    
-    <!-- 10种中国美学主题渐变色 - 这些实际上是drawable资源，不应该在colors.xml中定义 -->
+    <!-- Shared UI -->
+    <color name="bottom_nav_ripple">#0A000000</color>
+    <color name="semantic_error">#FFF44336</color>
+    <color name="semantic_warning">#FFFF9800</color>
+    <color name="semantic_success">#FF4CAF50</color>
 
-    <!-- 专注/待办分类标签：柔和色系，饱和度略提升（浅色底 + 深色字，深浅模式通用） -->
-    <color name="task_cat_default_bg">#D4E4F4</color>
-    <color name="task_cat_default_border">#A8C4DC</color>
-    <color name="task_cat_default_text">#3A5878</color>
-    <color name="task_cat_work_bg">#F8D4C4</color>
-    <color name="task_cat_work_border">#E8B0A0</color>
-    <color name="task_cat_work_text">#8B4838</color>
-    <color name="task_cat_study_bg">#C4DCF4</color>
-    <color name="task_cat_study_border">#98B8D8</color>
-    <color name="task_cat_study_text">#385878</color>
-    <color name="task_cat_life_bg">#CCE8C4</color>
-    <color name="task_cat_life_border">#A0D0A0</color>
-    <color name="task_cat_life_text">#3E7038</color>
-    <color name="task_cat_sports_bg">#F8E0B8</color>
-    <color name="task_cat_sports_border">#E8C890</color>
-    <color name="task_cat_sports_text">#9A6820</color>
-    <color name="task_cat_entertainment_bg">#E0CCF0</color>
-    <color name="task_cat_entertainment_border">#B8A0D0</color>
-    <color name="task_cat_entertainment_text">#604878</color>
-    <color name="task_cat_other_bg">#E0D4C8</color>
-    <color name="task_cat_other_border">#B8A898</color>
-    <color name="task_cat_other_text">#585040</color>
-
-    <!-- 统计图表主题色 -->
-    <color name="chart_grid">#1A000000</color>
-    <color name="chart_week_bar">#FF41CD9D</color>
-    <color name="chart_hourly_bar">#FF5BA4D9</color>
-    <color name="chart_pause_bar">#FF9A7BB8</color>
-    <color name="chart_marker_bg">#E641CD9D</color>
-    <color name="chart_marker_text">#FFFFFFFF</color>
-    <color name="stats_hero_accent">#1A41CD9D</color>
-    <color name="stats_insight_bg">#FFF3FAF7</color>
-
-    <!-- 日历 / 专注记录状态色 -->
-    <color name="session_status_completed">#FF2E7D32</color>
-    <color name="session_status_failed">#FFC62828</color>
-    <color name="session_status_incomplete">#FFE65100</color>
-    <color name="calendar_indicator_completed">#FF41CD9D</color>
-    <color name="calendar_indicator_failed">#FFF44336</color>
-    <color name="calendar_indicator_incomplete">#FFFF9800</color>
+    <!-- Shortcuts: mint disc aligned with app brand (replaces abrupt tomato red) -->
+    <color name="brand_shortcut_primary">#2DBF8E</color>
+    <color name="brand_shortcut_mid">#41CD9D</color>
+    <color name="brand_shortcut_dark">#239E76</color>
 </resources>

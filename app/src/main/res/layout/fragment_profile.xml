@@ -1,306 +1,357 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/profile_scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:scrollbars="none"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="12dp">
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:paddingHorizontal="12dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="32dp"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="0dp"
         android:orientation="vertical">
 
-        <!-- 账户信息区域 -->
+        <!-- 账户 Hero：无描边表面 -->
         <LinearLayout
             android:id="@+id/account_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:layout_marginTop="0dp"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/account_section_background"
-            android:gravity="center_vertical"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_profile_surface"
             android:clickable="true"
+            android:contentDescription="@string/profile_account_section_content_description"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
-            android:elevation="8dp"
-            android:shadowColor="@color/black"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="2">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="20dp">
 
             <ImageView
                 android:id="@+id/account_avatar"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_default_avatar"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:background="@drawable/bg_profile_avatar"
+                android:contentDescription="@string/profile_avatar_content_description"
                 android:scaleType="centerCrop"
-                android:background="@drawable/circle_background"/>
+                android:src="@drawable/ic_default_avatar" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/account_nickname"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:letterSpacing="0.01"
+                    android:maxLines="1"
+                    android:text="@string/profile_login_prompt"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/account_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/account_signature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:ellipsize="end"
+                    android:lineSpacingExtra="2dp"
+                    android:maxLines="2"
+                    android:text="@string/profile_signature_placeholder"
+                    android:textColor="@color/text_hint"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="10dp"
+                android:alpha="0.4"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="@color/text_secondary" />
+        </LinearLayout>
+
+        <!-- 轻量专注摘要：双列，无描边 -->
+        <LinearLayout
+            android:id="@+id/stats_summary_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_profile_surface"
+            android:clickable="true"
+            android:contentDescription="@string/profile_stats_section_content_description"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="20dp">
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="20dp">
-
-                <TextView
-                    android:id="@+id/account_nickname"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/profile_login_prompt"
-                    android:textSize="20sp"
-                    android:textColor="@color/text_primary"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/account_id"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textSize="14sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/rounded_background_light"
-                    android:padding="6dp"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_arrow_right"
-                    android:alpha="0.6"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/profile_tap_to_view"
-                    android:textSize="10sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginTop="2dp"/>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- 统计信息卡片 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/account_section_background"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"
-            android:elevation="6dp"
-            android:shadowColor="@color/black"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="2">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp">
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/ic_timer"
-                    android:layout_marginEnd="12dp"
-                    android:tint="@color/text_primary"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_summary_total_caption"
+                    android:textColor="@color/text_hint"
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/count_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="32sp"
+                    android:layout_marginTop="6dp"
                     android:textColor="@color/text_primary"
-                    android:textStyle="bold"/>
-
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/profile_today_completed_pomodoros"
-                android:textSize="16sp"
-                android:textColor="@color/text_secondary"
-                android:gravity="center"/>
+            <View
+                android:layout_width="1dp"
+                android:layout_height="36dp"
+                android:alpha="0.55"
+                android:background="@drawable/bg_profile_divider" />
 
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/profile_summary_duration_caption"
+                    android:textColor="@color/text_hint"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/duration_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:alpha="0.35"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_arrow_right"
+                app:tint="@color/text_secondary" />
         </LinearLayout>
 
-        <!-- 应用屏蔽功能卡片 -->
+        <!-- 应用屏蔽 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:background="@drawable/bg_profile_surface"
             android:orientation="vertical"
-            android:background="@drawable/account_section_background"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"
-            android:elevation="4dp"
-            android:shadowColor="@color/black"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="2">
+            android:paddingHorizontal="16dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:orientation="horizontal"
+                android:minHeight="40dp">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/profile_app_blocking"
-                    android:textSize="18sp"
                     android:textColor="@color/text_primary"
-                    android:textStyle="bold"/>
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-                <Switch
+                <androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/app_blocking_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:checked="false"/>
-
+                    android:checked="false"
+                    android:showText="false" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/app_blocking_description"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="3dp"
                 android:text="@string/profile_app_blocking_description"
-                android:textSize="14sp"
                 android:textColor="@color/text_secondary"
-                android:lineSpacingExtra="4dp"/>
+                android:textSize="13sp" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_app_blocking_settings"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
                 android:text="@string/blocking_title_manage_apps"
-                android:textSize="16sp"
-                android:background="@drawable/button_blue_background"
-                android:textColor="@android:color/white"
-                android:layout_marginTop="16dp"
-                android:visibility="gone"/>
-
-
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:visibility="gone"
+                app:backgroundTint="@color/surface_container"
+                app:cornerRadius="12dp"
+                app:elevation="0dp"
+                app:rippleColor="@color/bottom_nav_ripple" />
         </LinearLayout>
 
-
-        <!-- 功能按钮卡片 -->
+        <!-- 功能分组列表：无描边 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_profile_surface"
             android:orientation="vertical"
-            android:background="@drawable/account_section_background"
-            android:padding="12dp"
-            android:layout_marginBottom="24dp"
-            android:elevation="4dp"
-            android:shadowColor="@color/black"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="2">
+            android:paddingVertical="2dp">
 
-            <!-- 设置按钮 -->
             <LinearLayout
                 android:id="@+id/btn_settings"
-                style="@style/FunctionButton"
-                android:background="@drawable/function_button_settings_background"
-                android:layout_marginBottom="12dp">
+                style="@style/ProfileMenuRow">
 
-                <ImageView
-                    style="@style/FunctionButtonIcon"
-                    android:src="@drawable/ic_settings_white"/>
+                <FrameLayout style="@style/ProfileMenuRowIconWell">
+
+                    <ImageView
+                        style="@style/ProfileMenuRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_settings"
+                        app:tint="@color/text_primary" />
+                </FrameLayout>
 
                 <TextView
-                    style="@style/FunctionButtonText"
-                    android:text="@string/settings_title"/>
+                    style="@style/ProfileMenuRowText"
+                    android:text="@string/settings_title" />
 
                 <ImageView
-                    style="@style/FunctionButtonArrow"
-                    android:src="@drawable/ic_arrow_right_white"/>
-
+                    style="@style/ProfileMenuRowArrow"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
 
-            <!-- 开发实验室按钮 -->
+            <View
+                android:id="@+id/divider_before_dev_lab"
+                style="@style/ProfileMenuDivider"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/btn_dev_lab"
-                style="@style/FunctionButton"
-                android:background="@drawable/function_button_dev_lab_background"
-                android:layout_marginBottom="12dp">
+                style="@style/ProfileMenuRow"
+                android:visibility="gone">
 
-                <ImageView
-                    style="@style/FunctionButtonIcon"
-                    android:src="@drawable/ic_lab_white"/>
+                <FrameLayout style="@style/ProfileMenuRowIconWell">
+
+                    <ImageView
+                        style="@style/ProfileMenuRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_lab"
+                        app:tint="@color/text_primary" />
+                </FrameLayout>
 
                 <TextView
-                    style="@style/FunctionButtonText"
-                    android:text="@string/title_dev_lab"/>
+                    style="@style/ProfileMenuRowText"
+                    android:text="@string/title_dev_lab" />
 
                 <ImageView
-                    style="@style/FunctionButtonArrow"
-                    android:src="@drawable/ic_arrow_right_white"/>
-
+                    style="@style/ProfileMenuRowArrow"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
 
-            <!-- 常见问题按钮 -->
+            <View style="@style/ProfileMenuDivider" />
+
             <LinearLayout
                 android:id="@+id/btn_faq"
-                style="@style/FunctionButton"
-                android:background="@drawable/function_button_faq_background"
-                android:layout_marginBottom="12dp">
+                style="@style/ProfileMenuRow">
 
-                <ImageView
-                    style="@style/FunctionButtonIcon"
-                    android:src="@drawable/ic_faq_white"/>
+                <FrameLayout style="@style/ProfileMenuRowIconWell">
+
+                    <ImageView
+                        style="@style/ProfileMenuRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_faq_white"
+                        app:tint="@color/text_primary" />
+                </FrameLayout>
 
                 <TextView
-                    style="@style/FunctionButtonText"
-                    android:text="@string/title_faq"/>
+                    style="@style/ProfileMenuRowText"
+                    android:text="@string/title_faq" />
 
                 <ImageView
-                    style="@style/FunctionButtonArrow"
-                    android:src="@drawable/ic_arrow_right_white"/>
-
+                    style="@style/ProfileMenuRowArrow"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
 
-            <!-- 关于按钮 -->
+            <View style="@style/ProfileMenuDivider" />
+
             <LinearLayout
                 android:id="@+id/btn_about"
-                style="@style/FunctionButton"
-                android:background="@drawable/function_button_about_background"
-                android:layout_marginBottom="12dp">
+                style="@style/ProfileMenuRow">
 
-                <ImageView
-                    style="@style/FunctionButtonIcon"
-                    android:src="@drawable/ic_about_white"/>
+                <FrameLayout style="@style/ProfileMenuRowIconWell">
+
+                    <ImageView
+                        style="@style/ProfileMenuRowIcon"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_about_white"
+                        app:tint="@color/text_primary" />
+                </FrameLayout>
 
                 <TextView
-                    style="@style/FunctionButtonText"
-                    android:text="@string/title_about"/>
+                    style="@style/ProfileMenuRowText"
+                    android:text="@string/title_about" />
 
                 <ImageView
-                    style="@style/FunctionButtonArrow"
-                    android:src="@drawable/ic_arrow_right_white"/>
-
+                    style="@style/ProfileMenuRowArrow"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/text_secondary" />
             </LinearLayout>
-
         </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 「我的」页表面卡片：圆角填充、无描边，靠与页面背景的色差分层 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface_card" />
+    <corners android:radius="20dp" />
+</shape>

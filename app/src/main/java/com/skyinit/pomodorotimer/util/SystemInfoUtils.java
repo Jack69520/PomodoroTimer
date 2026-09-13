@@ -11,6 +11,7 @@ import android.util.Log;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
+import java.util.Locale;
 
 public class SystemInfoUtils {
     private static final String TAG = "SystemInfoUtils";
@@ -136,16 +137,39 @@ public class SystemInfoUtils {
 
     public static String getStorageUsagePercentage(Context context) {
         try {
-            StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
-            long totalSize = stat.getTotalBytes();
-            long availableSize = stat.getAvailableBytes();
-            long usedSize = totalSize - availableSize;
-
-            double percentage = (double) usedSize / totalSize * 100;
-            return String.format("%.1f%%", percentage);
+            double percentage = getStorageUsagePercentExact(context);
+            if (percentage < 0) {
+                return unavailable(context);
+            }
+            return String.format(Locale.getDefault(), "%.1f%%", percentage);
         } catch (Exception e) {
             Log.e(TAG, "Error getting storage usage percentage", e);
             return unavailable(context);
+        }
+    }
+
+    /** 存储占用百分比 0–100；失败返回 -1。 */
+    public static int getStorageUsagePercent(Context context) {
+        double percentage = getStorageUsagePercentExact(context);
+        if (percentage < 0) {
+            return -1;
+        }
+        return (int) Math.max(0, Math.min(100, Math.round(percentage)));
+    }
+
+    private static double getStorageUsagePercentExact(Context context) {
+        try {
+            StatFs stat = new StatFs(Environment.getExternalStorageDirectory().getPath());
+            long totalSize = stat.getTotalBytes();
+            long availableSize = stat.getAvailableBytes();
+            if (totalSize <= 0) {
+                return -1;
+            }
+            long usedSize = totalSize - availableSize;
+            return (double) usedSize / totalSize * 100;
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting storage usage percent", e);
+            return -1;
         }
     }
 
@@ -194,18 +218,42 @@ public class SystemInfoUtils {
      */
     public static String getMemoryUsagePercentage(Context context) {
         try {
-            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            double percentage = getMemoryUsagePercentExact(context);
+            if (percentage < 0) {
+                return unavailable(context);
+            }
+            return String.format(Locale.getDefault(), "%.1f%%", percentage);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting memory usage percentage", e);
+            return unavailable(context);
+        }
+    }
+
+    /** 内存占用百分比 0–100；失败返回 -1。 */
+    public static int getMemoryUsagePercent(Context context) {
+        double percentage = getMemoryUsagePercentExact(context);
+        if (percentage < 0) {
+            return -1;
+        }
+        return (int) Math.max(0, Math.min(100, Math.round(percentage)));
+    }
+
+    private static double getMemoryUsagePercentExact(Context context) {
+        try {
+            ActivityManager activityManager =
+                    (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
             ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
             activityManager.getMemoryInfo(memoryInfo);
 
             long totalMemory = getTotalMemoryBytes();
+            if (totalMemory <= 0) {
+                return -1;
+            }
             long usedMemory = totalMemory - memoryInfo.availMem;
-
-            double percentage = (double) usedMemory / totalMemory * 100;
-            return String.format("%.1f%%", percentage);
+            return (double) usedMemory / totalMemory * 100;
         } catch (Exception e) {
-            Log.e(TAG, "Error getting memory usage percentage", e);
-            return unavailable(context);
+            Log.e(TAG, "Error getting memory usage percent", e);
+            return -1;
         }
     }
 

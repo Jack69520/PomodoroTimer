@@ -26,7 +26,7 @@ public final class StatisticsChartTheme {
 
     @ColorInt
     public static int primary(@NonNull Context context) {
-        return ContextCompat.getColor(context, R.color.primary);
+        return ContextCompat.getColor(context, R.color.brand);
     }
 
     @ColorInt

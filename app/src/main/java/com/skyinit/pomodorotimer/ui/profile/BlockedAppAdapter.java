@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,6 +43,7 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
     private final OnCategoryClickListener categoryClickListener;
     private final BlockingPolicyEngine policyEngine;
     private final AppTypeLabelResolver typeLabelResolver;
+    private final LruCache<String, Drawable> iconCache = new LruCache<>(80);
     private Context context;
 
     private static final DiffUtil.ItemCallback<BlockedApp> DIFF = new DiffUtil.ItemCallback<BlockedApp>() {
@@ -84,6 +86,7 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         BlockedApp app = getItem(position);
+        holder.boundPackageName = app.packageName;
 
         holder.appNameText.setText(app.appName);
         holder.appPackageText.setText(app.packageName);
@@ -110,8 +113,9 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
 
         holder.lockedBadge.setVisibility(isCritical ? View.VISIBLE : View.GONE);
 
-        setAppIcon(holder.appIcon, app.packageName);
+        bindAppIcon(holder, app.packageName);
 
+        String displayName = app.appName != null ? app.appName : app.packageName;
         holder.blockSwitch.setOnCheckedChangeListener(null);
         holder.blockSwitch.setChecked(app.isEnabled);
         holder.blockSwitch.setEnabled(!isCritical);
@@ -119,18 +123,21 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
 
         if (isCritical) {
             holder.statusLabel.setText(R.string.blocking_status_locked);
+            holder.blockSwitch.setContentDescription(
+                    context.getString(R.string.blocking_a11y_switch_locked, displayName));
         } else if (app.isEnabled) {
             holder.statusLabel.setText(R.string.blocking_status_blocked);
+            holder.blockSwitch.setContentDescription(
+                    context.getString(R.string.blocking_a11y_switch_blocked, displayName));
         } else {
             holder.statusLabel.setText(R.string.blocking_status_allowed);
+            holder.blockSwitch.setContentDescription(
+                    context.getString(R.string.blocking_a11y_switch_allowed, displayName));
         }
 
         holder.blockSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isCritical) {
                 buttonView.setChecked(app.isEnabled);
-                if (listener != null) {
-                    listener.onBlockToggle(app, app.isEnabled);
-                }
                 return;
             }
             if (listener != null) {
@@ -145,14 +152,24 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
         });
     }
 
-    private void setAppIcon(ImageView imageView, String packageName) {
+    private void bindAppIcon(ViewHolder holder, String packageName) {
+        Drawable cached = iconCache.get(packageName);
+        if (cached != null) {
+            holder.appIcon.setImageDrawable(cached);
+            return;
+        }
         try {
             PackageManager pm = context.getPackageManager();
             ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
             Drawable appIcon = pm.getApplicationIcon(appInfo);
-            imageView.setImageDrawable(appIcon);
+            iconCache.put(packageName, appIcon);
+            if (packageName.equals(holder.boundPackageName)) {
+                holder.appIcon.setImageDrawable(appIcon);
+            }
         } catch (Exception e) {
-            imageView.setImageResource(android.R.drawable.ic_menu_info_details);
+            if (packageName.equals(holder.boundPackageName)) {
+                holder.appIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+            }
         }
     }
 
@@ -165,6 +182,7 @@ public class BlockedAppAdapter extends ListAdapter<BlockedApp, BlockedAppAdapter
         final TextView lockedBadge;
         final SwitchCompat blockSwitch;
         final TextView statusLabel;
+        String boundPackageName;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);

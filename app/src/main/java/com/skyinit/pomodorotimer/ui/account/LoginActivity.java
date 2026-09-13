@@ -1,44 +1,38 @@
 package com.skyinit.pomodorotimer.ui.account;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.R;
-import android.app.AlertDialog;
+import com.skyinit.pomodorotimer.data.model.FormFieldError;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Toast;
-import android.text.method.HideReturnsTransformationMethod;
-import android.text.method.PasswordTransformationMethod;
+
 import androidx.lifecycle.ViewModelProvider;
 
-public class LoginActivity extends BaseActivity {
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
+
+public class LoginActivity extends SubpageActivity {
     private LoginViewModel viewModel;
 
-    private EditText etUserId;
-    private EditText etPassword;
-    private ImageView ivPasswordToggle;
-    private Button btnLogin;
-    private TextView tvGoRegister;
-    private TextView tvGoRecover;
-
-    private boolean isPasswordVisible = false;
+    private TextInputLayout tilUserId;
+    private TextInputLayout tilPassword;
+    private TextInputEditText etUserId;
+    private TextInputEditText etPassword;
+    private MaterialButton btnLogin;
+    private MaterialButton tvGoRegister;
+    private MaterialButton tvGoRecover;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(R.string.title_login));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+        setContentWithSubpageChrome(R.layout.activity_login, R.string.title_login);
 
         App app = (App) getApplication();
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
@@ -50,9 +44,10 @@ public class LoginActivity extends BaseActivity {
     }
 
     private void initViews() {
+        tilUserId = findViewById(R.id.til_user_id);
+        tilPassword = findViewById(R.id.til_password);
         etUserId = findViewById(R.id.et_user_id);
         etPassword = findViewById(R.id.et_password);
-        ivPasswordToggle = findViewById(R.id.iv_password_toggle);
         btnLogin = findViewById(R.id.btn_login);
         tvGoRegister = findViewById(R.id.tv_go_register);
         tvGoRecover = findViewById(R.id.tv_go_recover);
@@ -83,13 +78,14 @@ public class LoginActivity extends BaseActivity {
         if (error == null) {
             return;
         }
+        clearFieldErrors();
         switch (error.field) {
             case FormFieldError.FIELD_USER_ID:
-                etUserId.setError(error.message);
+                tilUserId.setError(error.message);
                 etUserId.requestFocus();
                 break;
             case FormFieldError.FIELD_PASSWORD:
-                etPassword.setError(error.message);
+                tilPassword.setError(error.message);
                 etPassword.requestFocus();
                 break;
             default:
@@ -97,27 +93,48 @@ public class LoginActivity extends BaseActivity {
         }
     }
 
+    private void clearFieldErrors() {
+        tilUserId.setError(null);
+        tilPassword.setError(null);
+    }
+
     private void setupClickListeners() {
-        btnLogin.setOnClickListener(v -> viewModel.login(
-                etUserId.getText().toString(),
-                etPassword.getText().toString()));
+        btnLogin.setOnClickListener(v -> submitLogin());
+        etPassword.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                submitLogin();
+                return true;
+            }
+            return false;
+        });
 
         tvGoRegister.setOnClickListener(v ->
                 startActivity(new Intent(this, RegisterActivity.class)));
 
         tvGoRecover.setOnClickListener(v ->
                 startActivity(new Intent(this, AccountRecoveryActivity.class)));
+    }
 
-        ivPasswordToggle.setOnClickListener(v -> togglePasswordVisibility());
+    private void submitLogin() {
+        clearFieldErrors();
+        viewModel.login(
+                textOf(etUserId),
+                textOf(etPassword));
+    }
+
+    private static String textOf(TextInputEditText editText) {
+        return editText.getText() != null ? editText.getText().toString() : "";
     }
 
     private void showBlockingGuardDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.account_guard_blocking_title)
-                .setMessage(R.string.account_guard_blocking_message)
-                .setNegativeButton(R.string.account_guard_cancel_operation, null)
-                .setPositiveButton(R.string.account_guard_disable_blocking_continue,
-                        (dialog, which) -> viewModel.continueAfterDisablingBlocking())
+        ModernPromptDialog.builder(this)
+                .icon(R.drawable.ic_permission)
+                .accent(ModernPromptDialog.Accent.BRAND)
+                .title(R.string.account_guard_blocking_title)
+                .message(R.string.account_guard_blocking_message)
+                .primary(R.string.account_guard_disable_blocking_continue,
+                        () -> viewModel.continueAfterDisablingBlocking())
+                .tertiary(R.string.account_guard_cancel_operation, null)
                 .show();
     }
 
@@ -128,19 +145,5 @@ public class LoginActivity extends BaseActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void togglePasswordVisibility() {
-        if (isPasswordVisible) {
-            etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
-            ivPasswordToggle.setImageResource(R.drawable.ic_eye_off);
-            isPasswordVisible = false;
-        } else {
-            etPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-            ivPasswordToggle.setImageResource(R.drawable.ic_eye_on);
-            isPasswordVisible = true;
-        }
-
-        etPassword.setSelection(etPassword.getText().length());
     }
 }

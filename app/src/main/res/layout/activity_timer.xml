@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -14,6 +14,7 @@
         android:visibility="gone" />
 
     <LinearLayout
+        android:id="@+id/timer_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -73,11 +74,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/start_button"
-                android:backgroundTint="@color/teal_700"
+                android:backgroundTint="@color/brand"
                 android:textColor="@android:color/white"
                 android:minHeight="60dp"
                 android:textSize="20sp"
-                app:cornerRadius="20dp"
+                app:cornerRadius="16dp"
                 app:strokeWidth="0dp" />
 
             <View
@@ -89,7 +90,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/stop_button"
-                android:backgroundTint="@color/red_600"
+                android:backgroundTint="@color/semantic_error"
                 android:textColor="@android:color/white"
                 android:minHeight="60dp"
                 android:textSize="20sp"

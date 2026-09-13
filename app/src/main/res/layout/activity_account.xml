@@ -1,215 +1,249 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:scrollbars="none">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/subpage_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="50dp"
-        android:padding="12dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="32dp"
+        android:scrollbars="none">
 
-        <!-- 账户信息卡片 -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/account_section_background"
-            android:padding="12dp"
-            android:layout_marginBottom="24dp">
-
-            <!-- 头像区域 -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:orientation="vertical"
-                android:layout_marginBottom="20dp">
-
-                <ImageView
-                    android:id="@+id/account_avatar"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:src="@drawable/ic_default_avatar"
-                    android:scaleType="centerCrop"
-                    android:background="@drawable/circle_background"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?attr/selectableItemBackground"
-                    android:padding="8dp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:text="@string/account_tap_change_avatar"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginTop="8dp"/>
-
-            </LinearLayout>
-
-            <!-- 账户ID -->
-            <TextView
-                android:id="@+id/account_id"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/layout_placeholder_account_id"
-                android:textSize="14sp"
-                android:textColor="@color/text_secondary"
-                android:background="@drawable/rounded_background_light"
-                android:padding="8dp"
-                android:layout_marginBottom="40dp"/>
-
-            <!-- 账户昵称 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/rounded_background_light"
-                android:padding="16dp"
-                android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/account_label_nickname"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"/>
-
-                <TextView
-                    android:id="@+id/account_nickname"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="3"
-                    android:text="@string/account_placeholder_nickname"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"/>
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_edit"
-                    android:layout_marginStart="8dp"
-                    android:alpha="0.6"/>
-
-            </LinearLayout>
-
-            <!-- 个性化签名 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/rounded_background_light"
-                android:padding="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/account_label_signature"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_primary"/>
-
-                <TextView
-                    android:id="@+id/account_signature"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="4"
-                    android:text="@string/account_placeholder_signature"
-                    android:textSize="16sp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="end"
-                    android:maxLines="2"
-                    android:ellipsize="end"/>
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_edit"
-                    android:layout_marginStart="8dp"
-                    android:alpha="0.6"/>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- 按钮区域 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- 登录状态下的按钮 -->
-            <Button
-                android:id="@+id/btn_change_password"
+            <LinearLayout
+                android:id="@+id/section_profile"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/account_btn_change_password_label"
-                android:textSize="16sp"
-                android:background="@drawable/button_blue_background"
-                android:textColor="@color/white"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone"/>
+                android:background="@drawable/bg_settings_surface"
+                android:orientation="vertical">
 
-            <Button
-                android:id="@+id/btn_logout"
+                <LinearLayout
+                    android:id="@+id/row_avatar"
+                    style="@style/SettingsValueRow">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/account_label_avatar"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <ImageView
+                        android:id="@+id/row_avatar_preview"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@drawable/bg_profile_avatar"
+                        android:contentDescription="@string/profile_avatar_content_description"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_default_avatar" />
+
+                    <ImageView
+                        style="@style/ProfileMenuRowArrow"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:alpha="0.65"
+                    android:background="@drawable/bg_profile_divider" />
+
+                <LinearLayout
+                    android:id="@+id/row_user_id"
+                    style="@style/SettingsValueRow"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:foreground="@null">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/account_label_user_id"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/row_user_id_value"
+                        style="@style/SettingsNavRowValue"
+                        android:maxWidth="200dp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:alpha="0.65"
+                    android:background="@drawable/bg_profile_divider" />
+
+                <LinearLayout
+                    android:id="@+id/row_nickname"
+                    style="@style/SettingsValueRow">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/account_label_nickname"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/row_nickname_value"
+                        style="@style/SettingsNavRowValue" />
+
+                    <ImageView
+                        style="@style/ProfileMenuRowArrow"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:alpha="0.65"
+                    android:background="@drawable/bg_profile_divider" />
+
+                <LinearLayout
+                    android:id="@+id/row_signature"
+                    style="@style/SettingsValueRow">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/account_label_signature"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/row_signature_value"
+                        style="@style/SettingsNavRowValue"
+                        android:maxWidth="160dp"
+                        android:maxLines="2" />
+
+                    <ImageView
+                        style="@style/ProfileMenuRowArrow"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 将底部操作顶至可视区域下方 -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="24dp" />
+
+            <!-- 登录态：退出 / 切号 1:1 并排 -->
+            <LinearLayout
+                android:id="@+id/section_registered_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/account_btn_logout"
-                android:textSize="16sp"
-                android:background="@drawable/button_gray_background"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone"/>
+                android:orientation="horizontal"
+                android:visibility="gone">
 
-            <Button
-                android:id="@+id/btn_delete_account"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_logout"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="5dp"
+                    android:layout_weight="1"
+                    android:minHeight="48dp"
+                    android:text="@string/account_btn_logout"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/surface_container"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_switch_account"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:minHeight="48dp"
+                    android:text="@string/account_switch_account"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/surface_container"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
+            </LinearLayout>
+
+            <!-- 本地档案：升级 / 登录 -->
+            <LinearLayout
+                android:id="@+id/section_guest_actions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/account_btn_delete_account"
-                android:textSize="16sp"
-                android:background="@drawable/button_red_background"
-                android:textColor="@color/white"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone"/>
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <!-- 未登录状态下的按钮 -->
-            <Button
-                android:id="@+id/btn_register"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/account_btn_register_short"
-                android:textSize="16sp"
-                android:background="@drawable/button_blue_background"
-                android:textColor="@color/white"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_register"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/account_upgrade_to_registered"
+                    android:textAllCaps="false"
+                    android:textColor="@color/on_brand"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/brand"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
 
-            <Button
-                android:id="@+id/btn_login"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/account_btn_login"
-                android:textSize="16sp"
-                android:background="@drawable/button_green_background"
-                android:textColor="@color/white"
-                android:visibility="gone"/>
-
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_login"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="48dp"
+                    android:text="@string/account_login_existing"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:backgroundTint="@color/surface_container"
+                    app:cornerRadius="12dp"
+                    app:elevation="0dp"
+                    app:rippleColor="@color/bottom_nav_ripple" />
+            </LinearLayout>
         </LinearLayout>
-
-    </LinearLayout>
-
-</ScrollView>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

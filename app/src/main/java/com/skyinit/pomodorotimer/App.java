@@ -12,7 +12,6 @@ import com.skyinit.pomodorotimer.util.AppCategoryRulesLoader;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.util.CategoryDefaults;
-import com.skyinit.pomodorotimer.worker.RecurringTaskScheduler;
 
 import android.app.Application;
 import android.os.Handler;
@@ -140,7 +139,7 @@ public class App extends Application {
 
     private void performInitializationOnDisk() {
         database = AppDatabase.getDatabase(this);
-        AccountManager.getInstance(this).ensureDefaultProfileOnDisk();
+        AccountManager.getInstance(this).restoreSessionOnDisk();
         AppContainer.init(this);
         CategoryDefaults.init(this);
         AppCategory.init(this);
@@ -150,9 +149,6 @@ public class App extends Application {
         AppContainer.getInstance(this).getUserSessionRepository().syncFromAccountManager();
         AppContainer.getInstance(this).getUserPomodoroSettingsRepository().warmCacheOnDisk();
 
-        if (!isRobolectricEnvironment()) {
-            RecurringTaskScheduler.schedule(this);
-        }
     }
 
     private synchronized void onInitializationSucceeded() {

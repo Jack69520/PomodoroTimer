@@ -90,6 +90,9 @@ public interface PomodoroSessionDao {
     @Query("SELECT COUNT(*) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1")
     int getTotalCompletedCountForUser(String userId);
 
+    @Query("SELECT COALESCE(SUM(duration), 0) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1")
+    long getTotalCompletedDurationForUser(String userId);
+
     @Query("SELECT SUM(duration) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime")
     long getTotalDurationInRangeForUser(String userId, long startTime, long endTime);
 

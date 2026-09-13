@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.chip.ChipGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/priority_chip_group"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:singleSelection="true"
+    app:selectionRequired="true"
+    app:chipSpacingHorizontal="8dp"
+    app:chipSpacingVertical="8dp">
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_priority_low"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_priority_low"
+        android:checked="true"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_priority_medium"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_priority_medium"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_priority_high"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_priority_high"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_priority_urgent"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_priority_urgent"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+</com.google.android.material.chip.ChipGroup>

@@ -5,9 +5,17 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="@color/shortcut_brand_primary"
+        android:fillColor="@color/brand_shortcut_primary"
         android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M6.5,13.5h2.8v5H6.5z M10.75,6h2.8v12.5H10.75z M15,10h2.8v8.5H15z" />
+        android:fillColor="@color/absolute_white"
+        android:fillAlpha="0.72"
+        android:pathData="M7,13.2h2.4v5.3H7z" />
+    <path
+        android:fillColor="@color/absolute_white"
+        android:pathData="M10.8,7.5h2.4v11H10.8z" />
+    <path
+        android:fillColor="@color/absolute_white"
+        android:fillAlpha="0.88"
+        android:pathData="M14.6,10.5h2.4v8H14.6z" />
 </vector>

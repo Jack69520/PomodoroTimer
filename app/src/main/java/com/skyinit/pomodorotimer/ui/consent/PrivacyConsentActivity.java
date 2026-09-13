@@ -1,13 +1,13 @@
 package com.skyinit.pomodorotimer.ui.consent;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.MainActivity;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.repository.PrivacyConsentRepository;
+import com.skyinit.pomodorotimer.ui.onboarding.FirstRunNavigator;
 import com.skyinit.pomodorotimer.ui.profile.LegalDocumentActivity;
-import com.skyinit.pomodorotimer.util.ShortcutActions;
 
 import android.content.Intent;
+import android.graphics.Outline;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -15,6 +15,7 @@ import android.text.TextPaint;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.view.View;
+import android.view.ViewOutlineProvider;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -43,7 +44,7 @@ public class PrivacyConsentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         if (PrivacyConsentRepository.getInstance(this).hasAccepted()) {
-            navigateToMainAndFinish();
+            FirstRunNavigator.navigateAfterConsent(this, getIntent());
             return;
         }
 
@@ -63,7 +64,8 @@ public class PrivacyConsentActivity extends AppCompatActivity {
             }
             switch (action) {
                 case NAVIGATE_TO_MAIN:
-                    ((App) getApplication()).initializeAfterConsent(this::navigateToMainAndFinish);
+                    ((App) getApplication()).initializeAfterConsent(
+                            () -> FirstRunNavigator.navigateAfterConsent(this, getIntent()));
                     break;
                 case EXIT_APP:
                     exitApp();
@@ -103,6 +105,7 @@ public class PrivacyConsentActivity extends AppCompatActivity {
     private void bindStaticContent() {
         ImageView icon = findViewById(R.id.iv_consent_app_icon);
         icon.setImageResource(R.mipmap.ic_launcher);
+        applyRoundedSquareIconMask(icon);
 
         TextView linkPrivacy = findViewById(R.id.tv_consent_link_privacy);
         TextView linkAgreement = findViewById(R.id.tv_consent_link_agreement);
@@ -112,9 +115,25 @@ public class PrivacyConsentActivity extends AppCompatActivity {
                 LegalDocumentActivity.TYPE_USER_AGREEMENT);
     }
 
+    /**
+     * 主动对应用图标做圆角方形蒙版裁剪（约等于桌面自适应图标外观）。
+     */
+    private void applyRoundedSquareIconMask(@NonNull ImageView icon) {
+        icon.setClipToOutline(true);
+        icon.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, Outline outline) {
+                int size = Math.min(view.getWidth(), view.getHeight());
+                // 圆角半径约为边长 22%，贴近系统圆角方形图标蒙版
+                float radius = size * 0.22f;
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+            }
+        });
+    }
+
     private void setupLegalLink(TextView textView, String label, String documentType) {
         SpannableString spannable = new SpannableString(label);
-        int linkColor = ContextCompat.getColor(this, R.color.primary);
+        int linkColor = ContextCompat.getColor(this, R.color.brand);
         spannable.setSpan(new ClickableSpan() {
             @Override
             public void onClick(@NonNull View widget) {
@@ -134,14 +153,6 @@ public class PrivacyConsentActivity extends AppCompatActivity {
         textView.setText(spannable);
         textView.setMovementMethod(LinkMovementMethod.getInstance());
         textView.setHighlightColor(ContextCompat.getColor(this, android.R.color.transparent));
-    }
-
-    private void navigateToMainAndFinish() {
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        ShortcutActions.copyShortcutAction(getIntent(), mainIntent);
-        startActivity(mainIntent);
-        finish();
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     private void exitApp() {

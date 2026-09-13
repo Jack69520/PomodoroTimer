@@ -70,7 +70,8 @@ public class LoginViewModel extends AndroidViewModel {
                     getApplication().getString(R.string.account_error_user_id_required)));
             return;
         }
-        if (trimmedId.length() != 10) {
+        if (trimmedId.length() != com.skyinit.pomodorotimer.domain.account.UserIdGenerator.USER_ID_LENGTH
+                || !com.skyinit.pomodorotimer.domain.account.UserIdGenerator.isValidFormat(trimmedId)) {
             fieldError.setValue(new FormFieldError(FormFieldError.FIELD_USER_ID,
                     getApplication().getString(R.string.account_error_user_id_length)));
             return;

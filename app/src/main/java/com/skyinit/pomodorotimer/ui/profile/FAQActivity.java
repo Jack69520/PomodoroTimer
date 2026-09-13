@@ -1,7 +1,7 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
 
 import android.animation.ObjectAnimator;
 import android.os.Bundle;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class FAQActivity extends BaseActivity {
+public class FAQActivity extends SubpageActivity {
 
     private static final long ANIM_DURATION_MS = 220L;
 
@@ -40,12 +40,7 @@ public class FAQActivity extends BaseActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_faq);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(getString(R.string.title_faq));
-        }
+        setContentWithSubpageChrome(R.layout.activity_faq, R.string.title_faq);
 
         faqContainer = findViewById(R.id.faq_container);
 
@@ -238,7 +233,7 @@ public class FAQActivity extends BaseActivity {
     private void filterFaq(String query) {
         currentQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         boolean isSearching = !currentQuery.isEmpty();
-        int highlightColor = ContextCompat.getColor(this, R.color.primary);
+        int highlightColor = ContextCompat.getColor(this, R.color.brand);
 
         for (SectionViews sectionViews : sectionViewsList) {
             boolean sectionHasMatch = false;

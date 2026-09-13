@@ -34,7 +34,7 @@ public class TimerViewModel extends ViewModel {
     }
 
     public boolean isLoggedIn() {
-        return sessionRepository.isRegistered();
+        return sessionRepository.isLoggedIn();
     }
 
     public void syncFromService(TimerService service) {
@@ -71,6 +71,11 @@ public class TimerViewModel extends ViewModel {
 
     public boolean shouldShowPauseControls(TimerUiState state) {
         return state != null && state.isStudySession() && (state.running || state.paused);
+    }
+
+    /** 学习进行中且未达暂停上限时可展示暂停按钮。 */
+    public boolean shouldAllowPause(TimerUiState state) {
+        return state != null && state.isStudySession() && state.running && state.canPause;
     }
 
     public boolean shouldShowBreakEndButton(TimerUiState state) {

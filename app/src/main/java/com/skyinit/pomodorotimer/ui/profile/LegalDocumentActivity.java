@@ -1,31 +1,33 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
 
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.widget.TextView;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
-public class LegalDocumentActivity extends BaseActivity {
+public class LegalDocumentActivity extends SubpageActivity {
 
     public static final String EXTRA_DOCUMENT_TYPE = "document_type";
     public static final String TYPE_PRIVACY_POLICY = "privacy_policy";
     public static final String TYPE_USER_AGREEMENT = "user_agreement";
 
+    private static final String ASSET_PRIVACY_POLICY = "legal/privacy_policy.html";
+    private static final String ASSET_USER_AGREEMENT = "legal/user_agreement.html";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_legal_document);
 
         String documentType = getIntent().getStringExtra(EXTRA_DOCUMENT_TYPE);
         if (documentType == null) {
@@ -34,45 +36,53 @@ public class LegalDocumentActivity extends BaseActivity {
         }
 
         int titleRes;
-        String assetFileName;
+        String assetPath;
         if (TYPE_USER_AGREEMENT.equals(documentType)) {
             titleRes = R.string.title_user_agreement;
-            assetFileName = "user_agreement.txt";
+            assetPath = ASSET_USER_AGREEMENT;
         } else {
             titleRes = R.string.title_privacy_policy;
-            assetFileName = "privacy_policy.txt";
+            assetPath = ASSET_PRIVACY_POLICY;
         }
 
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(titleRes));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
-
-        TextView contentView = findViewById(R.id.tv_legal_content);
-        String content = loadAssetText(assetFileName);
-        if (content == null) {
+        if (!assetExists(assetPath)) {
             Toast.makeText(this, R.string.legal_document_load_failed, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        contentView.setText(content);
+
+        setContentWithSubpageChrome(R.layout.activity_legal_document, titleRes);
+        setupWebView(findViewById(R.id.subpage_content), assetPath);
     }
 
-    @Nullable
-    private String loadAssetText(String fileName) {
-        try (InputStream inputStream = getAssets().open(fileName);
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            StringBuilder builder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line).append('\n');
+    private void setupWebView(WebView webView, String assetPath) {
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(false);
+        settings.setDomStorageEnabled(false);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(false);
+        settings.setBlockNetworkLoads(true);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+
+        webView.setBackgroundColor(0);
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // 仅展示本地法律文档，拦截一切外链跳转
+                return true;
             }
-            return builder.toString();
+        });
+        webView.loadUrl("file:///android_asset/" + assetPath);
+    }
+
+    private boolean assetExists(String assetPath) {
+        try (InputStream ignored = getAssets().open(assetPath)) {
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return false;
         }
     }
 

@@ -1,26 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/legal_scroll"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
-    android:clipToPadding="false"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="50dp"
-    android:scrollbars="none">
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tv_legal_content"
+    <include layout="@layout/include_subpage_toolbar" />
+
+    <WebView
+        android:id="@+id/subpage_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="50dp"
-        android:focusable="true"
-        android:lineSpacingExtra="4dp"
-        android:longClickable="true"
-        android:textColor="@color/text_primary"
-        android:textIsSelectable="true"
-        android:textSize="14sp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@android:color/transparent" />
 
-</ScrollView>
+</LinearLayout>

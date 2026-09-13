@@ -63,7 +63,7 @@
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="2dp"
                 android:text="@string/calendar_session_has_notes"
-                android:textColor="@color/primary"
+                android:textColor="@color/brand"
                 android:textSize="10sp"
                 android:visibility="gone" />
 

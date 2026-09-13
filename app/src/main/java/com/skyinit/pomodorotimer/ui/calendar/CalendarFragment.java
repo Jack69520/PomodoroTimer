@@ -275,6 +275,11 @@ public class CalendarFragment extends Fragment {
     }
 
     private void showEmptyStateForDate(Calendar date) {
+        App app = (App) requireActivity().getApplication();
+        if (!app.getContainer().getUserSessionRepository().isLoggedIn()) {
+            applyGuestAuthEmptyState();
+            return;
+        }
         Calendar today = Calendar.getInstance();
         Calendar yesterday = Calendar.getInstance();
         yesterday.add(Calendar.DAY_OF_MONTH, -1);
@@ -302,6 +307,48 @@ public class CalendarFragment extends Fragment {
         }
 
         applyEmptyState(title, message, mode);
+    }
+
+    private void applyGuestAuthEmptyState() {
+        if (sessionsRecyclerView != null) {
+            sessionsRecyclerView.setVisibility(View.GONE);
+        }
+        if (sessionsEmptyLayout != null) {
+            sessionsEmptyLayout.setVisibility(View.VISIBLE);
+        }
+        if (sessionsEmptyTitle != null) {
+            sessionsEmptyTitle.setText(R.string.calendar_guest_title);
+        }
+        if (sessionsEmptyMessage != null) {
+            sessionsEmptyMessage.setText(R.string.calendar_guest_message);
+        }
+        if (quickActionsLayout != null) {
+            quickActionsLayout.setVisibility(View.VISIBLE);
+        }
+        if (totalDurationText != null) {
+            totalDurationText.setText(R.string.calendar_guest_title);
+        }
+        if (totalSessionsText != null) {
+            totalSessionsText.setText("");
+        }
+        startFocusBtn.setVisibility(View.VISIBLE);
+        pickDateBtn.setVisibility(View.VISIBLE);
+        startFocusBtn.setText(R.string.auth_gate_register);
+        startFocusBtn.setOnClickListener(v -> {
+            if (!tryConsumeAction()) {
+                return;
+            }
+            startActivity(new android.content.Intent(requireContext(),
+                    com.skyinit.pomodorotimer.ui.account.RegisterActivity.class));
+        });
+        pickDateBtn.setText(R.string.calendar_empty_action_login);
+        pickDateBtn.setOnClickListener(v -> {
+            if (!tryConsumeAction()) {
+                return;
+            }
+            startActivity(new android.content.Intent(requireContext(),
+                    com.skyinit.pomodorotimer.ui.account.LoginActivity.class));
+        });
     }
 
     /** 按「日」比较，忽略时分秒。 */
@@ -451,10 +498,10 @@ public class CalendarFragment extends Fragment {
             sessionsEmptyMessage.setTextColor(secondaryText);
         }
         if (recordsCountBadge != null) {
-            recordsCountBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
+            recordsCountBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.brand));
         }
         if (backToTodayChip != null) {
-            backToTodayChip.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary));
+            backToTodayChip.setTextColor(ContextCompat.getColor(requireContext(), R.color.brand));
         }
         if (sessionsRecyclerView != null && sessionAdapter != null) {
             sessionAdapter.notifyDataSetChanged();

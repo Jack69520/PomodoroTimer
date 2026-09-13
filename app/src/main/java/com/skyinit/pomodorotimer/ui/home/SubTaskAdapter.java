@@ -56,13 +56,15 @@ public class SubTaskAdapter extends RecyclerView.Adapter<SubTaskAdapter.ViewHold
         holder.checkBox.setChecked(subTask.completed);
         holder.order.setText(String.valueOf(subTask.order + 1));
 
-        // 设置完成状态的样式
+        // 设置完成状态的样式（使用主题色资源，避免硬编码）
         if (subTask.completed) {
             holder.title.setAlpha(0.6f);
-            holder.title.setTextColor(0xFF888888);
+            holder.title.setTextColor(androidx.core.content.ContextCompat.getColor(
+                    holder.itemView.getContext(), R.color.text_secondary));
         } else {
             holder.title.setAlpha(1.0f);
-            holder.title.setTextColor(0xFFFFFFFF);
+            holder.title.setTextColor(androidx.core.content.ContextCompat.getColor(
+                    holder.itemView.getContext(), R.color.text_primary));
         }
 
         holder.checkBox.setOnCheckedChangeListener(null);

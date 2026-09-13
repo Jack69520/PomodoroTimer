@@ -65,6 +65,10 @@ public class HomeTimerUiHelper {
     }
 
     private void showDurationPickerAndStart(TodoItem item, SubTask subTask) {
+        if (!host.getViewModel().isLoggedIn()) {
+            com.skyinit.pomodorotimer.ui.auth.AuthGate.show(host.getFragment().requireActivity());
+            return;
+        }
         TimerService timerService = host.getTimerService();
         if (timerService != null && (timerService.isRunning() || timerService.isPaused())) {
             Toast.makeText(host.getFragment().requireContext(), R.string.home_toast_stop_current_timer, Toast.LENGTH_SHORT).show();

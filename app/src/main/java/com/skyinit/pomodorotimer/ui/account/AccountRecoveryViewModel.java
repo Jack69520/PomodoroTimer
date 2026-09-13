@@ -65,7 +65,8 @@ public class AccountRecoveryViewModel extends AndroidViewModel {
         String trimmedId = userId == null ? "" : userId.trim();
         String trimmedNickname = nickname == null ? "" : nickname.trim();
 
-        if (TextUtils.isEmpty(trimmedId) || trimmedId.length() != 10) {
+        if (TextUtils.isEmpty(trimmedId)
+                || !com.skyinit.pomodorotimer.domain.account.UserIdGenerator.isValidFormat(trimmedId)) {
             fieldError.setValue(new FormFieldError(FormFieldError.FIELD_USER_ID,
                     getApplication().getString(R.string.account_error_user_id_10_digits)));
             return;

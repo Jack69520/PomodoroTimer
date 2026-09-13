@@ -21,11 +21,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.app.ActivityManager;
+import androidx.core.content.ContextCompat;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
@@ -45,12 +48,17 @@ import com.skyinit.pomodorotimer.util.CategoryDefaults;
 import com.skyinit.pomodorotimer.util.FocusDndHelper;
 import com.skyinit.pomodorotimer.data.repository.SessionBlockRecordRepository;
 import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
+import com.skyinit.pomodorotimer.util.LockScreenPresenter;
 import com.skyinit.pomodorotimer.util.PermissionUtils;
 import com.skyinit.pomodorotimer.util.SessionPauseUtils;
+import com.skyinit.pomodorotimer.domain.timer.SessionPhase;
+import com.skyinit.pomodorotimer.domain.timer.SettleDecision;
+import com.skyinit.pomodorotimer.domain.timer.TimerSessionPolicy;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -94,11 +102,10 @@ public class TimerService extends Service {
     public static final String ACTION_PAUSE_TIMEOUT = "PAUSE_TIMEOUT";
     /** Alarm 触发的会话到点完成（进程被杀后的兜底入口）。 */
     public static final String ACTION_SESSION_COMPLETE = "SESSION_COMPLETE";
-    /** 用户确认后从快照恢复计时。 */
+    /** 从快照恢复或评估结算。 */
     public static final String ACTION_RESTORE_SESSION = "RESTORE_SESSION";
-    /** 用户主动结束中断的会话。 */
-    public static final String ACTION_END_INTERRUPTED = "END_INTERRUPTED";
-    public static final String EXTRA_SAVE_RECORD = "save_record";
+    /** 统一评估磁盘快照：未到期恢复，已到期结算。 */
+    public static final String ACTION_EVALUATE_CHECKPOINT = "EVALUATE_CHECKPOINT";
     public static final String ACTION_ACTIVITY_ENDED_BROADCAST = "com.skyinit.pomodorotimer.ACTION_ACTIVITY_ENDED";
     public static final String ACTION_FORCE_FAIL = "FORCE_FAIL";
 
@@ -147,13 +154,20 @@ public class TimerService extends Service {
         if (sessionUserId != null && !sessionUserId.isEmpty()) {
             return sessionUserId;
         }
-        sessionUserId = AccountManager.getInstance(this).requireActiveUserId();
+        String activeUserId = AccountManager.getInstance(this).getCurrentUserId();
+        if (activeUserId == null || activeUserId.isEmpty()) {
+            throw new IllegalStateException("No active registered session");
+        }
+        sessionUserId = activeUserId;
         return sessionUserId;
     }
 
     /** 新轮次开始时绑定会话归属；若内存中残留其他账户 ID 则纠正为当前活跃账户。 */
     private void bindSessionUserForNewSession() {
-        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        String activeUserId = AccountManager.getInstance(this).getCurrentUserId();
+        if (activeUserId == null || activeUserId.isEmpty()) {
+            throw new IllegalStateException("No active registered session");
+        }
         if (sessionUserId == null || sessionUserId.isEmpty()) {
             sessionUserId = activeUserId;
         } else if (!activeUserId.equals(sessionUserId)) {
@@ -170,9 +184,31 @@ public class TimerService extends Service {
     /** 标记是否已从磁盘恢复，避免 onCreate 与 onStartCommand 重复恢复。 */
     private boolean restoredFromCheckpoint;
     /** 防止 Alarm 恢复与 handleSessionCompleteAlarm 重复触发完成逻辑。 */
-    private boolean isCompletingSession;
+    private final AtomicBoolean isCompletingSession = new AtomicBoolean(false);
+    /** Alarm / checkpoint 代际，防止过期触发误结算。 */
+    private int sessionGeneration;
     /** 上次已同步到提醒渠道的铃声 URI，避免重复写渠道。 */
     private String syncedAlertRingtoneUri = "";
+
+    private LockScreenPresenter lockScreenPresenter;
+    private boolean lockScreenReceiverRegistered;
+    private final BroadcastReceiver lockScreenReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent == null || intent.getAction() == null || lockScreenPresenter == null) {
+                return;
+            }
+            String action = intent.getAction();
+            if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                lockScreenPresenter.onScreenOff();
+            } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                lockScreenPresenter.onScreenOn();
+            } else if (Intent.ACTION_USER_UNLOCKED.equals(action)
+                    || Intent.ACTION_USER_PRESENT.equals(action)) {
+                lockScreenPresenter.onUserUnlocked();
+            }
+        }
+    };
 
     /** 需要响铃提醒的计时阶段切换节点。 */
     private enum SessionAlert {
@@ -208,19 +244,20 @@ public class TimerService extends Service {
         pomodoroSettingsRepository = container.getUserPomodoroSettingsRepository();
         sessionBlockRecordRepository = container.getSessionBlockRecordRepository();
         pomodoroSettingsRepository.warmCache();
+        AppExecutors.getInstance().diskIo(() -> {
+            String userId = AccountManager.getInstance(TimerService.this).getCurrentUserId();
+            container.getUserAppBlockingRepository().warmForUser(userId);
+        });
         timeLeftInMillis = timerSettingsRepository.getDefaultStudyTimeMs();
         settingsManager = container.getSettingsManager();
+        lockScreenPresenter = new LockScreenPresenter(this);
         syncAlertChannelSound();
         timerHandler = new Handler(Looper.getMainLooper());
         pauseTimeoutHandler = new Handler(Looper.getMainLooper());
         tickRunnable = this::onTick;
-
-        // 存在快照时暂不自动恢复，等待用户在 MainActivity 弹窗中选择；同时取消旧 Alarm 避免对话框期间误触发
-        if (ActiveSessionStore.hasActiveSession(this)) {
-            TimerAlarmScheduler.cancelAll(this);
-        }
-
+        // 有快照时保留 Alarm，不在此处 cancelAll（否则拆掉进程死后兜底）
         publishState();
+        syncLockScreenPresenter();
     }
 
     private long getDefaultStudyTimeMs() {
@@ -232,8 +269,74 @@ public class TimerService extends Service {
     }
 
     private void publishState() {
+        long pauseRemaining = 0L;
+        if (isPaused && pauseStartElapsedRealtime > 0L) {
+            long pauseElapsed = TimerSessionPolicy.resolvePauseElapsed(
+                    pauseStartElapsedRealtime,
+                    0L,
+                    SystemClock.elapsedRealtime(),
+                    System.currentTimeMillis());
+            pauseRemaining = Math.max(0L, PAUSE_TIMEOUT - pauseElapsed);
+        }
         timerStateRepository.publish(
-                getTimeLeft(), isRunning, isPaused, sessionType, awaitingPostBreakChoice, isLongBreak);
+                getTimeLeft(),
+                isRunning,
+                isPaused,
+                sessionType,
+                awaitingPostBreakChoice,
+                isLongBreak,
+                sessionStartTime,
+                sessionGeneration,
+                pauseRemaining,
+                ExactAlarmPermissionHelperCanSchedule(),
+                canPause());
+        syncLockScreenPresenter();
+    }
+
+    private void syncLockScreenPresenter() {
+        if (lockScreenPresenter == null || timerSettingsRepository == null) {
+            return;
+        }
+        boolean pref = timerSettingsRepository.isLockScreenFullscreenEnabled();
+        boolean eligible = isRunning || isPaused;
+        lockScreenPresenter.updateSession(pref, isRunning, isPaused);
+        if (pref && eligible) {
+            ensureLockScreenReceiverRegistered();
+        } else {
+            unregisterLockScreenReceiver();
+        }
+    }
+
+    private void ensureLockScreenReceiverRegistered() {
+        if (lockScreenReceiverRegistered) {
+            return;
+        }
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            filter.addAction(Intent.ACTION_USER_UNLOCKED);
+        }
+        // 系统广播需 EXPORTED，否则部分机型收不到 USER_PRESENT/USER_UNLOCKED，
+        // 导致长按解锁后 suppress 无法清除、再次亮屏不再全屏展示。
+        ContextCompat.registerReceiver(this, lockScreenReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
+        lockScreenReceiverRegistered = true;
+    }
+
+    private void unregisterLockScreenReceiver() {
+        if (!lockScreenReceiverRegistered) {
+            return;
+        }
+        try {
+            unregisterReceiver(lockScreenReceiver);
+        } catch (Exception ignored) {
+        }
+        lockScreenReceiverRegistered = false;
+    }
+
+    private boolean ExactAlarmPermissionHelperCanSchedule() {
+        return com.skyinit.pomodorotimer.util.ExactAlarmPermissionHelper.canScheduleExactAlarms(this);
     }
 
     @Override
@@ -241,12 +344,32 @@ public class TimerService extends Service {
         // startForegroundService() 要求在约 5 秒内调用 startForeground()，否则系统 ANR
         promoteToForegroundImmediately();
 
+        // 空启动 / START_STICKY：静默恢复未到期会话，到期则交由 Alarm 或此处结算
+        if (intent == null || intent.getAction() == null) {
+            trySilentRestoreOrSettle(-1);
+            downgradeForegroundIfIdle();
+            return START_STICKY;
+        }
+
         if (intent != null) {
             String action = intent.getAction();
+            int alarmGeneration = intent.getIntExtra(TimerAlarmScheduler.EXTRA_GENERATION, -1);
             if (ACTION_START.equals(action)) {
+                if (!AccountManager.getInstance(this).hasActiveSession()) {
+                    AppLog.w(TAG, "Refuse ACTION_START without registered session");
+                    downgradeForegroundIfIdle();
+                    return START_NOT_STICKY;
+                }
+                // 进行中（含暂停）会话禁止被 START 重置，否则会清零 pauseCount，绕过暂停上限
+                if (isRunning || isPaused) {
+                    AppLog.w(TAG, "Ignore ACTION_START while session active"
+                            + " (running=" + isRunning + ", paused=" + isPaused + ")");
+                    startForegroundWithNotification();
+                    return START_STICKY;
+                }
                 awaitingPostBreakChoice = false;
                 long customStudyMs = intent.getLongExtra(EXTRA_STUDY_DURATION_MS, -1L);
-                if (sessionType == 1 && !isRunning && !isPaused && timeLeftInMillis > 0L) {
+                if (sessionType == 1 && timeLeftInMillis > 0L) {
                     isLongBreak = false;
                     timeLeftInMillis = getBreakTimeMs();
                     beginNewSession();
@@ -277,39 +400,71 @@ public class TimerService extends Service {
             } else if (ACTION_FORCE_FAIL.equals(action)) {
                 endSessionDueToLeave();
             } else if (ACTION_PAUSE_TIMEOUT.equals(action)) {
-                handlePauseTimeoutAlarm();
+                handlePauseTimeoutAlarm(alarmGeneration);
             } else if (ACTION_SESSION_COMPLETE.equals(action)) {
-                handleSessionCompleteAlarm();
-            } else if (ACTION_RESTORE_SESSION.equals(action)) {
-                restoreFromCheckpoint();
-            } else if (ACTION_END_INTERRUPTED.equals(action)) {
-                boolean saveRecord = intent.getBooleanExtra(EXTRA_SAVE_RECORD, false);
-                endInterruptedSession(saveRecord);
+                handleSessionCompleteAlarm(alarmGeneration);
+            } else if (ACTION_RESTORE_SESSION.equals(action)
+                    || ACTION_EVALUATE_CHECKPOINT.equals(action)) {
+                trySilentRestoreOrSettle(alarmGeneration);
             }
         }
 
-        // 空闲时降为后台服务，避免常驻无意义的前台通知
+        // 空闲时降为后台服务；暂停态保持轻量 FGS，避免被杀后丢 Handler
         downgradeForegroundIfIdle();
         return START_STICKY;
     }
 
     /**
+     * 静默恢复未到期会话；若已到期则按 1-A 自动结算。
+     */
+    private void trySilentRestoreOrSettle(int alarmGeneration) {
+        if (isRunning || isPaused || awaitingPostBreakChoice || restoredFromCheckpoint) {
+            return;
+        }
+        if (!ActiveSessionStore.hasActiveSession(this)) {
+            return;
+        }
+        ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(this);
+        if (cp == null) {
+            return;
+        }
+        if (cp.running) {
+            long remaining = ActiveSessionStore.computeRemainingMillis(cp);
+            restoreFromCheckpoint();
+            if (remaining <= 0L && isRunning) {
+                timeLeftInMillis = 0L;
+                onTimerComplete();
+            }
+        } else if (cp.paused) {
+            long pauseElapsed = ActiveSessionStore.computePauseElapsedMillis(cp);
+            restoreFromCheckpoint();
+            if (pauseElapsed >= PAUSE_TIMEOUT) {
+                endSessionDueToTimeout();
+            }
+        } else if (cp.awaitingPostBreakChoice) {
+            restoreFromCheckpoint();
+        } else {
+            restoreFromCheckpoint();
+        }
+    }
+
+    /**
      * 立即进入前台状态，满足 startForegroundService 的时限要求。
-     * 空闲/等待用户恢复时使用轻量通知，运行/暂停时使用计时通知。
+     * 空闲时使用轻量通知，运行/暂停时使用计时通知。
      */
     private void promoteToForegroundImmediately() {
         Notification notification;
         if (isRunning || isPaused) {
             notification = createNotification();
         } else if (ActiveSessionStore.hasActiveSession(this)) {
-            notification = createPendingRecoveryNotification();
+            notification = createNotification();
         } else {
             notification = createIdleNotification();
         }
         enterForeground(notification);
     }
 
-    /** 非运行态时降回后台，startForeground 要求已在前序 promote 中满足。 */
+    /** 非运行且非暂停时降回后台。暂停保持 FGS。 */
     private void downgradeForegroundIfIdle() {
         if (!isRunning && !isPaused) {
             stopForeground(STOP_FOREGROUND_DETACH);
@@ -318,23 +473,27 @@ public class TimerService extends Service {
 
     /**
      * 从 ActiveSessionStore 恢复会话。若计时已过期则立即完成；若暂停已超时则判定失败。
-     * 供用户确认继续或 Alarm 兜底时调用。
+     *
+     * @return true 表示已进入活跃态（运行/暂停/待选择）或已触发结算；false 表示无快照或因账户边界丢弃
      */
-    private void restoreFromCheckpoint() {
+    private boolean restoreFromCheckpoint() {
+        if (isRunning || isPaused || awaitingPostBreakChoice) {
+            restoredFromCheckpoint = true;
+            return true;
+        }
         ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(this);
         if (cp == null) {
-            return;
+            return false;
         }
 
-        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
-        if (!cp.belongsToUser(activeUserId)) {
-            AppLog.w(TAG, "Discarding checkpoint for inactive user: " + cp.userId);
+        String activeUserId = AccountManager.getInstance(this).getCurrentUserId();
+        if (activeUserId == null || activeUserId.isEmpty() || !cp.belongsToUser(activeUserId)) {
+            AppLog.w(TAG, "Discarding checkpoint for inactive/mismatched user: " + cp.userId);
             clearCheckpoint();
             resetTimerQuietly();
-            return;
+            return false;
         }
 
-        restoredFromCheckpoint = true;
         sessionUserId = cp.userId;
         sessionType = cp.sessionType;
         isLongBreak = cp.isLongBreak;
@@ -354,85 +513,59 @@ public class TimerService extends Service {
 
         if (cp.running) {
             timerEndElapsedRealtime = cp.timerEndElapsedRealtime;
-            long remaining = timerEndElapsedRealtime - SystemClock.elapsedRealtime();
+            long remaining = ActiveSessionStore.computeRemainingMillis(cp);
+            sessionGeneration = cp.generation;
             if (remaining <= 0L) {
                 // 必须先置为 false，否则 handleSessionCompleteAlarm 会再次调用 onTimerComplete
                 isRunning = false;
                 isPaused = false;
                 timeLeftInMillis = 0L;
+                restoredFromCheckpoint = true;
                 onTimerComplete();
-                return;
+                return true;
             }
             isRunning = true;
             isPaused = false;
             timeLeftInMillis = remaining;
+            // 用当前剩余重建终点（兼容重启后 wall 解析）
+            timerEndElapsedRealtime = SystemClock.elapsedRealtime() + remaining;
+            restoredFromCheckpoint = true;
             startForegroundWithNotification();
             startTimerLoop();
-            TimerAlarmScheduler.scheduleSessionComplete(this, timerEndElapsedRealtime);
             if (sessionType == 0 && isRunning && !isPaused) {
                 maybeStartTimerBlocking();
             }
             notifyStateChanged();
+            return true;
         } else if (cp.paused) {
             isPaused = true;
             isRunning = false;
             timeLeftInMillis = cp.timeLeftInMillis;
             pauseStartElapsedRealtime = cp.pauseStartElapsedRealtime;
-            long pauseElapsed = SystemClock.elapsedRealtime() - pauseStartElapsedRealtime;
+            sessionGeneration = cp.generation;
+            long pauseElapsed = ActiveSessionStore.computePauseElapsedMillis(cp);
+            restoredFromCheckpoint = true;
             if (pauseElapsed >= PAUSE_TIMEOUT) {
                 timerHandler.post(this::endSessionDueToTimeout);
-                return;
+                return true;
             }
+            // 校正暂停起点为“剩余超时”对应的 elapsed
+            pauseStartElapsedRealtime = SystemClock.elapsedRealtime() - pauseElapsed;
             startPauseTimeoutCheck();
-            updateNotification();
+            startForegroundWithNotification();
             notifyStateChanged();
+            return true;
+        } else if (cp.awaitingPostBreakChoice) {
+            sessionGeneration = cp.generation;
+            timeLeftInMillis = cp.timeLeftInMillis > 0L ? cp.timeLeftInMillis : getDefaultStudyTimeMs();
+            restoredFromCheckpoint = true;
+            notifyStateChanged();
+            return true;
         } else {
             clearCheckpoint();
-        }
-    }
-
-    /** 用户选择结束中断会话：按是否保存写入数据库或仅清除快照。 */
-    private void endInterruptedSession(boolean saveRecord) {
-        ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(this);
-        if (cp == null) {
             resetTimerQuietly();
-            return;
+            return false;
         }
-
-        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
-        if (!cp.belongsToUser(activeUserId)) {
-            AppLog.w(TAG, "Rejecting interrupted session for inactive user: " + cp.userId);
-            clearCheckpoint();
-            resetTimerQuietly();
-            return;
-        }
-
-        long elapsed = ActiveSessionStore.computeElapsedMillis(cp);
-        if (saveRecord && cp.sessionType == 0 && elapsed >= ActiveSessionStore.SAVE_ELIGIBLE_MS) {
-            statisticsRepository.recordSession(
-                    cp.userId,
-                    cp.sessionStartTime,
-                    elapsed,
-                    cp.taskId,
-                    cp.subTaskId,
-                    cp.category,
-                    cp.tags,
-                    cp.pauseCount,
-                    SessionPauseUtils.decodeReasons(cp.pauseReasons, null),
-                    true,
-                    null
-            );
-        } else if (cp.sessionType == 0) {
-            sessionBlockRecordRepository.deleteSessionRecords(cp.userId, cp.sessionStartTime);
-        }
-
-        if (cp.sessionType == 0) {
-            stopTimerBlocking();
-            FocusDndHelper.restoreDnd(this);
-        }
-
-        clearCheckpoint();
-        resetTimerQuietly();
     }
 
     /** 结束中断会话后重置为空闲，不触发 stopSelf（保持 Service 绑定）。 */
@@ -457,12 +590,13 @@ public class TimerService extends Service {
 
     /** 全新开始一轮计时（重置暂停次数与会话起点）。 */
     private void beginNewSession() {
-        if (isRunning) {
+        if (isRunning || isPaused) {
             return;
         }
 
         bindSessionUserForNewSession();
         cancelPauseTimeoutCheck();
+        sessionGeneration++;
         isRunning = true;
         isPaused = false;
         pauseCount = 0;
@@ -490,6 +624,7 @@ public class TimerService extends Service {
         }
 
         cancelPauseTimeoutCheck();
+        sessionGeneration++;
         isPaused = false;
         pauseStartElapsedRealtime = 0L;
         isRunning = true;
@@ -509,13 +644,20 @@ public class TimerService extends Service {
         timerEndElapsedRealtime = SystemClock.elapsedRealtime() + timeLeftInMillis;
         timerHandler.removeCallbacks(tickRunnable);
         timerHandler.post(tickRunnable);
-        // Handler tick 之外，Alarm 负责到点兜底
-        TimerAlarmScheduler.scheduleSessionComplete(this, timerEndElapsedRealtime);
+        TimerAlarmScheduler.scheduleSessionComplete(this, timerEndElapsedRealtime, sessionGeneration);
     }
 
+    /** 停 Handler 并取消到点 Alarm（用户主动停止/正常结算时使用）。 */
     private void stopTimerLoop() {
-        timerHandler.removeCallbacks(tickRunnable);
+        stopHandlerTicksOnly();
         TimerAlarmScheduler.cancelSessionComplete(this);
+    }
+
+    /** 仅停 Handler，保留 Alarm（onDestroy 活跃会话时使用）。 */
+    private void stopHandlerTicksOnly() {
+        if (timerHandler != null && tickRunnable != null) {
+            timerHandler.removeCallbacks(tickRunnable);
+        }
     }
 
     private void onTick() {
@@ -538,18 +680,16 @@ public class TimerService extends Service {
     }
 
     private void onTimerComplete() {
-        if (isCompletingSession) {
+        if (!isCompletingSession.compareAndSet(false, true)) {
             AppLog.d(TAG, "Ignoring duplicate onTimerComplete");
             return;
         }
-        isCompletingSession = true;
         try {
             stopTimerLoop();
             isRunning = false;
             isPaused = false;
             cancelPauseTimeoutCheck();
-            clearCheckpoint();
-
+            long settledId = sessionStartTime;
             int completedSessionType = sessionType;
 
             notifyTimerFinish();
@@ -567,15 +707,19 @@ public class TimerService extends Service {
                     incrementTaskCompletedPomodoros(currentTaskId, userId);
                 }
 
+                ActiveSessionStore.markSettledResult(
+                        this, settledId, ActiveSessionStore.RESULT_BREAK_STARTED);
                 prepareAndAutoStartBreak();
             } else {
+                ActiveSessionStore.markSettledResult(
+                        this, settledId, ActiveSessionStore.RESULT_COMPLETED);
                 handleBreakComplete();
             }
             if (!isRunning && !isPaused) {
                 stopForeground(STOP_FOREGROUND_REMOVE);
             }
         } finally {
-            isCompletingSession = false;
+            isCompletingSession.set(false);
         }
     }
 
@@ -653,21 +797,35 @@ public class TimerService extends Service {
     }
 
     /** Alarm 触发的到点完成：Service 被杀或 Doze 期间 Handler 未执行时的兜底。 */
-    private void handleSessionCompleteAlarm() {
+    private void handleSessionCompleteAlarm(int alarmGeneration) {
         if (!restoredFromCheckpoint && ActiveSessionStore.hasActiveSession(this)) {
+            ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(this);
+            if (cp != null && alarmGeneration >= 0 && alarmGeneration != cp.generation) {
+                AppLog.d(TAG, "Ignoring stale session-complete alarm gen=" + alarmGeneration);
+                return;
+            }
             restoreFromCheckpoint();
+        } else if (alarmGeneration >= 0 && alarmGeneration != sessionGeneration) {
+            AppLog.d(TAG, "Ignoring stale in-memory session-complete alarm");
+            return;
         }
         if (!isRunning) {
             return;
         }
         long remaining = timerEndElapsedRealtime - SystemClock.elapsedRealtime();
-        if (remaining <= 0L) {
+        SettleDecision decision = TimerSessionPolicy.decide(
+                sessionType == 1 ? SessionPhase.RUNNING_BREAK : SessionPhase.RUNNING_STUDY,
+                remaining,
+                0L,
+                PAUSE_TIMEOUT,
+                alarmGeneration,
+                sessionGeneration);
+        if (decision == SettleDecision.COMPLETE_RUNNING || remaining <= 0L) {
             AppLog.d(TAG, "Session complete via AlarmManager");
             timeLeftInMillis = 0L;
             onTimerComplete();
-        } else {
-            // 时钟偏差或提前触发：重新注册 Alarm
-            TimerAlarmScheduler.scheduleSessionComplete(this, timerEndElapsedRealtime);
+        } else if (decision == SettleDecision.NONE) {
+            TimerAlarmScheduler.scheduleSessionComplete(this, timerEndElapsedRealtime, sessionGeneration);
         }
     }
 
@@ -741,6 +899,7 @@ public class TimerService extends Service {
         timeLeftInMillis = Math.max(0L, timerEndElapsedRealtime - SystemClock.elapsedRealtime());
         isRunning = false;
         isPaused = true;
+        sessionGeneration++;
         pauseStartElapsedRealtime = SystemClock.elapsedRealtime();
 
         if (recordReason && sessionType == 0 && reason != null && !reason.isEmpty()) {
@@ -753,8 +912,7 @@ public class TimerService extends Service {
         }
 
         startPauseTimeoutCheck();
-        updateNotification();
-        stopForeground(STOP_FOREGROUND_DETACH);
+        startForegroundWithNotification();
         saveCheckpoint();
         notifyStateChanged();
     }
@@ -784,7 +942,8 @@ public class TimerService extends Service {
         pauseTimeoutHandler.postDelayed(pauseTimeoutRunnable, pauseTimeoutRemaining);
         TimerAlarmScheduler.schedulePauseTimeout(
                 this,
-                SystemClock.elapsedRealtime() + pauseTimeoutRemaining
+                SystemClock.elapsedRealtime() + pauseTimeoutRemaining,
+                sessionGeneration
         );
     }
 
@@ -796,9 +955,23 @@ public class TimerService extends Service {
         TimerAlarmScheduler.cancelPauseTimeout(this);
     }
 
-    private void handlePauseTimeoutAlarm() {
+    /** 仅移除暂停超时 Handler，保留 Alarm（onDestroy 用）。 */
+    private void stopPauseTimeoutHandlerOnly() {
+        if (pauseTimeoutHandler != null && pauseTimeoutRunnable != null) {
+            pauseTimeoutHandler.removeCallbacks(pauseTimeoutRunnable);
+        }
+    }
+
+    private void handlePauseTimeoutAlarm(int alarmGeneration) {
         if (!restoredFromCheckpoint && ActiveSessionStore.hasActiveSession(this)) {
+            ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(this);
+            if (cp != null && alarmGeneration >= 0 && alarmGeneration != cp.generation) {
+                AppLog.d(TAG, "Ignoring stale pause-timeout alarm");
+                return;
+            }
             restoreFromCheckpoint();
+        } else if (alarmGeneration >= 0 && alarmGeneration != sessionGeneration) {
+            return;
         }
         if (isPaused && !isRunning && pauseStartElapsedRealtime > 0L) {
             long pauseDuration = SystemClock.elapsedRealtime() - pauseStartElapsedRealtime;
@@ -810,31 +983,40 @@ public class TimerService extends Service {
     }
 
     private void endSessionDueToTimeout() {
-        cancelPauseTimeoutCheck();
-        stopTimerLoop();
-        isRunning = false;
-        isPaused = false;
-        timeLeftInMillis = 0L;
-        clearCheckpoint();
-
-        if (sessionType == 0) {
-            long duration = System.currentTimeMillis() - sessionStartTime;
-            String userId = getSessionUserIdOrActive();
-            List<String> reasons = new ArrayList<>(sessionPauseReasons);
-            String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
-            reasons.add(pauseReasonTimeout);
-            statisticsRepository.recordFailedSession(
-                    userId, sessionStartTime, duration, pauseReasonTimeout, currentTaskId, currentCategory,
-                    Math.max(pauseCount, 1), reasons, null);
-            stopTimerBlocking();
-            FocusDndHelper.restoreDnd(this);
+        if (!isCompletingSession.compareAndSet(false, true)) {
+            return;
         }
+        try {
+            cancelPauseTimeoutCheck();
+            stopTimerLoop();
+            isRunning = false;
+            isPaused = false;
+            timeLeftInMillis = 0L;
+            long settledId = sessionStartTime;
 
-        notifyTimerFinish();
+            if (sessionType == 0) {
+                long duration = System.currentTimeMillis() - sessionStartTime;
+                String userId = getSessionUserIdOrActive();
+                List<String> reasons = new ArrayList<>(sessionPauseReasons);
+                String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
+                reasons.add(pauseReasonTimeout);
+                statisticsRepository.recordFailedSession(
+                        userId, sessionStartTime, duration, pauseReasonTimeout, currentTaskId, currentCategory,
+                        Math.max(pauseCount, 1), reasons, null);
+                stopTimerBlocking();
+                FocusDndHelper.restoreDnd(this);
+            }
 
-        dispatchSessionAlert(SessionAlert.SESSION_FAILED);
-        stopForeground(STOP_FOREGROUND_REMOVE);
-        stopSelf();
+            ActiveSessionStore.markSettledResult(
+                    this, settledId, ActiveSessionStore.RESULT_FAILED_TIMEOUT);
+            notifyTimerFinish();
+
+            dispatchSessionAlert(SessionAlert.SESSION_FAILED);
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+        } finally {
+            isCompletingSession.set(false);
+        }
     }
 
     private void endSessionDueToLeave() {
@@ -954,15 +1136,6 @@ public class TimerService extends Service {
                 .build();
     }
 
-    /** 存在未恢复快照、等待用户在应用内确认时的占位通知。 */
-    private Notification createPendingRecoveryNotification() {
-        return buildBaseNotificationBuilder()
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(getString(R.string.timer_notification_recovery_prompt))
-                .setOngoing(false)
-                .build();
-    }
-
     private NotificationCompat.Builder buildBaseNotificationBuilder() {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -989,6 +1162,8 @@ public class TimerService extends Service {
         ActiveSessionStore.save(
                 this,
                 getSessionUserIdOrActive(),
+                sessionStartTime,
+                sessionGeneration,
                 timerEndElapsedRealtime,
                 getTimeLeft(),
                 isRunning,
@@ -1383,8 +1558,8 @@ public class TimerService extends Service {
 
     private void updateNotification() {
         Notification notification = createNotification();
-        if (isRunning) {
-            // 运行中通过 startForeground 刷新，确保锁屏 Chronometer 持续更新
+        if (isRunning || isPaused) {
+            // 运行/暂停均通过 startForeground 刷新，保持轻量 FGS
             startForegroundWithNotification();
             return;
         }
@@ -1423,6 +1598,7 @@ public class TimerService extends Service {
         manager.cancel(NOTIFICATION_ID_ALERT_BREAK_ENDED);
         manager.cancel(NOTIFICATION_ID_ALERT_STUDY_AUTO_STARTED);
         manager.cancel(NOTIFICATION_ID_ALERT_FAILED);
+        manager.cancel(LockScreenPresenter.NOTIFICATION_ID_LOCK_PRESENT);
     }
 
     @Override
@@ -1434,20 +1610,71 @@ public class TimerService extends Service {
 
     @Override
     public void onDestroy() {
-        if (isRunning || isPaused) {
-            saveCheckpoint();
+        unregisterLockScreenReceiver();
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.teardown();
         }
-        cancelPauseTimeoutCheck();
-        stopTimerLoop();
+        boolean sessionActive = isRunning || isPaused || awaitingPostBreakChoice;
+        if (sessionActive) {
+            saveCheckpoint();
+            // 只停 Handler，保留 Alarm 作为进程死后兜底
+            stopHandlerTicksOnly();
+            stopPauseTimeoutHandlerOnly();
+        } else {
+            cancelPauseTimeoutCheck();
+            stopTimerLoop();
+        }
         listeners.clear();
 
-        // 进行中会话保留通知，便于用户返回
         if (!isRunning && !isPaused) {
             NotificationManagerCompat manager = NotificationManagerCompat.from(this);
             manager.cancel(NOTIFICATION_ID_ONGOING);
             cancelAllAlertNotifications(manager);
         }
         super.onDestroy();
+    }
+
+    /** 普通计时页进入前台（抑制锁屏页强拉回）。 */
+    public void notifyTimerUiResumed() {
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.onNormalTimerUiResumed();
+        }
+    }
+
+    /**
+     * 普通计时页离开前台。
+     * @param dueToConfigChange 配置变更（旋转等）不触发强拉回
+     */
+    public void notifyTimerUiStopped(boolean dueToConfigChange) {
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.onNormalTimerUiStopped(dueToConfigChange);
+        }
+    }
+
+    /** 锁屏专用计时页进入前台。 */
+    public void notifyLockScreenUiResumed() {
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.onLockScreenUiResumed();
+        }
+    }
+
+    /** 锁屏专用计时页离开前台。 */
+    public void notifyLockScreenUiStopped(boolean dueToConfigChange) {
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.onLockScreenUiStopped(dueToConfigChange);
+        }
+    }
+
+    /** 用户在锁屏计时页长按解锁，抑制立即再次强拉回。 */
+    public void notifyUserRequestedUnlock() {
+        if (lockScreenPresenter != null) {
+            lockScreenPresenter.onUserRequestedUnlock();
+        }
+    }
+
+    public boolean isLockScreenFullscreenEnabled() {
+        return timerSettingsRepository != null
+                && timerSettingsRepository.isLockScreenFullscreenEnabled();
     }
 
     @Override
@@ -1476,6 +1703,10 @@ public class TimerService extends Service {
         if (listener != null) {
             addListener(listener);
         }
+    }
+
+    public void publishStateForSync() {
+        publishState();
     }
 
     public boolean isRunning() {
@@ -1551,17 +1782,27 @@ public class TimerService extends Service {
         return currentTaskId;
     }
 
+    /**
+     * 学习阶段挂上计时联动屏蔽源，并把 sessionStartTime 写入拦截服务以便记账。
+     * 「番茄内自动屏蔽」开启时会主动启动屏蔽；「我的」独立屏蔽已在跑时仅挂会话键，
+     * 避免拦了应用却因缺少 SOURCE_TIMER 而不落库。
+     */
     private void maybeStartTimerBlocking() {
         if (sessionType != 0 || isPaused || !isRunning) {
             return;
         }
-        if (!timerSettingsRepository.isAutoBlockDuringPomodoroEnabled()) {
+        if (sessionStartTime <= 0L) {
+            return;
+        }
+        boolean autoBlock = timerSettingsRepository.isAutoBlockDuringPomodoroEnabled();
+        boolean blockingAlreadyRunning = AppBlockingServiceUtils.isServiceRunning(this);
+        boolean standaloneEnabled = AppContainer.getInstance(this)
+                .getUserAppBlockingRepository()
+                .isEnabledForCurrentUser();
+        if (!autoBlock && !blockingAlreadyRunning && !standaloneEnabled) {
             return;
         }
         if (!PermissionUtils.hasAllAppBlockingPermissions(this)) {
-            return;
-        }
-        if (sessionStartTime <= 0L) {
             return;
         }
         AppBlockingServiceUtils.startTimerBlocking(this, sessionStartTime);

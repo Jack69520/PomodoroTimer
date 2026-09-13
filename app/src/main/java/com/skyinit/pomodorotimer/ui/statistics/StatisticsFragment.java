@@ -76,10 +76,15 @@ public class StatisticsFragment extends Fragment {
     private LinearLayout pauseSectionBody;
     private TextView pauseSectionToggle;
     private ProgressBar loadingView;
+    private View statisticsScroll;
+    private View statisticsGuestLayout;
+    private TextView statisticsGuestRegister;
+    private TextView statisticsGuestLogin;
 
     private StatisticsViewModel viewModel;
     private boolean pauseSectionExpanded;
     private boolean categoryDrillDownDialogShowing;
+    private boolean guestMode;
 
     @Nullable
     @Override
@@ -97,9 +102,49 @@ public class StatisticsFragment extends Fragment {
         setupStaticCharts();
         setupPauseSectionToggle();
         observeViewModel();
+        observeAuthGate();
+    }
+
+    private void observeAuthGate() {
+        App app = (App) requireActivity().getApplication();
+        app.getContainer().getUserSessionRepository().getActiveUser()
+                .observe(getViewLifecycleOwner(), user -> applyGuestAuthState(user != null));
+    }
+
+    private void applyGuestAuthState(boolean loggedIn) {
+        if (!isAdded()) {
+            return;
+        }
+        guestMode = !loggedIn;
+        if (statisticsScroll != null) {
+            statisticsScroll.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
+            statisticsScroll.setAlpha(1f);
+        }
+        if (statisticsGuestLayout != null) {
+            statisticsGuestLayout.setVisibility(loggedIn ? View.GONE : View.VISIBLE);
+        }
+        if (loadingView != null && !loggedIn) {
+            loadingView.setVisibility(View.GONE);
+        }
+        if (!loggedIn) {
+            if (statisticsGuestRegister != null) {
+                statisticsGuestRegister.setOnClickListener(v ->
+                        startActivity(new android.content.Intent(requireContext(),
+                                com.skyinit.pomodorotimer.ui.account.RegisterActivity.class)));
+            }
+            if (statisticsGuestLogin != null) {
+                statisticsGuestLogin.setOnClickListener(v ->
+                        startActivity(new android.content.Intent(requireContext(),
+                                com.skyinit.pomodorotimer.ui.account.LoginActivity.class)));
+            }
+        }
     }
 
     private void bindViews(@NonNull View view) {
+        statisticsScroll = view.findViewById(R.id.statistics_scroll);
+        statisticsGuestLayout = view.findViewById(R.id.statistics_guest_layout);
+        statisticsGuestRegister = view.findViewById(R.id.statistics_guest_register);
+        statisticsGuestLogin = view.findViewById(R.id.statistics_guest_login);
         heroTodayDuration = view.findViewById(R.id.hero_today_duration);
         heroTodaySessions = view.findViewById(R.id.hero_today_sessions);
         heroWeekDuration = view.findViewById(R.id.hero_week_duration);
@@ -202,7 +247,8 @@ public class StatisticsFragment extends Fragment {
     private void observeViewModel() {
         viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
             if (loadingView != null) {
-                loadingView.setVisibility(Boolean.TRUE.equals(loading) ? View.VISIBLE : View.GONE);
+                loadingView.setVisibility(
+                        !guestMode && Boolean.TRUE.equals(loading) ? View.VISIBLE : View.GONE);
             }
         });
 
@@ -218,7 +264,7 @@ public class StatisticsFragment extends Fragment {
     }
 
     private void bindDashboard(@Nullable StatisticsDashboard dashboard) {
-        if (dashboard == null || !isAdded()) {
+        if (dashboard == null || !isAdded() || guestMode) {
             return;
         }
         bindHero(dashboard);

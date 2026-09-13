@@ -16,8 +16,9 @@ public final class ColorContrastUtils {
     }
 
     public static int getContrastingTextColor(Context context, int backgroundColor) {
-        int darkCandidate = ContextCompat.getColor(context, R.color.text_primary);
-        int lightCandidate = ContextCompat.getColor(context, R.color.dark_text);
+        // Absolute candidates: must not follow night semantic text flips.
+        int darkCandidate = ContextCompat.getColor(context, R.color.absolute_black);
+        int lightCandidate = ContextCompat.getColor(context, R.color.absolute_white);
 
         double darkContrast = contrastRatio(backgroundColor, darkCandidate);
         double lightContrast = contrastRatio(backgroundColor, lightCandidate);

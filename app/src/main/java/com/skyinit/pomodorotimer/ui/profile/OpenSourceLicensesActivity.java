@@ -1,7 +1,7 @@
 package com.skyinit.pomodorotimer.ui.profile;
 
-import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
 
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -29,7 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-public class OpenSourceLicensesActivity extends BaseActivity {
+public class OpenSourceLicensesActivity extends SubpageActivity {
 
     private static final String APACHE_LICENSE_URL = "https://www.apache.org/licenses/LICENSE-2.0";
 
@@ -112,13 +112,7 @@ public class OpenSourceLicensesActivity extends BaseActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_open_source_licenses);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(R.string.title_open_source_licenses));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+        setContentWithSubpageChrome(R.layout.activity_open_source_licenses, R.string.title_open_source_licenses);
 
         TableLayout table = findViewById(R.id.table_open_source);
         addTableHeader(table);
@@ -192,7 +186,7 @@ public class OpenSourceLicensesActivity extends BaseActivity {
         textView.setGravity(Gravity.CENTER_VERTICAL);
         textView.setMovementMethod(LinkMovementMethod.getInstance());
 
-        int linkColor = ContextCompat.getColor(this, R.color.primary);
+        int linkColor = ContextCompat.getColor(this, R.color.brand);
         SpannableString spannable = new SpannableString(text);
         spannable.setSpan(new NoUnderlineLinkSpan(url, linkColor), 0, text.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

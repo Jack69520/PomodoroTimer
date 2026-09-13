@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- 卡片内输入底：浅/深均用 secondary，避免盖住主题页底 -->
+    <solid android:color="@color/surface_container" />
+    <corners android:radius="12dp" />
+</shape>

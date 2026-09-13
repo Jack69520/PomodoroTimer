@@ -16,6 +16,7 @@ import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -93,10 +94,18 @@ public class CalendarViewModel extends ViewModel {
             date = Calendar.getInstance();
         }
         bindSessionsForDate(date);
-        loadHighlightedDates(date.get(Calendar.YEAR), date.get(Calendar.MONTH));
+        if (sessionRepository.hasActiveProfile()) {
+            loadHighlightedDates(date.get(Calendar.YEAR), date.get(Calendar.MONTH));
+        } else {
+            highlightedDates.setValue(Collections.emptySet());
+        }
     }
 
     public void loadHighlightedDates(int year, int month) {
+        if (!sessionRepository.hasActiveProfile()) {
+            highlightedDates.setValue(Collections.emptySet());
+            return;
+        }
         sessionRepository.loadHighlightedDates(year, month, dates -> highlightedDates.setValue(dates));
     }
 

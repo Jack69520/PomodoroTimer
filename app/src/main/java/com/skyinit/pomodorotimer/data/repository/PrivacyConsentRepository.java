@@ -12,7 +12,8 @@ public final class PrivacyConsentRepository {
     private static final String KEY_ACCEPTED = "privacy_consent_accepted";
     /** 与 assets 中隐私政策版本号一致，政策重大变更时可递增以要求重新同意。 */
     private static final String KEY_POLICY_VERSION = "privacy_consent_policy_version";
-    public static final int CURRENT_POLICY_VERSION = 1;
+    /** 与应用内隐私政策/用户协议重大变更同步递增，触发重新同意。对应文案版本 1.1.0。 */
+    public static final int CURRENT_POLICY_VERSION = 2;
 
     private static volatile PrivacyConsentRepository instance;
 

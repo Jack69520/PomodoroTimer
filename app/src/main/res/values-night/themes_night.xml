@@ -1,19 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Theme.PomodoroTimer" parent="Theme.MaterialComponents.DayNight">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/lilac</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/text_primary</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">@color/background_card</item>
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorPrimaryVariant">@color/brand</item>
+        <item name="colorOnPrimary">@color/on_brand</item>
+        <item name="colorSecondary">@color/brand</item>
+        <item name="colorSecondaryVariant">@color/brand</item>
+        <item name="colorOnSecondary">@color/on_brand</item>
+        <item name="android:statusBarColor">@color/surface_card</item>
         <item name="actionBarStyle">@style/AppActionBar</item>
         <item name="android:actionBarStyle">@style/AppActionBar</item>
-        <item name="android:navigationBarColor" tools:targetApi="l">@color/background_card</item>
+        <item name="android:navigationBarColor" tools:targetApi="l">@color/surface_card</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Pomodoro.MaterialAlertDialog</item>
     </style>
 </resources>

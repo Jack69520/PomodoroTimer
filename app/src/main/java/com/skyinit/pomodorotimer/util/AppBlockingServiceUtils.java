@@ -1,7 +1,7 @@
 package com.skyinit.pomodorotimer.util;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.data.repository.SettingsManager;
+import com.skyinit.pomodorotimer.AppContainer;
 import com.skyinit.pomodorotimer.service.AppBlockingService;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -75,8 +75,9 @@ public final class AppBlockingServiceUtils {
      * 确保「我的」页独立屏蔽开关与前台服务状态一致。
      */
     public static void syncStandaloneServiceStatus(Context context) {
-        SettingsManager settings = new SettingsManager(context);
-        boolean shouldBeEnabled = settings.isAppBlockingEnabled()
+        boolean shouldBeEnabled = AppContainer.getInstance(context)
+                .getUserAppBlockingRepository()
+                .isEnabledForCurrentUser()
                 && PermissionUtils.hasAllAppBlockingPermissions(context);
         boolean isRunning = isServiceRunning(context);
 

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -26,11 +26,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/stats_hero_accent"
-                app:strokeWidth="1dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -135,7 +134,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:textColor="@color/primary"
+                        android:textColor="@color/brand"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -173,9 +172,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -208,8 +208,10 @@
                     <TextView
                         android:id="@+id/monthly_chart_empty_text"
                         android:layout_width="match_parent"
-                        android:layout_height="220dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
+                        android:paddingVertical="20dp"
                         android:text="@string/statistics_empty_month_chart"
                         android:textColor="@color/text_hint"
                         android:textSize="15sp"
@@ -222,9 +224,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -249,8 +252,10 @@
                     <TextView
                         android:id="@+id/week_chart_empty_text"
                         android:layout_width="match_parent"
-                        android:layout_height="180dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
+                        android:paddingVertical="20dp"
                         android:text="@string/statistics_empty_week_chart"
                         android:textColor="@color/text_hint"
                         android:textSize="15sp"
@@ -263,9 +268,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -308,6 +314,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:paddingVertical="12dp"
                         android:text="@string/statistics_insight_empty"
                         android:textColor="@color/text_hint"
                         android:textSize="13sp"
@@ -320,9 +328,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -355,8 +364,10 @@
                     <TextView
                         android:id="@+id/category_chart_empty_text"
                         android:layout_width="match_parent"
-                        android:layout_height="240dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
+                        android:paddingVertical="20dp"
                         android:text="@string/statistics_category_empty"
                         android:textColor="@color/text_hint"
                         android:textSize="15sp"
@@ -369,9 +380,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -396,8 +408,10 @@
                     <TextView
                         android:id="@+id/hourly_distribution_empty_text"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
+                        android:paddingVertical="20dp"
                         android:text="@string/statistics_empty_hourly"
                         android:textColor="@color/text_hint"
                         android:textSize="15sp"
@@ -410,9 +424,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="@color/surface_card"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -444,7 +459,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/statistics_pause_section_expand"
-                            android:textColor="@color/primary"
+                            android:textColor="@color/brand"
                             android:textSize="13sp" />
                     </LinearLayout>
 
@@ -464,8 +479,10 @@
                         <TextView
                             android:id="@+id/pause_reason_chart_empty_text"
                             android:layout_width="match_parent"
-                            android:layout_height="120dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
                             android:gravity="center"
+                            android:paddingVertical="20dp"
                             android:text="@string/statistics_pause_reason_empty"
                             android:textColor="@color/text_hint"
                             android:textSize="15sp"
@@ -475,6 +492,92 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <LinearLayout
+        android:id="@+id/statistics_guest_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="32dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/bg_calendar_empty_icon">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_statistics"
+                app:tint="@color/brand" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/statistics_guest_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/statistics_guest_title"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/statistics_guest_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:lineSpacingExtra="3dp"
+            android:text="@string/statistics_guest_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/statistics_guest_register"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_calendar_primary_btn"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="@string/auth_gate_register"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/statistics_guest_login"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_calendar_secondary_btn"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:maxLines="1"
+                android:text="@string/calendar_empty_action_login"
+                android:textColor="@color/brand"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
 
     <ProgressBar
         android:id="@+id/statistics_loading"

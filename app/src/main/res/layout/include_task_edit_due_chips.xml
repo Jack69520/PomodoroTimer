@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.chip.ChipGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/due_chip_group"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:singleSelection="true"
+    app:selectionRequired="true"
+    app:chipSpacingHorizontal="8dp"
+    app:chipSpacingVertical="8dp">
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_due_none"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_due_none"
+        android:checked="true"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_due_today"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/todo_due_today"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_due_tomorrow"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/todo_due_tomorrow"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chip_due_pick"
+        style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/task_due_pick"
+        app:checkedIconVisible="false"
+        app:chipMinHeight="36dp" />
+</com.google.android.material.chip.ChipGroup>

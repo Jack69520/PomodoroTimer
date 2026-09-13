@@ -78,9 +78,9 @@ public class CalendarDayCellView extends View {
         float cx = getWidth() * 0.5f;
         float cy = getHeight() * 0.5f;
 
-        int primary = ContextCompat.getColor(getContext(), R.color.primary);
+        int primary = ContextCompat.getColor(getContext(), R.color.brand);
         int textPrimary = ContextCompat.getColor(getContext(), R.color.text_primary);
-        int onPrimary = ContextCompat.getColor(getContext(), R.color.white);
+        int onPrimary = ContextCompat.getColor(getContext(), R.color.on_brand);
 
         if (selected) {
             fillPaint.setColor(primary);

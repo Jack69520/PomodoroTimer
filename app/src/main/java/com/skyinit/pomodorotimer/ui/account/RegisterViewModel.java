@@ -31,11 +31,8 @@ public class RegisterViewModel extends AndroidViewModel {
                              UserSessionRepository sessionRepository) {
         super(application);
         this.sessionRepository = sessionRepository;
-        if (sessionRepository.isLocalProfile()) {
-            User user = sessionRepository.getCurrentUser();
-            if (user != null) {
-                initialNickname.setValue(user.nickname);
-            }
+        if (sessionRepository.isLoggedIn()) {
+            // 已登录不可直接注册；Activity 层会拦截。此处不预填昵称。
         }
     }
 
@@ -61,6 +58,10 @@ public class RegisterViewModel extends AndroidViewModel {
 
     public void register(String nickname, String password, String confirmPassword, String signature) {
         if (Boolean.TRUE.equals(loading.getValue())) {
+            return;
+        }
+        if (sessionRepository.isLoggedIn()) {
+            toastMessage.setValue(getApplication().getString(R.string.account_error_logout_before_register));
             return;
         }
 
@@ -97,7 +98,7 @@ public class RegisterViewModel extends AndroidViewModel {
                     public void onSuccess(User user) {
                         loading.setValue(false);
                         toastMessage.setValue(getApplication().getString(
-                                R.string.account_upgrade_success, user.userId));
+                                R.string.account_register_success, user.userId));
                         registerSuccess.call();
                     }
 

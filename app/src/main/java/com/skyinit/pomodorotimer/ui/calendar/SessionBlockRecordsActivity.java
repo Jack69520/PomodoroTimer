@@ -12,9 +12,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.BaseActivity;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.SessionAppBlockRecord;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import java.util.Locale;
 /**
  * 单次番茄计时的应用拦截记录详情页。
  */
-public class SessionBlockRecordsActivity extends BaseActivity {
+public class SessionBlockRecordsActivity extends SubpageActivity {
 
     public static final String EXTRA_SESSION_START_TIME = "extra_session_start_time";
     public static final String EXTRA_SESSION_END_TIME = "extra_session_end_time";
@@ -42,9 +42,9 @@ public class SessionBlockRecordsActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_session_block_records);
+        setContentWithSubpageChrome(R.layout.activity_session_block_records,
+                R.string.session_block_records_title);
 
-        setupToolbar();
         initViews();
 
         long sessionStartTime = getIntent().getLongExtra(EXTRA_SESSION_START_TIME, 0L);
@@ -97,14 +97,6 @@ public class SessionBlockRecordsActivity extends BaseActivity {
                 finish();
             }
         });
-    }
-
-    private void setupToolbar() {
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(R.string.session_block_records_title);
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
     }
 
     private void initViews() {

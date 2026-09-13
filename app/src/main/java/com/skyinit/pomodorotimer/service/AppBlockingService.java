@@ -5,6 +5,7 @@ import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.data.dao.BlockedAppDao;
 import com.skyinit.pomodorotimer.data.entity.BlockedApp;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
+import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.SessionBlockRecordRepository;
 import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.AppExecutors;
@@ -182,7 +183,7 @@ public class AppBlockingService extends Service {
     }
 
     private void ensureMonitoringStarted() {
-        String activeUserId = AccountManager.getInstance(this).requireActiveUserId();
+        String activeUserId = AccountManager.getInstance(this).getCurrentUserId();
         if (activeUserId == null || activeUserId.isEmpty()) {
             AppLog.w(TAG, "Cannot start blocking without active user");
             standaloneBlockingActive = false;
@@ -483,16 +484,48 @@ public class AppBlockingService extends Service {
     }
 
     private void recordBlockEventIfNeeded(String packageName, String appName, long blockTime) {
-        if (!timerBlockingActive || timerSessionStartTime <= 0L) {
+        long sessionStart = resolveSessionStartForRecording();
+        if (sessionStart <= 0L) {
             return;
         }
         String userId = blockingUserId;
         if (userId == null || userId.isEmpty()) {
             return;
         }
-        final long sessionStart = timerSessionStartTime;
+        final long sessionStartFinal = sessionStart;
         AppExecutors.getInstance().diskIo(() ->
-                blockRecordRepository.recordBlockSync(userId, sessionStart, packageName, appName, blockTime));
+                blockRecordRepository.recordBlockSync(
+                        userId, sessionStartFinal, packageName, appName, blockTime));
+    }
+
+    /**
+     * 优先使用计时联动挂上的 sessionStartTime；若独立屏蔽期间正处于学习专注，
+     * 则从 ActiveSessionStore 兜底解析，避免漏记拦截。
+     */
+    private long resolveSessionStartForRecording() {
+        if (timerBlockingActive && timerSessionStartTime > 0L) {
+            return timerSessionStartTime;
+        }
+        try {
+            ActiveSessionStore.Checkpoint checkpoint = ActiveSessionStore.load(this);
+            if (checkpoint == null
+                    || !checkpoint.running
+                    || checkpoint.paused
+                    || checkpoint.sessionType != 0
+                    || checkpoint.sessionStartTime <= 0L) {
+                return 0L;
+            }
+            if (blockingUserId != null
+                    && !blockingUserId.isEmpty()
+                    && checkpoint.userId != null
+                    && !blockingUserId.equals(checkpoint.userId)) {
+                return 0L;
+            }
+            return checkpoint.sessionStartTime;
+        } catch (Exception e) {
+            AppLog.w(TAG, "Failed to resolve session start for block record", e);
+            return 0L;
+        }
     }
 
     private void showBlockingNotification(String appName) {

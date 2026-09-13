@@ -12,11 +12,13 @@ import com.skyinit.pomodorotimer.util.ExactAlarmPermissionHelper;
 
 /**
  * 统一管理计时器相关 Alarm，作为 Handler tick 的兜底。
- * 使用 BroadcastReceiver 触发，避免 Android 12+ 后台直接 startService 受限。
+ * Intent 携带 generation，防止过期代际误结算。
  */
 public final class TimerAlarmScheduler {
 
     private static final String TAG = "TimerAlarmScheduler";
+
+    public static final String EXTRA_GENERATION = "alarm_generation";
 
     static final int REQUEST_SESSION_COMPLETE = 2002;
     static final int REQUEST_PAUSE_TIMEOUT = 2001;
@@ -25,22 +27,24 @@ public final class TimerAlarmScheduler {
     }
 
     /** 注册会话到点 Alarm（elapsedRealtime 绝对触发时刻）。 */
-    public static void scheduleSessionComplete(Context context, long triggerElapsedRealtime) {
+    public static void scheduleSessionComplete(Context context, long triggerElapsedRealtime, int generation) {
         scheduleExactElapsed(
                 context,
                 TimerService.ACTION_SESSION_COMPLETE,
                 REQUEST_SESSION_COMPLETE,
-                triggerElapsedRealtime
+                triggerElapsedRealtime,
+                generation
         );
     }
 
     /** 注册暂停超时 Alarm（elapsedRealtime 绝对触发时刻）。 */
-    public static void schedulePauseTimeout(Context context, long triggerElapsedRealtime) {
+    public static void schedulePauseTimeout(Context context, long triggerElapsedRealtime, int generation) {
         scheduleExactElapsed(
                 context,
                 TimerService.ACTION_PAUSE_TIMEOUT,
                 REQUEST_PAUSE_TIMEOUT,
-                triggerElapsedRealtime
+                triggerElapsedRealtime,
+                generation
         );
     }
 
@@ -52,7 +56,7 @@ public final class TimerAlarmScheduler {
         cancel(context, TimerService.ACTION_PAUSE_TIMEOUT, REQUEST_PAUSE_TIMEOUT);
     }
 
-    /** 会话结束或重置时取消全部计时 Alarm。 */
+    /** 会话真正结束或重置时取消全部计时 Alarm。 */
     public static void cancelAll(Context context) {
         cancelSessionComplete(context);
         cancelPauseTimeout(context);
@@ -61,13 +65,14 @@ public final class TimerAlarmScheduler {
     private static void scheduleExactElapsed(Context context,
                                              String action,
                                              int requestCode,
-                                             long triggerElapsedRealtime) {
+                                             long triggerElapsedRealtime,
+                                             int generation) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) {
             return;
         }
 
-        PendingIntent pendingIntent = buildAlarmPendingIntent(context, action, requestCode);
+        PendingIntent pendingIntent = buildAlarmPendingIntent(context, action, requestCode, generation);
         long safeTrigger = Math.max(triggerElapsedRealtime, SystemClock.elapsedRealtime() + 1000L);
 
         try {
@@ -82,7 +87,6 @@ public final class TimerAlarmScheduler {
                     alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, safeTrigger, pendingIntent);
                 }
             } else {
-                // 无精确闹钟权限时降级，精度下降但仍有兜底
                 AppLog.w(TAG, "Exact alarm not granted, falling back to inexact alarm for " + action);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setAndAllowWhileIdle(
@@ -104,12 +108,17 @@ public final class TimerAlarmScheduler {
         if (alarmManager == null) {
             return;
         }
-        alarmManager.cancel(buildAlarmPendingIntent(context, action, requestCode));
+        // FLAG_NO_CREATE：取消时 generation 无关，用 UPDATE 重建同 requestCode 即可
+        alarmManager.cancel(buildAlarmPendingIntent(context, action, requestCode, 0));
     }
 
-    private static PendingIntent buildAlarmPendingIntent(Context context, String action, int requestCode) {
+    private static PendingIntent buildAlarmPendingIntent(Context context,
+                                                         String action,
+                                                         int requestCode,
+                                                         int generation) {
         Intent intent = new Intent(context, TimerAlarmReceiver.class);
         intent.setAction(action);
+        intent.putExtra(EXTRA_GENERATION, generation);
         return PendingIntent.getBroadcast(
                 context,
                 requestCode,

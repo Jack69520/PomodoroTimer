@@ -4,6 +4,7 @@ import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.SubTask;
 import com.skyinit.pomodorotimer.util.AppLog;
 
+import android.graphics.Paint;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -19,16 +21,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 待办集编辑页子任务列表：勾选 / 改番茄 / 显式删除。
+ */
 public class SubTaskEditAdapter extends RecyclerView.Adapter<SubTaskEditAdapter.ViewHolder> {
 
     public interface Listener {
         void onSubTaskToggle(SubTask subTask, boolean completed);
+
         void onSubTaskDelete(SubTask subTask);
+
         void onSubTaskPomodorosChanged(SubTask subTask, int estimatedPomodoros);
     }
 
     private List<SubTask> subTaskList = new ArrayList<>();
-    private Listener listener;
+    private final Listener listener;
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView order;
@@ -36,6 +43,7 @@ public class SubTaskEditAdapter extends RecyclerView.Adapter<SubTaskEditAdapter.
         TextView title;
         EditText estimatedPomodoros;
         TextView pomodoroProgress;
+        ImageButton deleteButton;
 
         ViewHolder(View view) {
             super(view);
@@ -44,6 +52,7 @@ public class SubTaskEditAdapter extends RecyclerView.Adapter<SubTaskEditAdapter.
             title = view.findViewById(R.id.subtask_title);
             estimatedPomodoros = view.findViewById(R.id.subtask_estimated_pomodoros);
             pomodoroProgress = view.findViewById(R.id.subtask_pomodoro_progress);
+            deleteButton = view.findViewById(R.id.btn_delete_subtask);
         }
     }
 
@@ -74,9 +83,11 @@ public class SubTaskEditAdapter extends RecyclerView.Adapter<SubTaskEditAdapter.
         });
 
         if (subTask.completed) {
-            holder.title.setAlpha(0.6f);
+            holder.title.setAlpha(0.55f);
+            holder.title.setPaintFlags(holder.title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
             holder.title.setAlpha(1.0f);
+            holder.title.setPaintFlags(holder.title.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
         }
 
         holder.estimatedPomodoros.setOnFocusChangeListener(null);
@@ -115,11 +126,10 @@ public class SubTaskEditAdapter extends RecyclerView.Adapter<SubTaskEditAdapter.
         holder.pomodoroProgress.setText(
                 holder.itemView.getContext().getString(R.string.task_pomodoro_progress, completed, estimated));
 
-        holder.itemView.setOnLongClickListener(v -> {
+        holder.deleteButton.setOnClickListener(v -> {
             if (listener != null) {
                 listener.onSubTaskDelete(subTask);
             }
-            return true;
         });
     }
 

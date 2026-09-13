@@ -1,48 +1,53 @@
 package com.skyinit.pomodorotimer.ui.account;
 
 import com.skyinit.pomodorotimer.App;
-import com.skyinit.pomodorotimer.BaseActivity;
-import com.skyinit.pomodorotimer.data.model.FormFieldError;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.model.FormFieldError;
+import com.skyinit.pomodorotimer.ui.SubpageActivity;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.text.method.HideReturnsTransformationMethod;
-import android.text.method.PasswordTransformationMethod;
+
 import androidx.lifecycle.ViewModelProvider;
 
-public class RegisterActivity extends BaseActivity {
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
+
+public class RegisterActivity extends SubpageActivity {
     private RegisterViewModel viewModel;
 
-    private EditText etNickname;
-    private EditText etPassword;
-    private ImageView ivPasswordToggle;
-    private EditText etConfirmPassword;
-    private ImageView ivConfirmPasswordToggle;
-    private EditText etSignature;
-    private Button btnRegister;
-    private TextView tvGoLogin;
-
-    private boolean isPasswordVisible = false;
-    private boolean isConfirmPasswordVisible = false;
+    private TextInputLayout tilNickname;
+    private TextInputLayout tilPassword;
+    private TextInputLayout tilConfirmPassword;
+    private TextInputEditText etNickname;
+    private TextInputEditText etPassword;
+    private TextInputEditText etConfirmPassword;
+    private TextInputEditText etSignature;
+    private MaterialButton btnRegister;
+    private MaterialButton tvGoLogin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_register);
-
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle(getString(R.string.title_register));
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowHomeEnabled(true);
-        }
+        setContentWithSubpageChrome(R.layout.activity_register, R.string.title_register);
 
         App app = (App) getApplication();
+        if (app.getContainer().getUserSessionRepository().isLoggedIn()) {
+            ModernPromptDialog.builder(this)
+                    .icon(R.drawable.ic_lock)
+                    .accent(ModernPromptDialog.Accent.BRAND)
+                    .title(R.string.auth_gate_title)
+                    .message(R.string.account_error_logout_before_register)
+                    .primary(R.string.confirm, this::finish)
+                    .cancelable(true)
+                    .show()
+                    .setOnCancelListener(d -> finish());
+            return;
+        }
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
                 .get(RegisterViewModel.class);
 
@@ -52,11 +57,12 @@ public class RegisterActivity extends BaseActivity {
     }
 
     private void initViews() {
+        tilNickname = findViewById(R.id.til_nickname);
+        tilPassword = findViewById(R.id.til_password);
+        tilConfirmPassword = findViewById(R.id.til_confirm_password);
         etNickname = findViewById(R.id.et_nickname);
         etPassword = findViewById(R.id.et_password);
-        ivPasswordToggle = findViewById(R.id.iv_password_toggle);
         etConfirmPassword = findViewById(R.id.et_confirm_password);
-        ivConfirmPasswordToggle = findViewById(R.id.iv_confirm_password_toggle);
         etSignature = findViewById(R.id.et_signature);
         btnRegister = findViewById(R.id.btn_register);
         tvGoLogin = findViewById(R.id.tv_go_login);
@@ -64,7 +70,7 @@ public class RegisterActivity extends BaseActivity {
 
     private void observeViewModel() {
         viewModel.getInitialNickname().observe(this, nickname -> {
-            if (nickname != null && etNickname.getText().length() == 0) {
+            if (nickname != null && etNickname.getText() != null && etNickname.getText().length() == 0) {
                 etNickname.setText(nickname);
             }
         });
@@ -88,17 +94,18 @@ public class RegisterActivity extends BaseActivity {
         if (error == null) {
             return;
         }
+        clearFieldErrors();
         switch (error.field) {
             case FormFieldError.FIELD_NICKNAME:
-                etNickname.setError(error.message);
+                tilNickname.setError(error.message);
                 etNickname.requestFocus();
                 break;
             case FormFieldError.FIELD_PASSWORD:
-                etPassword.setError(error.message);
+                tilPassword.setError(error.message);
                 etPassword.requestFocus();
                 break;
             case FormFieldError.FIELD_CONFIRM_PASSWORD:
-                etConfirmPassword.setError(error.message);
+                tilConfirmPassword.setError(error.message);
                 etConfirmPassword.requestFocus();
                 break;
             default:
@@ -106,18 +113,28 @@ public class RegisterActivity extends BaseActivity {
         }
     }
 
+    private void clearFieldErrors() {
+        tilNickname.setError(null);
+        tilPassword.setError(null);
+        tilConfirmPassword.setError(null);
+    }
+
     private void setupClickListeners() {
-        btnRegister.setOnClickListener(v -> viewModel.register(
-                etNickname.getText().toString(),
-                etPassword.getText().toString(),
-                etConfirmPassword.getText().toString(),
-                etSignature.getText().toString()));
+        btnRegister.setOnClickListener(v -> {
+            clearFieldErrors();
+            viewModel.register(
+                    textOf(etNickname),
+                    textOf(etPassword),
+                    textOf(etConfirmPassword),
+                    textOf(etSignature));
+        });
 
         tvGoLogin.setOnClickListener(v ->
                 startActivity(new Intent(this, LoginActivity.class)));
+    }
 
-        ivPasswordToggle.setOnClickListener(v -> togglePasswordVisibility());
-        ivConfirmPasswordToggle.setOnClickListener(v -> toggleConfirmPasswordVisibility());
+    private static String textOf(TextInputEditText editText) {
+        return editText.getText() != null ? editText.getText().toString() : "";
     }
 
     @Override
@@ -127,33 +144,5 @@ public class RegisterActivity extends BaseActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void togglePasswordVisibility() {
-        if (isPasswordVisible) {
-            etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
-            ivPasswordToggle.setImageResource(R.drawable.ic_eye_off);
-            isPasswordVisible = false;
-        } else {
-            etPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-            ivPasswordToggle.setImageResource(R.drawable.ic_eye_on);
-            isPasswordVisible = true;
-        }
-
-        etPassword.setSelection(etPassword.getText().length());
-    }
-
-    private void toggleConfirmPasswordVisibility() {
-        if (isConfirmPasswordVisible) {
-            etConfirmPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
-            ivConfirmPasswordToggle.setImageResource(R.drawable.ic_eye_off);
-            isConfirmPasswordVisible = false;
-        } else {
-            etConfirmPassword.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-            ivConfirmPasswordToggle.setImageResource(R.drawable.ic_eye_on);
-            isConfirmPasswordVisible = true;
-        }
-
-        etConfirmPassword.setSelection(etConfirmPassword.getText().length());
     }
 }
