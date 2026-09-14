@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 
 import androidx.annotation.MainThread;
@@ -23,8 +24,10 @@ import com.skyinit.pomodorotimer.ui.home.LockScreenTimerActivity;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 锁屏全屏计时强拉回调度：混合亮屏（不在 SCREEN_OFF 唤醒）、
- * suppressUntilUnlocked 防解锁竞态、独立 FSI 通知（不改动 ongoing Chronometer）。
+ * 锁屏全屏计时强拉回调度。
+ * <p>
+ * 混合亮屏：不计时主动灭屏后不强行唤醒；仅在用户再次亮屏且处于锁屏时展示。
+ * present 入口以 {@link #onScreenOn()} 为主，灭屏导致的 Activity stop 不得 tryPresent。
  */
 public final class LockScreenPresenter {
 
@@ -42,6 +45,8 @@ public final class LockScreenPresenter {
     private final AtomicBoolean presentInFlight = new AtomicBoolean(false);
     private final AtomicBoolean normalTimerUiResumed = new AtomicBoolean(false);
     private final AtomicBoolean lockScreenUiResumed = new AtomicBoolean(false);
+    /** 最近一次收到 SCREEN_OFF 且尚未 SCREEN_ON；用于挡住灭屏引发的 stop→present。 */
+    private final AtomicBoolean screenOff = new AtomicBoolean(false);
 
     private volatile boolean preferenceEnabled;
     private volatile boolean sessionEligible;
@@ -64,7 +69,7 @@ public final class LockScreenPresenter {
             wasEligible = false;
             return;
         }
-        // 仅在「变为可展示」且当前无任何计时 UI 在前台时拉起
+        // 会话刚变为可展示：仅屏亮着时尝试；熄屏中交给后续 SCREEN_ON
         if (!wasEligible && !isAnyTimerUiResumed()) {
             tryPresent("session_became_eligible");
         }
@@ -84,9 +89,8 @@ public final class LockScreenPresenter {
         if (dueToConfigChange) {
             return;
         }
-        if (shouldPresent()) {
-            tryPresent("normal_ui_stopped");
-        }
+        // 用户离开普通计时页：仅在屏已亮且锁屏时强拉回；灭屏中不拉起（避免唤醒）
+        tryPresent("normal_ui_stopped");
     }
 
     @MainThread
@@ -99,13 +103,8 @@ public final class LockScreenPresenter {
     @MainThread
     public void onLockScreenUiStopped(boolean dueToConfigChange) {
         lockScreenUiResumed.set(false);
-        if (dueToConfigChange) {
-            return;
-        }
-        // 长按解锁后的 stop 不应立刻再拉起（由 suppressUntilUnlocked 拦截）
-        if (shouldPresent()) {
-            tryPresent("lock_ui_stopped");
-        }
+        // 灭屏 / 长按解锁 / 其它原因导致 stop：一律不在此处 present。
+        // 重新展示只走 onScreenOn（混合亮屏硬约束）。
     }
 
     @MainThread
@@ -121,24 +120,27 @@ public final class LockScreenPresenter {
     }
 
     /**
-     * 用户灭屏后再次点亮：若已处于锁屏，开启新一轮展示（清除长按解锁抑制）。
-     * 不强行在 SCREEN_OFF 唤醒。
+     * 用户主动亮屏：若处于锁屏则展示锁屏计时页（唯一主入口）。
      */
     @MainThread
     public void onScreenOn() {
+        screenOff.set(false);
         if (isKeyguardLocked()) {
-            // 再次进入锁屏亮屏周期：允许重新全屏展示
-            // （USER_UNLOCKED/PRESENT 在部分机型上可能收不到，不能只依赖它们清 suppress）
+            // USER_UNLOCKED/PRESENT 在部分机型可能收不到，亮屏+锁屏时清除抑制
             suppressUntilUnlocked.set(false);
         }
         tryPresent("screen_on");
     }
 
-    /** 灭屏：结束当前展示抑制，下一轮亮屏+锁屏可再展示。 */
+    /**
+     * 用户主动灭屏：禁止任何 present / 唤醒；清抑制与防抖，供下次亮屏使用。
+     */
     @MainThread
     public void onScreenOff() {
-        // 不在此处 tryPresent；仅清除抑制与防抖，避免长按解锁后同屏立刻盖回，
-        // 同时保证「解锁 → 再灭屏 → 再亮屏」不被 1.5s debounce 误伤。
+        screenOff.set(true);
+        presentInFlight.set(false);
+        cancelPresentNotification();
+        // 不在此处 tryPresent（混合策略：灭屏不强唤醒）
         suppressUntilUnlocked.set(false);
         lastPresentAtMs = 0L;
     }
@@ -152,6 +154,7 @@ public final class LockScreenPresenter {
         presentInFlight.set(false);
         normalTimerUiResumed.set(false);
         lockScreenUiResumed.set(false);
+        screenOff.set(false);
         cancelPresentNotification();
         mainHandler.removeCallbacksAndMessages(null);
     }
@@ -200,6 +203,7 @@ public final class LockScreenPresenter {
             return;
         }
 
+        // FSI 仅在屏已亮的路径作为降级；熄屏中 shouldPresent 已为 false，不会走到这里唤醒屏幕
         if (LockScreenTimerGate.canUseFullScreenIntent(appContext)
                 && LockScreenTimerGate.hasNotificationPermission(appContext)) {
             fireFullScreenIntentNotification();
@@ -211,15 +215,26 @@ public final class LockScreenPresenter {
     }
 
     private boolean shouldPresent() {
-        return preferenceEnabled
-                && sessionEligible
-                && !suppressUntilUnlocked.get()
-                && isKeyguardLocked();
+        if (!preferenceEnabled || !sessionEligible) {
+            return false;
+        }
+        if (suppressUntilUnlocked.get()) {
+            return false;
+        }
+        if (screenOff.get() || !isScreenInteractive()) {
+            return false;
+        }
+        return isKeyguardLocked();
     }
 
     private boolean isKeyguardLocked() {
         KeyguardManager km = (KeyguardManager) appContext.getSystemService(Context.KEYGUARD_SERVICE);
         return km != null && km.isKeyguardLocked();
+    }
+
+    private boolean isScreenInteractive() {
+        PowerManager pm = (PowerManager) appContext.getSystemService(Context.POWER_SERVICE);
+        return pm != null && pm.isInteractive();
     }
 
     private boolean tryStartActivityDirect() {
@@ -248,6 +263,7 @@ public final class LockScreenPresenter {
         PendingIntent fullScreen = PendingIntent.getActivity(appContext, 70, intent, flags);
         PendingIntent content = PendingIntent.getActivity(appContext, 71, intent, flags);
 
+        // highPriority=false：屏已亮时盖住即可，避免被系统当作唤醒闹钟
         NotificationCompat.Builder builder = new NotificationCompat.Builder(appContext, CHANNEL_ID_LOCK_PRESENT)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentTitle(appContext.getString(R.string.lock_screen_present_notification_title))
@@ -257,7 +273,7 @@ public final class LockScreenPresenter {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setContentIntent(content)
-                .setFullScreenIntent(fullScreen, true);
+                .setFullScreenIntent(fullScreen, false);
 
         try {
             NotificationManagerCompat.from(appContext).notify(NOTIFICATION_ID_LOCK_PRESENT, builder.build());

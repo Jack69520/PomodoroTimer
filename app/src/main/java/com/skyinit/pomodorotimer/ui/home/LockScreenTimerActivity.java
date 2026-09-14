@@ -146,12 +146,19 @@ public class LockScreenTimerActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        // 灭屏/离开时清掉 TURN_SCREEN_ON 与 KEEP_SCREEN_ON，避免 OEM 因窗口 flag 再次唤醒
+        clearWakeFlags();
+        super.onPause();
+    }
+
+    @Override
     protected void onStop() {
         boolean configChange = isChangingConfigurations();
         if (timerService != null) {
             timerService.notifyLockScreenUiStopped(configChange);
         }
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        clearWakeFlags();
         super.onStop();
     }
 
@@ -277,11 +284,21 @@ public class LockScreenTimerActivity extends AppCompatActivity {
     private void applyLockWindowFlags() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
+            // 仅在屏已亮时用于盖住锁屏；熄屏路径不会走到本页拉起
             setTurnScreenOn(true);
         } else {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
                     | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
+    }
+
+    private void clearWakeFlags() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(false);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        }
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private void clearLockWindowFlags() {
