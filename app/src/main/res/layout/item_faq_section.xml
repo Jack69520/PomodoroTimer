@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/account_section_background"
+    android:background="@drawable/bg_settings_surface"
     android:paddingStart="12dp"
     android:paddingEnd="12dp"
     android:paddingTop="16dp"
     android:paddingBottom="8dp"
     android:layout_marginBottom="16dp"
-    android:elevation="4dp">
+    android:elevation="0dp">
 
     <LinearLayout
         android:id="@+id/faq_section_header"

@@ -182,7 +182,7 @@
                     android:textAllCaps="false"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
-                    app:backgroundTint="@color/surface_container"
+                    app:backgroundTint="@color/surface_card"
                     app:cornerRadius="12dp"
                     app:elevation="0dp"
                     app:rippleColor="@color/bottom_nav_ripple" />
@@ -199,7 +199,7 @@
                     android:textAllCaps="false"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
-                    app:backgroundTint="@color/surface_container"
+                    app:backgroundTint="@color/surface_card"
                     app:cornerRadius="12dp"
                     app:elevation="0dp"
                     app:rippleColor="@color/bottom_nav_ripple" />
@@ -239,7 +239,7 @@
                     android:textAllCaps="false"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
-                    app:backgroundTint="@color/surface_container"
+                    app:backgroundTint="@color/surface_card"
                     app:cornerRadius="12dp"
                     app:elevation="0dp"
                     app:rippleColor="@color/bottom_nav_ripple" />
