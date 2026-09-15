@@ -20,6 +20,9 @@
       "exactPackages": [
         "com.huawei.health",
         "com.hihonor.health",
+        "com.mi.health",
+        "com.vivo.health",
+        "com.heytap.health",
         "cn.hsa.app"
       ],
       "packagePrefixes": [],
@@ -27,7 +30,6 @@
         "exercise",
         "fitness",
         "health",
-        "hihonor.health",
         "medical",
         "sport",
         "wellness",
@@ -41,8 +43,8 @@
         "华为运动健康",
         "荣耀运动健康",
         "小米运动健康",
-        "Vivo运动健康",
-        "OPPO运动健康",
+        "vivo健康",
+        "OPPO健康",
 
         "AQ",
         "小荷AI医生",
@@ -66,7 +68,6 @@
         "每日走路计步",
         "热汗舞蹈",
         "天天走路运动",
-
 
         "大姨妈",
         "美柚",
@@ -111,6 +112,7 @@
         "考研",
         "学信网",
         "一点英语",
+        "多邻国",
         "万词王",
         "不背单词",
         "墨墨背单词",
@@ -210,7 +212,12 @@
         "同步学",
         "试卷100",
         "辞海",
-        "豆包爱学"
+        "豆包爱学",
+
+        "驾考",
+        "驾考宝典",
+        "驾校一点通",
+        "驾校宝典"
       ],
       "skipSystemApp": true
     },
@@ -218,7 +225,11 @@
       "category": "金融政务",
       "exactPackages": [
         "com.google.android.apps.pay",
-        "com.google.android.apps.walletnfcrel"
+        "com.google.android.apps.walletnfcrel",
+
+        "cn.cyberIdentity.certification",
+        "cn.gov.pbc.dcep",
+        "com.hicorenational.antifraud"
       ],
       "packagePrefixes": [],
       "packageContains": [
@@ -350,6 +361,8 @@
         "电子税务局",
         "个人所得税",
         "公安一网通办",
+        "国家网络身份认证",
+        "国家反诈中心",
         "政协",
         "政协云",
 
@@ -369,6 +382,8 @@
         "闽政务",
         "吉事办",
         "辽事通",
+        "郑好办",
+        "豫事办",
 
         "湖南智慧人大",
         "新疆人大",
@@ -409,12 +424,24 @@
       "category": "出行旅游",
       "exactPackages": [
         "com.google.android.apps.maps",
+
         "com.MobileTicket",
         "com.umetrip.android.msky.app",
+
         "com.autonavi.minimap",
         "com.baidu.BaiduMap",
         "com.tencent.map",
-        "com.sdu.didi.psnger"
+
+        "com.sdu.didi.psnger",
+        "com.sdu.didi.gsui",
+
+        "ctrip.android.view",
+        "com.Qunar",
+        "com.tongcheng.android",
+        "com.taobao.trip",
+        "com.booking",
+
+        "com.ziipin.homeinn"
       ],
       "packagePrefixes": [],
       "packageContains": [
@@ -582,7 +609,7 @@
         "旅游",
         "携程",
         "去哪儿旅行",
-        "同城旅行",
+        "同程旅行",
         "艺龙旅行",
         "飞猪旅行",
         "途牛旅游",
@@ -688,6 +715,7 @@
         "飞书",
         "政务微信",
         "企业微信",
+        "百度搭子",
 
         "邮件",
         "邮箱",
@@ -706,7 +734,13 @@
       "exactPackages": [
         "com.google.android.apps.dynamite",
         "com.google.android.apps.meetings",
-        "com.google.android.apps.tachyon"
+        "com.google.android.apps.tachyon",
+        "com.tencent.mobileqq",
+        "com.tencent.mm",
+        "com.xingin.xhs",
+        "com.sina.weibo",
+        "com.baidu.tieba",
+        "com.zhihu.android"
       ],
       "packagePrefixes": [],
       "packageContains": [
@@ -715,19 +749,12 @@
         "facebook",
         "instagram",
         "org.telegram",
-        "qq",
         "telegram",
         "twitter",
-        "wechat",
-        "weibo"
+        "wechat"
       ],
       "appNameContains": [
-        "QQ",
         "QQ空间",
-        "WeChat",
-        "微信",
-        "小红书",
-        "微博",
         "知乎",
         "百度贴吧",
 
@@ -752,7 +779,6 @@
         "小寻",
         "小黑盒",
         "探探",
-        "星野",
         "牵手",
         "猫箱",
         "王者营地",
@@ -794,7 +820,11 @@
         "com.hihonor.android.gamecenter",
         "com.vivo.video",
         "com.vivo.music",
-        "com.android.bbkmusic"
+        "com.android.bbkmusic",
+
+        "com.ss.android.ugc.aweme",
+        "com.ss.android.ugc.aweme.lite",
+        "com.ss.android.ugc.live"
       ],
       "packagePrefixes": [],
       "packageContains": [
@@ -802,7 +832,6 @@
         "douyin",
         "iqiyi",
         "music",
-        "netease",
         "tiktok",
         "youku",
         "youtube"
@@ -817,13 +846,23 @@
         "汽水音乐",
         "喜马拉雅",
         "咪咕音乐",
+        "番茄畅听",
+
+        "铃声",
+        "酷狗铃声",
+
+        "全民K歌",
+        "唱吧",
+        "酷狗唱唱",
+        "K歌达人",
 
         "视频",
         "直播",
         "短剧",
+        "剧场",
+        "漫剧",
         "TikTok",
         "YouTube",
-        "抖音",
         "快手",
         "爱奇艺",
         "优酷视频",
@@ -840,6 +879,18 @@
         "搜狐视频",
         "酷狗直播",
         "乐视视频",
+
+        "小说",
+        "漫画",
+        "QQ阅读",
+        "七猫免费小说",
+        "番茄免费小说",
+        "书旗小说",
+        "七点读书",
+        "帆书",
+        "点点穿书",
+        "看漫",
+        "快看漫画",
 
         "娱乐",
         "游戏",
@@ -871,6 +922,7 @@
         "台球王者",
         "和平狙击",
         "和平精英",
+        "和平营地",
         "地铁跑酷",
         "城市飞车",
         "城市飞车2",
@@ -988,28 +1040,54 @@
     },
     {
       "category": "购物生活",
-      "exactPackages": [],
+      "exactPackages": [
+        "com.taobao.taobao",
+        "com.tmall.wireless",
+        "com.jingdong.app.mall",
+        "com.xunmeng.pinduoduo",
+        "com.taobao.idlefish",
+        "com.achievo.vipshop",
+        "com.alibaba.wireless",
+
+        "com.sankuai.meituan",
+        "com.sankuai.meituan.takeoutnew",
+        "me.ele",
+        "com.wudaokou.hippo",
+
+        "cn.amazon.mShop.android",
+        "cn.walmart.app",
+        "cn.samsclub.app"
+      ],
       "packagePrefixes": [],
       "packageContains": [
         "amazon",
-        "jd",
-        "pinduoduo",
+        "walmart",
+        "samsclub",
         "taobao",
         "tmall"
       ],
       "appNameContains": [
         "购物",
         "淘宝",
+        "天猫",
         "京东",
         "JD.COM",
         "闲鱼",
         "阿里巴巴",
         "拼多多",
         "得物",
+        "唯品会",
+        "慢慢买",
+        "转转",
+        "爱回收",
+
+        "58同城",
+        "大众点评",
 
         "外卖",
         "美团",
         "饿了么",
+        "淘宝闪购",
         "KFC",
         "肯德基",
         "麦当劳",
@@ -1020,32 +1098,77 @@
 
         "喵街",
 
+        "小象超市",
         "1号会员店",
-        "Nike 耐克",
-        "唯品会",
+        "沃尔玛",
+        "亚马逊购物",
+        "山姆会员商店",
 
         "U净",
         "云达人",
 
+        "Nike 耐克",
         "adidas",
         "东方甄选",
         "义乌购",
         "优衣库",
         "商城",
 
-        "山姆会员商店",
         "当当",
+        "抖音精选",
         "抖音商城",
+        "网易严选",
         "海底捞",
         "盒马",
         "阿里拍卖",
+        "叮咚买菜",
 
         "华为商城",
         "荣耀商城",
         "小米商城",
         "Vivo商城",
         "OPPO商城",
-        "大疆商城"
+        "大疆商城",
+
+        "快递",
+        "中国邮政",
+        "邮政EMS",
+        "顺丰速运",
+        "顺丰国际",
+        "京东快递",
+        "圆通快递",
+        "中通快递",
+        "申通快递",
+        "韵达快递",
+        "德邦快递",
+        "货拉拉",
+        "菜鸟",
+        "丰巢",
+
+        "二手车",
+        "懂车帝",
+        "汽车之家",
+        "易车",
+        "优信二手车",
+        "车300二手车",
+        "淘车车",
+        "瓜子二手车",
+
+        "找房",
+        "租房",
+        "二手房",
+        "安居客",
+        "贝壳找房",
+        "链家",
+        "自如",
+        "房天下",
+        "泊寓",
+        "我爱我家",
+        "乐有家",
+        "Wellcee",
+        "365淘房",
+        "贝壳租房",
+        "看房网"
       ],
       "skipSystemApp": true
     },
@@ -1088,7 +1211,6 @@
         "com.qihoo.browser.opt",
         "com.qihoo.cleandroid",
         "com.qihoo.security",
-        "com.quark.browser",
         "com.realme.market",
         "com.sec.android.app.samsungapps",
         "com.shouxin.inputmethod",
@@ -1103,7 +1225,16 @@
         "com.vodafone.vodafone360",
         "com.xiaomi.market",
         "com.xiaomi.mipicks",
-        "com.xunlei.browser"
+
+        "com.greenpoint.android.mc10086.activity",
+        "com.ct.client",
+        "com.sinovatech.unicom.ui",
+        "com.ai.obc.cbn.app",
+
+        "com.quark.browser",
+        "com.xunlei.browser",
+
+        "com.deepseek.chat"
       ],
       "packagePrefixes": [
         "ai.question",
@@ -1148,22 +1279,19 @@
         "tool"
       ],
       "appNameContains": [
-        "2345浏览器",
-        "360手机卫士",
-        "360手机卫士极速版",
-        "360清理大师极速版",
-        "AI",
-        "AI海报",
+        "中国移动",
+        "中国电信",
+        "中国联通",
+        "中国广电",
+
         "AppGallery",
-        "Ask AI",
+
         "Authenticator",
         "Cellular-Z",
-        "ChatGPT",
+
         "ChatOn",
         "Clash Verge",
-        "Claude",
-        "Copilot",
-        "DeepSeek",
+
         "Galaxy Store",
         "Gemini",
         "Play 商店",
@@ -1180,10 +1308,30 @@
         "Google One",
         "Google Photos",
         "Google助理",
+
+        "AI",
+        "Ask AI",
+        "ChatGPT",
+        "Claude",
+        "Copilot",
+        "DeepSeek",
         "Grok",
         "IMA",
         "Meta AI",
         "Microsoft Copilot",
+        "豆包",
+        "即梦AI",
+        "可灵AI",
+        "扣子",
+        "纳米AI",
+        "千问",
+        "文心",
+        "腾讯元宝",
+        "小度",
+        "星野",
+        "讯飞星火",
+        "智谱清言",
+
         "PolyBuzz",
         "Question AI",
         "Question.AI",
@@ -1194,31 +1342,36 @@
         "元宝",
         "加速器",
         "助理",
+
         "卫士",
-        "即梦AI",
-        "计算器",
-        "夸克",
         "安全",
-        "小度",
-        "工具",
-        "文小言",
-        "日历",
-        "星野",
-        "智谱清言",
         "清理",
-        "猎豹清理大师",
-        "纳米AI",
-        "腾讯元宝",
-        "腾讯手机管家",
-        "豆包",
+        "360手机卫士",
+        "360手机卫士极速版",
+        "360清理大师极速版",
         "百度手机卫士",
-        "通义",
+        "猎豹清理大师",
+        "腾讯手机管家",
+
+        "工具",
+        "计算器",
+
+        "日历",
+
         "掌物",
         "Palmventory",
         "我的物品",
         "番茄TodDo",
         "研分宝",
         "ScorePal",
+        "迅雷",
+
+        "遥控器",
+        "智能遥控",
+        "万能遥控器",
+
+        "向日葵远程控制",
+        "ToDesk",
 
         "浏览器",
         "百度",
@@ -1252,7 +1405,52 @@
         "小艺输入法",
         "微信输入法",
         "QQ输入法",
-        "手心输入法"
+        "手心输入法",
+
+        "天气",
+        "中国气象",
+        "天气预报",
+        "墨迹天气",
+        "彩云天气",
+
+        "WiFi",
+        "wifi",
+        "WiFi万能钥匙",
+        "万能WiFi钥匙",
+        "360免费WiFi",
+        "WiFi密码查看",
+        "测速网",
+
+        "网盘",
+        "云盘",
+        "百度网盘",
+        "阿里云盘",
+        "腾讯微云",
+        "迅雷云盘",
+        "123云盘",
+        "城通网盘",
+        "360AI云盘",
+        "坚果云",
+        "联通云盘",
+
+        "修图",
+        "相机",
+        "美颜相机",
+        "水印相机",
+
+        "剪辑",
+        "醒图",
+        "剪映",
+        "快影",
+        "必剪",
+        "快剪辑",
+        "秒剪",
+        "简影",
+        "剪影",
+        "开拍",
+
+        "格式转换",
+        "格式工厂"
       ],
       "skipSystemApp": true
     },
