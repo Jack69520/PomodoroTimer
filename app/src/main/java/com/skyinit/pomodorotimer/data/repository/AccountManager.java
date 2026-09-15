@@ -228,7 +228,8 @@ public class AccountManager {
     }
 
     public void clearForcePasswordReset() {
-        prefs.edit().putBoolean(KEY_FORCE_PASSWORD_RESET, false).apply();
+        // commit：与 recoverLogin 设 flag 对称，避免改密成功后进程被杀仍残留强制改密态
+        prefs.edit().putBoolean(KEY_FORCE_PASSWORD_RESET, false).commit();
     }
 
     /**
@@ -374,7 +375,8 @@ public class AccountManager {
                             context.getString(R.string.account_error_password_mismatch)));
                     return;
                 }
-                passwordRepository.updatePassword(context, currentUser, newPassword);
+                // 同 diskIo 任务内同步落库；成功语义 = Room 已更新，再清强制改密并 ACK
+                passwordRepository.updatePasswordOnDisk(context, currentUser, newPassword);
                 clearForcePasswordReset();
                 mainHandler.post(callback::onSuccess);
             } catch (Exception e) {

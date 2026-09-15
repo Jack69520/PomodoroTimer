@@ -6,6 +6,7 @@ import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.TestApp;
 import com.skyinit.pomodorotimer.data.entity.User;
+import com.skyinit.pomodorotimer.security.PasswordHasher;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 
 import org.junit.After;
@@ -124,6 +125,51 @@ public class AccountManagerFlowTest {
     }
 
     @Test
+    public void updatePassword_persistsToDbBeforeSuccess_oldPasswordCannotLogin()
+            throws InterruptedException {
+        String userId = awaitRegister("ChangePw", VALID_PASSWORD).userId;
+        String newPassword = "Newpass1";
+
+        awaitUpdatePassword(VALID_PASSWORD, newPassword);
+        assertFalse(accountManager.isForcePasswordReset());
+
+        AtomicReference<User> persisted = new AtomicReference<>();
+        CountDownLatch readLatch = new CountDownLatch(1);
+        AppExecutors.getInstance().diskIo(() -> {
+            persisted.set(AppDatabase.getDatabase(context).userDao().getUserById(userId));
+            readLatch.countDown();
+        });
+        awaitCallback(readLatch);
+
+        User dbUser = persisted.get();
+        assertNotNull(dbUser);
+        assertTrue(PasswordHasher.verifyPassword(newPassword, dbUser.password));
+        assertFalse(PasswordHasher.verifyPassword(VALID_PASSWORD, dbUser.password));
+
+        awaitLogout();
+        awaitLogin(userId, newPassword);
+
+        awaitLogout();
+        AtomicReference<String> oldLoginError = new AtomicReference<>();
+        CountDownLatch loginOldLatch = new CountDownLatch(1);
+        accountManager.login(userId, VALID_PASSWORD, new AccountManager.LoginCallback() {
+            @Override
+            public void onSuccess(User user) {
+                fail("Old password must not login after change");
+                loginOldLatch.countDown();
+            }
+
+            @Override
+            public void onError(String message) {
+                oldLoginError.set(message);
+                loginOldLatch.countDown();
+            }
+        });
+        awaitCallback(loginOldLatch);
+        assertNotNull(oldLoginError.get());
+    }
+
+    @Test
     public void register_whenAlreadyLoggedIn_fails() throws InterruptedException {
         AtomicReference<String> error = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(1);
@@ -196,6 +242,29 @@ public class AccountManagerFlowTest {
             fail("Login failed: " + error.get());
         }
         return result.get();
+    }
+
+    private void awaitUpdatePassword(String oldPassword, String newPassword)
+            throws InterruptedException {
+        AtomicReference<String> error = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        accountManager.updatePassword(oldPassword, newPassword, newPassword,
+                new AccountManager.PasswordUpdateCallback() {
+                    @Override
+                    public void onSuccess() {
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        error.set(message);
+                        latch.countDown();
+                    }
+                });
+        awaitCallback(latch);
+        if (error.get() != null) {
+            fail("Update password failed: " + error.get());
+        }
     }
 
     private void awaitLogout() throws InterruptedException {

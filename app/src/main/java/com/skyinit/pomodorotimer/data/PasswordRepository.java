@@ -41,7 +41,10 @@ public class PasswordRepository {
         user.password = hash;
         user.passwordSalt = PasswordHasher.extractSaltHex(hash);
         if (user.passwordSalt != null) {
-            getPrefs(context).edit().putString(KEY_SALT_PREFIX + user.userId, user.passwordSalt).apply();
+            // commit：密码相关盐必须与内存哈希同边界落盘，避免进程被杀后盐/哈希分叉
+            getPrefs(context).edit()
+                    .putString(KEY_SALT_PREFIX + user.userId, user.passwordSalt)
+                    .commit();
         }
     }
 
@@ -53,10 +56,22 @@ public class PasswordRepository {
         return PasswordHasher.verifyPassword(password, hash);
     }
 
+    /**
+     * 更新内存哈希并写入 Room。已在 diskIo 线程时同步执行，避免嵌套 enqueue
+     * 导致「成功回调早于 DB 落库」的竞态。
+     */
     public void updatePassword(Context context, User user, String newPassword) {
-        hashAndStorePassword(context, user, newPassword);
-        appExecutors.diskIo(() -> getUserDao(context).updatePassword(
-                user.userId, user.password, user.passwordSalt),
+        if (appExecutors.isDiskIoThread()) {
+            updatePasswordOnDisk(context, user, newPassword);
+            return;
+        }
+        appExecutors.diskIo(() -> updatePasswordOnDisk(context, user, newPassword),
                 throwable -> AppLog.e(TAG, "Failed to update password", throwable));
+    }
+
+    /** 须在 diskIo 线程调用：哈希写入内存/Prefs 后立刻同步更新 Room。 */
+    public void updatePasswordOnDisk(Context context, User user, String newPassword) {
+        hashAndStorePassword(context, user, newPassword);
+        getUserDao(context).updatePassword(user.userId, user.password, user.passwordSalt);
     }
 }
