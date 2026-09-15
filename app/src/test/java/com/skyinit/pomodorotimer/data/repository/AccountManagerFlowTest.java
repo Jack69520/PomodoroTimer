@@ -5,6 +5,7 @@ import android.content.Context;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.TestApp;
+import com.skyinit.pomodorotimer.data.AvatarStorage;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.security.PasswordHasher;
 import com.skyinit.pomodorotimer.util.AppExecutors;
@@ -17,6 +18,10 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
+import android.graphics.Bitmap;
+import android.graphics.Color;
+
+import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -122,6 +127,36 @@ public class AccountManagerFlowTest {
         });
         awaitCallback(latch);
         assertNull(deletedCheck.get());
+    }
+
+    @Test
+    public void deleteCurrentAccount_removesAvatarFile_otherUserUnaffected()
+            throws InterruptedException {
+        User userA = awaitRegister("AvatarA", VALID_PASSWORD);
+        String userIdA = userA.userId;
+        Bitmap bitmapA = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888);
+        bitmapA.eraseColor(Color.RED);
+        String pathA = AvatarStorage.getInstance().saveJpeg(context, userIdA, bitmapA);
+        bitmapA.recycle();
+        assertNotNull(pathA);
+        assertTrue(new File(pathA).exists());
+
+        awaitLogout();
+        User userB = awaitRegister("AvatarB", VALID_PASSWORD);
+        String userIdB = userB.userId;
+        Bitmap bitmapB = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888);
+        bitmapB.eraseColor(Color.BLUE);
+        String pathB = AvatarStorage.getInstance().saveJpeg(context, userIdB, bitmapB);
+        bitmapB.recycle();
+        assertNotNull(pathB);
+        assertTrue(new File(pathB).exists());
+
+        awaitLogout();
+        awaitLogin(userIdA, VALID_PASSWORD);
+        awaitDeleteAccount();
+
+        assertFalse(AvatarStorage.getInstance().getAvatarFile(context, userIdA).exists());
+        assertTrue(AvatarStorage.getInstance().getAvatarFile(context, userIdB).exists());
     }
 
     @Test
