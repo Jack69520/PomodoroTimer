@@ -19,6 +19,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.AvatarStorage;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.data.model.ProfileAvatarImage;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
@@ -29,7 +30,6 @@ import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -181,7 +181,7 @@ public class AccountViewModel extends AndroidViewModel
                     if (bitmap == null) {
                         error = app.getString(R.string.account_toast_image_failed);
                     } else {
-                        savedPath = saveAvatarImageOnDisk(bitmap, userId);
+                        savedPath = AvatarStorage.getInstance().saveJpeg(app, userId, bitmap);
                         if (!bitmap.isRecycled()) {
                             bitmap.recycle();
                         }
@@ -193,6 +193,8 @@ public class AccountViewModel extends AndroidViewModel
             } catch (Exception e) {
                 AppLog.w(TAG, "Avatar process failed", e);
                 error = app.getString(R.string.account_toast_image_failed);
+            } finally {
+                AvatarStorage.getInstance().deleteCameraCaptureFile(app);
             }
             final String path = savedPath;
             final String err = error;
@@ -229,25 +231,6 @@ public class AccountViewModel extends AndroidViewModel
                         });
             });
         });
-    }
-
-    @Nullable
-    private String saveAvatarImageOnDisk(@NonNull Bitmap bitmap, @NonNull String userId) {
-        try {
-            File avatarDir = new File(getApplication().getExternalFilesDir(null), "avatars");
-            if (!avatarDir.exists() && !avatarDir.mkdirs()) {
-                return null;
-            }
-            String fileName = "avatar_" + userId + "_" + System.currentTimeMillis() + ".jpg";
-            File avatarFile = new File(avatarDir, fileName);
-            FileOutputStream fos = new FileOutputStream(avatarFile);
-            boolean ok = bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos);
-            fos.close();
-            return ok ? avatarFile.getAbsolutePath() : null;
-        } catch (Exception e) {
-            AppLog.w(TAG, "Save avatar failed", e);
-            return null;
-        }
     }
 
     private void onActiveUserChanged(@Nullable User user) {

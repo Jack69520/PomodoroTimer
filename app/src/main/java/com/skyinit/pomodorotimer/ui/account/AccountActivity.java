@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.AvatarStorage;
 import com.skyinit.pomodorotimer.data.model.ProfileAvatarImage;
 import com.skyinit.pomodorotimer.ui.SubpageActivity;
 import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
@@ -261,7 +262,7 @@ public class AccountActivity extends SubpageActivity {
 
     private void launchCamera() {
         try {
-            File temp = new File(getExternalFilesDir(null), "temp_avatar.jpg");
+            File temp = AvatarStorage.getInstance().createCameraCaptureFile(this);
             Uri photoUri = FileProvider.getUriForFile(this,
                     getPackageName() + ".fileprovider", temp);
             pendingCameraUri = photoUri;

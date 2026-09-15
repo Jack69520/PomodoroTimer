@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 
 import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.R;
+import com.skyinit.pomodorotimer.data.AvatarStorage;
 import com.skyinit.pomodorotimer.data.PasswordRepository;
 import com.skyinit.pomodorotimer.data.dao.UserDao;
 import com.skyinit.pomodorotimer.data.entity.User;
@@ -338,6 +339,7 @@ public class AccountManager {
                 }
 
                 passwordRepository.clearStoredSalt(context, userId);
+                AvatarStorage.getInstance().deleteForUser(context, userId);
                 clearSessionOnDisk(true);
                 clearForcePasswordReset();
                 mainHandler.post(callback::onSuccess);
