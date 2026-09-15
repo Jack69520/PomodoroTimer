@@ -102,11 +102,6 @@ public class OpenSourceLicensesActivity extends SubpageActivity {
                     "https://github.com/PhilJay/MPAndroidChart",
                     "Apache License 2.0",
                     APACHE_LICENSE_URL),
-            new OpenSourceLibrary(
-                    "AndroidX WorkManager",
-                    "https://github.com/androidx/androidx/tree/androidx-main/work",
-                    "Apache License 2.0",
-                    APACHE_LICENSE_URL),
     };
 
     @Override

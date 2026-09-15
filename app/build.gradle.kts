@@ -87,13 +87,11 @@ dependencies {
     annotationProcessor(libs.room.compiler)
     implementation(libs.core)
     implementation(libs.mpandroidchart)
-    implementation(libs.work.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.arch.core.testing)
     testImplementation(libs.robolectric)
     testImplementation(libs.room.testing)
-    testImplementation(libs.work.testing)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }

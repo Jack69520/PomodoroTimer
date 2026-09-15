@@ -1,7 +1,5 @@
 package com.skyinit.pomodorotimer;
 
-import androidx.work.testing.WorkManagerTestInitHelper;
-
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.data.repository.PrivacyConsentRepository;
 
@@ -17,7 +15,6 @@ public class TestApp extends App {
 
     @Override
     public void onCreate() {
-        WorkManagerTestInitHelper.initializeTestWorkManager(this);
         PrivacyConsentRepository.getInstance(this).accept();
         super.onCreate();
         resetTestState();
