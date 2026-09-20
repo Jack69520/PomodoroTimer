@@ -236,6 +236,8 @@ public class TimerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Alarm 唤醒进程时可能未走完 App 业务 init：幂等孤儿勿扰兜底（有活跃会话则跳过）
+        FocusDndHelper.recoverOrphanIfNeeded(this);
         createNotificationChannel();
         AppContainer container = AppContainer.getInstance(this);
         timerSettingsRepository = container.getTimerSettingsRepository();

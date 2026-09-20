@@ -12,6 +12,7 @@ import com.skyinit.pomodorotimer.util.AppCategoryRulesLoader;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.util.CategoryDefaults;
+import com.skyinit.pomodorotimer.util.FocusDndHelper;
 
 import android.app.Application;
 import android.os.Handler;
@@ -159,6 +160,8 @@ public class App extends Application {
         }
         initializationInProgress = false;
         dispatchPendingCallbacks();
+        // 无活跃会话时条件恢复遗留勿扰（3-A1）；有会话则跳过，等计时结束走 restoreDnd
+        FocusDndHelper.recoverOrphanIfNeeded(this);
         restoreTimerServiceIfNeeded();
     }
 
