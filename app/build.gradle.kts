@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.room.runtime)
     annotationProcessor(libs.room.compiler)
     implementation(libs.core)
+    implementation(libs.activity)
     implementation(libs.mpandroidchart)
 
     testImplementation(libs.junit)

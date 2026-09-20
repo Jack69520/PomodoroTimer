@@ -141,12 +141,12 @@
 
 
     <style name="BottomNavigationTextActive" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">@dimen/bottom_nav_text_size_active</item>
         <item name="android:includeFontPadding">false</item>
     </style>
 
     <style name="BottomNavigationTextInactive" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">@dimen/bottom_nav_text_size_inactive</item>
         <item name="android:includeFontPadding">false</item>
     </style>
 

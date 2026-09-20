@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.RippleDrawable;
 import android.content.res.ColorStateList;
@@ -17,12 +18,12 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import com.skyinit.pomodorotimer.util.AppLog;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -34,6 +35,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
@@ -50,8 +52,6 @@ import com.skyinit.pomodorotimer.data.repository.SettingsManager;
 import com.skyinit.pomodorotimer.ui.bootstrap.AppBootstrapViewModel;
 import com.skyinit.pomodorotimer.ui.consent.PrivacyConsentActivity;
 import com.skyinit.pomodorotimer.ui.onboarding.FirstRunNavigator;
-import com.skyinit.pomodorotimer.ui.theme.WallpaperCatalog;
-import com.skyinit.pomodorotimer.ui.theme.WallpaperThemeRepository;
 import com.skyinit.pomodorotimer.service.AppBlockingService;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
@@ -69,8 +69,6 @@ import com.skyinit.pomodorotimer.util.FocusBlockNavigation;
 import com.skyinit.pomodorotimer.util.ShortcutActions;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-
-import androidx.core.content.ContextCompat;
 
 /**
  * 主界面壳 Activity：底部四 Tab 导航（首页 / 统计 / 日历 / 我的），
@@ -118,10 +116,79 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
+    public void applyTheme() {
+        super.applyTheme();
+        // WallpaperApplier 会在 listener 之后再次写入系统栏颜色，主壳必须事后恢复透明延伸。
+        applyMainShellSystemBars(resolveToolbarBarColor());
+    }
+
+    @Override
     protected void onBarColorApplied(int barColor) {
         topLevelBarColor = barColor;
         if (isTopLevelDestination(currentDestinationId)) {
             applyTopLevelToolbarStyle(barColor);
+        }
+    }
+
+    /**
+     * 主壳系统栏：透明底色由 Toolbar / BottomNav 延伸；图标明暗跟顶栏背景对比度。
+     * NoActionBar 主题被多 Activity 共用，故不在 themes 里全局改透明。
+     */
+    private void applyMainShellSystemBars(int toolbarBarColor) {
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+
+        int statusIconBg = toolbarBarColor != 0
+                ? toolbarBarColor
+                : ContextCompat.getColor(this, R.color.surface_card);
+        int navIconBg = ContextCompat.getColor(this, R.color.surface_card);
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(isLightBackground(statusIconBg));
+        controller.setAppearanceLightNavigationBars(isLightBackground(navIconBg));
+    }
+
+    private static boolean isLightBackground(int color) {
+        double darkness = 1 - (0.299 * Color.red(color)
+                + 0.587 * Color.green(color)
+                + 0.114 * Color.blue(color)) / 255;
+        return darkness < 0.5;
+    }
+
+    private void setupRootWindowInsets() {
+        if (mainToolbarContainer != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainToolbarContainer, (view, windowInsets) -> {
+                Insets statusBars = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
+                Insets cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
+                int top = Math.max(statusBars.top, cutout.top);
+                view.setPadding(view.getPaddingLeft(), top, view.getPaddingRight(), view.getPaddingBottom());
+                return windowInsets;
+            });
+            ViewCompat.requestApplyInsets(mainToolbarContainer);
+        }
+
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            final int baseBottomPadding =
+                    getResources().getDimensionPixelSize(R.dimen.bottom_nav_padding_bottom);
+            final int initialLeft = bottomNav.getPaddingLeft();
+            final int initialTop = bottomNav.getPaddingTop();
+            final int initialRight = bottomNav.getPaddingRight();
+            ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (view, windowInsets) -> {
+                Insets navigationBars = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+                Insets cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
+                view.setPadding(
+                        initialLeft + Math.max(navigationBars.left, cutout.left),
+                        initialTop,
+                        initialRight + Math.max(navigationBars.right, cutout.right),
+                        baseBottomPadding + navigationBars.bottom
+                );
+                return windowInsets;
+            });
+            ViewCompat.requestApplyInsets(bottomNav);
         }
     }
 
@@ -232,35 +299,6 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    private void setupRootWindowInsets() {
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-
-        if (mainToolbarContainer != null) {
-            ViewCompat.setOnApplyWindowInsetsListener(mainToolbarContainer, (view, windowInsets) -> {
-                Insets statusBars = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
-                view.setPadding(0, statusBars.top, 0, 0);
-                return windowInsets;
-            });
-            ViewCompat.requestApplyInsets(mainToolbarContainer);
-        }
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
-        if (bottomNav != null) {
-            final int initialBottomPadding = bottomNav.getPaddingBottom();
-            ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (view, windowInsets) -> {
-                Insets navigationBars = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
-                view.setPadding(
-                        view.getPaddingLeft(),
-                        view.getPaddingTop(),
-                        view.getPaddingRight(),
-                        initialBottomPadding + navigationBars.bottom
-                );
-                return windowInsets;
-            });
-            ViewCompat.requestApplyInsets(bottomNav);
-        }
-    }
-
     private int getToolbarTitleRes(int destinationId) {
         if (destinationId == R.id.nav_home) {
             return R.string.nav_title_home;
@@ -368,12 +406,14 @@ public class MainActivity extends BaseActivity {
         }
         mainContentInitialized = true;
 
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
         mainToolbarContainer = findViewById(R.id.main_toolbar_container);
         mainToolbar = findViewById(R.id.main_toolbar);
         clearMainToolbarDecoration();
         setupRootWindowInsets();
+        applyMainShellSystemBars(resolveToolbarBarColor());
 
         if (savedInstanceState != null) {
             selectedNavId = savedInstanceState.getInt("SELECTED_NAV", R.id.nav_home);
@@ -771,11 +811,7 @@ public class MainActivity extends BaseActivity {
             }
 
             int rippleColor = ContextCompat.getColor(this, R.color.bottom_nav_ripple);
-            int radiusPx = (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP,
-                    18f,
-                    getResources().getDisplayMetrics()
-            );
+            int radiusPx = getResources().getDimensionPixelSize(R.dimen.bottom_nav_ripple_radius);
 
             ViewGroup menuGroup = (ViewGroup) menuView;
             for (int i = 0; i < menuGroup.getChildCount(); i++) {
@@ -794,21 +830,7 @@ public class MainActivity extends BaseActivity {
         if (bottomNav != null) {
             applyBottomNavRipple(bottomNav);
             bottomNav.invalidate();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                try {
-                    WallpaperCatalog.WallpaperOption option =
-                            new WallpaperThemeRepository(this).getSelectedOption();
-                    if (!option.gradient) {
-                        int color = WallpaperCatalog.isDefaultKey(option.key)
-                                ? ContextCompat.getColor(this, R.color.surface_page)
-                                : ContextCompat.getColor(this, option.resId);
-                        getWindow().setNavigationBarColor(color);
-                    }
-                } catch (Exception e) {
-                    getWindow().setNavigationBarColor(
-                            ContextCompat.getColor(this, R.color.surface_page));
-                }
-            }
+            applyMainShellSystemBars(resolveToolbarBarColor());
         }
     }
 
