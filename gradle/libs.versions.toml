@@ -10,6 +10,7 @@ navigation = "2.7.7"
 lifecycle = "2.8.0"
 room = "2.6.1"
 core = "1.13.1"
+activity = "1.9.3"
 archCoreTesting = "2.2.0"
 mpandroidchart = "v3.1.0"
 robolectric = "4.14.1"
@@ -28,6 +29,7 @@ lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmode
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 core = { group = "androidx.core", name = "core", version.ref = "core" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCoreTesting" }
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
