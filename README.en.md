@@ -9,7 +9,6 @@ All data stays on the device—no network, sync, or upload at runtime. This repo
 | Item | Value |
 |------|-------|
 | Package | `com.skyinit.pomodorotimer` |
-| Version | 1.0.0 (versionCode 1) |
 | Min / target SDK | Android 9 (API 28) / API 36 |
 | License | [Apache License 2.0](LICENSE) |
 
@@ -56,7 +55,7 @@ All data stays on the device—no network, sync, or upload at runtime. This repo
   - Enable standalone blocking from Profile, or turn on **auto-block during Pomodoro** in settings (active only while focus is running—not while paused or on break)
   - Management UI: search, categories, all / blocked / allowed, scan installed apps; rules from a local JSON policy engine
   - A blocking service run stops automatically after about 5 hours
-- **Do Not Disturb during focus**: optionally enable system DND when a focus session starts (notification policy access required)
+- **Do Not Disturb during focus**: optionally enable system DND when a focus session starts (notification policy access required); the prior system interruption filter is persisted to disk so it can be restored when the session ends—including after process death and alarm-driven settlement—with conditional orphan recovery on cold start when no active session remains
 
 ### Accounts & personalization
 
