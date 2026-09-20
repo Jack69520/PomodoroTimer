@@ -122,9 +122,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/profile_summary_total_caption"
-                    android:textColor="@color/text_hint"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
+                <!-- 后期若超长仍换行，可按需恢复：
+                     android:maxLines="1"
+                -->
                 <TextView
                     android:id="@+id/count_text"
                     android:layout_width="wrap_content"
@@ -153,9 +156,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/profile_summary_duration_caption"
-                    android:textColor="@color/text_hint"
+                    android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
+                <!-- 后期若超长仍换行，可按需恢复：
+                     android:maxLines="1"
+                -->
                 <TextView
                     android:id="@+id/duration_text"
                     android:layout_width="wrap_content"

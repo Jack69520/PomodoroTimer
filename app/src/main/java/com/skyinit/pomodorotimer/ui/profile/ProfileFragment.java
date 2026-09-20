@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +18,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -32,6 +37,9 @@ import com.skyinit.pomodorotimer.util.AppLog;
  * 「我的」页：渲染 {@link ProfileUiState}、消费 {@link ProfileEffect}，业务经 Intent 交给 ViewModel。
  */
 public class ProfileFragment extends Fragment {
+
+    /** 累计数值中计量单位相对数字的字号比例（约 14–15sp @ 24sp）。 */
+    private static final float PROFILE_STAT_UNIT_SCALE = 0.62f;
 
     private ProfileViewModel viewModel;
 
@@ -188,8 +196,8 @@ public class ProfileFragment extends Fragment {
         accountSection.setClickable(state.accountSectionEnabled);
 
         if (state.statsReady) {
-            countText.setText(getString(R.string.profile_label_total_focus, state.totalCompletedCount));
-            durationText.setText(formatDuration(state.totalFocusDurationMs));
+            countText.setText(formatStyledFocusCount(state.totalCompletedCount));
+            durationText.setText(formatStyledDuration(state.totalFocusDurationMs));
         } else {
             countText.setText(R.string.profile_stats_placeholder);
             durationText.setText(R.string.profile_stats_placeholder);
@@ -328,14 +336,63 @@ public class ProfileFragment extends Fragment {
                 .show();
     }
 
+    @NonNull
+    private CharSequence formatStyledFocusCount(int count) {
+        String text = getString(R.string.profile_label_total_focus, count);
+        return applyStatUnitStyle(text, getString(R.string.profile_unit_times));
+    }
+
+    @NonNull
+    private CharSequence formatStyledDuration(long durationMs) {
+        return applyStatUnitStyle(
+                formatDuration(durationMs),
+                getString(R.string.home_duration_unit_hour),
+                getString(R.string.home_duration_unit_minute));
+    }
+
+    @NonNull
     private String formatDuration(long durationMs) {
         long minutes = Math.max(0L, durationMs) / (1000L * 60L);
         long hours = minutes / 60L;
         minutes = minutes % 60L;
+        // 超长累计：省略分钟，优先保证单行可读
+        if (hours >= 100L) {
+            return getString(R.string.format_duration_hours, hours);
+        }
         if (hours > 0L) {
             return getString(R.string.format_duration_hours_minutes, hours, minutes);
         }
         return getString(R.string.format_duration_minutes, minutes);
+    }
+
+    /**
+     * 缩小并弱化计量单位字号/颜色，数字保持 TextView 主色与字号。
+     */
+    @NonNull
+    private CharSequence applyStatUnitStyle(@NonNull String text, @NonNull String... units) {
+        SpannableString spannable = new SpannableString(text);
+        int unitColor = ContextCompat.getColor(requireContext(), R.color.text_secondary);
+        for (String unit : units) {
+            if (unit.isEmpty()) {
+                continue;
+            }
+            int start = 0;
+            while ((start = text.indexOf(unit, start)) >= 0) {
+                int end = start + unit.length();
+                spannable.setSpan(
+                        new RelativeSizeSpan(PROFILE_STAT_UNIT_SCALE),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                spannable.setSpan(
+                        new ForegroundColorSpan(unitColor),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                start = end;
+            }
+        }
+        return spannable;
     }
 
     @Override

@@ -815,6 +815,7 @@
     <string name="profile_summary_duration_caption">累计时长</string>
     <string name="profile_stats_placeholder">—</string>
     <string name="profile_label_total_focus">%d 次</string>
+    <string name="profile_unit_times">次</string>
     <string name="profile_app_blocking">应用屏蔽</string>
     <string name="profile_app_blocking_description">专注期间默认屏蔽未加入白名单的应用；系统关键服务始终可用</string>
     <string name="blocking_description_enabled">应用屏蔽已启用：专注期间默认屏蔽未加入白名单的应用；系统关键服务始终可用（最长5小时）</string>
