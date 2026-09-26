@@ -3,16 +3,15 @@ package com.skyinit.pomodorotimer.ui.home;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.MainActivity;
 import com.skyinit.pomodorotimer.data.model.TimerUiState;
+import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.util.AppLog;
-import android.Manifest;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -23,20 +22,21 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageView;
-import androidx.activity.OnBackPressedCallback;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
-import android.content.res.Configuration;
+import android.content.ServiceConnection;
+import android.graphics.Color;
 
 /**
  * 计时器专属页面：仅包含计时显示与控制按钮。
@@ -53,11 +53,14 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
     private TimerService timerService;
     private TimerViewModel viewModel;
     private boolean isBound = false;
+    private int defaultHintColor = Color.WHITE;
+
     private final BroadcastReceiver endReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (TimerService.ACTION_ACTIVITY_ENDED_BROADCAST.equals(intent.getAction())) {
-                Toast.makeText(TimerActivity.this, getString(R.string.timer_toast_activity_ended), Toast.LENGTH_SHORT).show();
+                Toast.makeText(TimerActivity.this,
+                        getString(R.string.timer_toast_activity_ended), Toast.LENGTH_SHORT).show();
                 navigateHome();
             }
         }
@@ -96,6 +99,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             viewModel.syncFromService(timerService);
             updateUIFromState(viewModel.getTimerState().getValue());
             timerService.notifyTimerUiResumed();
+            viewModel.dispatch(TimerIntent.serviceBound());
         }
 
         @Override
@@ -116,6 +120,8 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         viewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
                 .get(TimerViewModel.class);
         viewModel.getTimerState().observe(this, this::updateUIFromState);
+        viewModel.getScreenState().observe(this, this::applyScreenState);
+        viewModel.getEffects().observe(this, this::handleEffect);
 
         timerText = findViewById(R.id.timer_text);
         taskTitleText = findViewById(R.id.task_title_text);
@@ -123,94 +129,33 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         bgImageView = findViewById(R.id.bg_image);
         primaryButton = findViewById(R.id.primary_button);
         secondaryButton = findViewById(R.id.secondary_button);
+        if (sessionHintText != null) {
+            defaultHintColor = sessionHintText.getCurrentTextColor();
+        }
 
-        // 绑定服务
         Intent serviceIntent = new Intent(this, TimerService.class);
         TimerServiceLauncher.ensureRunning(this);
         bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE);
 
-        // 随机背景：进入页面时尝试设置图片背景（失败则回退为渐变）
         TimerBackgroundHelper.applyRandomBackground(this, bgImageView);
 
-        // 统一拦截系统返回键（包括手势返回）
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (!confirmExitIfRunning()) {
+                TimerUiState state = viewModel.getTimerState().getValue();
+                if (viewModel.shouldConfirmExit(state)) {
+                    showExitConfirm();
+                } else {
                     finish();
                 }
             }
         });
 
-        // 注册“活动结束”广播（Android 13+ 需声明导出标志）
         IntentFilter filter = new IntentFilter(TimerService.ACTION_ACTIVITY_ENDED_BROADCAST);
         ContextCompat.registerReceiver(this, endReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
-        primaryButton.setOnClickListener(v -> {
-            if (timerService == null) return;
-            TimerUiState state = viewModel.getTimerState().getValue();
-            if (state != null && state.awaitingPostBreakChoice) {
-                sendAction(TimerService.ACTION_START);
-                navigateStay();
-                return;
-            }
-            if (timerService.isRunning()) {
-                if (timerService.canPause()) {
-                    PauseReasonDialog dialog = new PauseReasonDialog();
-                    dialog.show(getSupportFragmentManager(), "pause_reason_dialog");
-                } else {
-                    Toast.makeText(this, getString(R.string.timer_toast_max_pause_reached), Toast.LENGTH_SHORT).show();
-                    updateControls(viewModel.getTimerState().getValue());
-                }
-            } else if (timerService.isPaused()) {
-                sendAction(TimerService.ACTION_RESUME);
-            } else {
-                // 防止 LiveData 与 binder 短暂不同步时误发 START，清零 pauseCount
-                if (state != null && (state.running || state.paused)) {
-                    viewModel.syncFromService(timerService);
-                    updateControls(viewModel.getTimerState().getValue());
-                    return;
-                }
-                sendAction(TimerService.ACTION_START);
-            }
-        });
-
-        secondaryButton.setOnClickListener(v -> {
-            if (timerService == null) return;
-            TimerUiState state = viewModel.getTimerState().getValue();
-            if (state != null && state.isBreakSession() && state.running) {
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                        .setTitle(R.string.timer_confirm_end_break_title)
-                        .setMessage(R.string.timer_confirm_end_break_message)
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(R.string.timer_end_break, (d, w) -> {
-                            sendAction(TimerService.ACTION_END_BREAK);
-                            vibrateShort();
-                            Toast.makeText(this, getString(R.string.timer_toast_break_ended), Toast.LENGTH_SHORT).show();
-                            navigateHome();
-                        })
-                        .show();
-                return;
-            }
-            if (state != null && state.awaitingPostBreakChoice) {
-                sendAction(TimerService.ACTION_RESET);
-                vibrateShort();
-                Toast.makeText(this, getString(R.string.timer_toast_activity_ended), Toast.LENGTH_SHORT).show();
-                navigateHome();
-                return;
-            }
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.timer_confirm_reset_title)
-                    .setMessage(R.string.timer_confirm_reset_message)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(R.string.stop_button, (d, w) -> {
-                        sendAction(TimerService.ACTION_RESET);
-                        vibrateShort();
-                        Toast.makeText(this, getString(R.string.timer_toast_timer_ended), Toast.LENGTH_SHORT).show();
-                        navigateHome();
-                    })
-                    .show();
-        });
+        primaryButton.setOnClickListener(v -> viewModel.dispatch(TimerIntent.primaryClicked()));
+        secondaryButton.setOnClickListener(v -> viewModel.dispatch(TimerIntent.secondaryClicked()));
     }
 
     @Override
@@ -219,6 +164,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         if (timerService != null) {
             timerService.notifyTimerUiResumed();
         }
+        viewModel.dispatch(TimerIntent.screenResumed());
     }
 
     @Override
@@ -250,8 +196,104 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
     }
 
-    private void sendAction(String action) {
-        TimerServiceLauncher.deliverAction(this, action);
+    private void handleEffect(@Nullable TimerEffect effect) {
+        if (effect == null || isFinishing()) {
+            return;
+        }
+        switch (effect.type) {
+            case DELIVER_ACTION:
+                if (effect.serviceAction != null) {
+                    TimerServiceLauncher.deliverAction(this, effect.serviceAction);
+                }
+                break;
+            case DELIVER_ACTION_WITH_REASON:
+                if (effect.serviceAction != null && effect.pauseReason != null) {
+                    Intent intent = new Intent(this, TimerService.class);
+                    intent.setAction(effect.serviceAction);
+                    intent.putExtra(TimerService.EXTRA_PAUSE_REASON, effect.pauseReason);
+                    TimerServiceLauncher.deliverAction(this, intent);
+                }
+                break;
+            case SHOW_TOAST:
+                Toast.makeText(this, effect.toastRes, Toast.LENGTH_SHORT).show();
+                break;
+            case SHOW_PAUSE_REASON_DIALOG:
+                showPauseReasonDialog(effect.promptMode != null
+                        ? effect.promptMode
+                        : PauseReasonPromptMode.ASK_SKIPPABLE);
+                break;
+            case DISMISS_PAUSE_REASON_DIALOG:
+                dismissPauseReasonDialog();
+                break;
+            case SHOW_STOP_CONFIRM:
+                showStopConfirm();
+                break;
+            case SHOW_END_BREAK_CONFIRM:
+                showEndBreakConfirm();
+                break;
+            case SHOW_EXIT_CONFIRM:
+                showExitConfirm();
+                break;
+            case FINISH_SESSION:
+                if (effect.serviceAction != null) {
+                    TimerServiceLauncher.deliverAction(this, effect.serviceAction);
+                }
+                vibrateShort();
+                if (effect.toastRes != 0) {
+                    Toast.makeText(this, effect.toastRes, Toast.LENGTH_SHORT).show();
+                }
+                navigateHome();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void showPauseReasonDialog(PauseReasonPromptMode mode) {
+        if (getSupportFragmentManager().findFragmentByTag(PauseReasonDialog.TAG) != null) {
+            return;
+        }
+        PauseReasonDialog.newInstance(mode)
+                .show(getSupportFragmentManager(), PauseReasonDialog.TAG);
+    }
+
+    private void dismissPauseReasonDialog() {
+        androidx.fragment.app.Fragment existing =
+                getSupportFragmentManager().findFragmentByTag(PauseReasonDialog.TAG);
+        if (existing instanceof PauseReasonDialog) {
+            ((PauseReasonDialog) existing).dismissAllowingStateLoss();
+        }
+    }
+
+    private void showStopConfirm() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.timer_confirm_reset_title)
+                .setMessage(R.string.timer_confirm_reset_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.stop_button, (d, w) ->
+                        viewModel.dispatch(TimerIntent.confirmStop()))
+                .show();
+    }
+
+    private void showEndBreakConfirm() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.timer_confirm_end_break_title)
+                .setMessage(R.string.timer_confirm_end_break_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.timer_end_break, (d, w) ->
+                        viewModel.dispatch(TimerIntent.confirmEndBreak()))
+                .show();
+    }
+
+    private void showExitConfirm() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.timer_dialog_exit_title)
+                .setMessage(R.string.timer_dialog_exit_message)
+                .setPositiveButton(R.string.timer_dialog_exit_confirm, (d, w) ->
+                        viewModel.dispatch(TimerIntent.confirmExitReset()))
+                .setNegativeButton(R.string.timer_dialog_exit_continue, (d, w) -> d.dismiss())
+                .setCancelable(true)
+                .show();
     }
 
     private void applyTaskFromIntent() {
@@ -273,7 +315,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
     private void maybeStartOnEnter() {
         boolean start = getIntent().getBooleanExtra("start", false);
         if (start && timerService != null && !timerService.isRunning() && !timerService.isPaused()) {
-            sendAction(TimerService.ACTION_START);
+            TimerServiceLauncher.deliverAction(this, TimerService.ACTION_START);
         }
     }
 
@@ -282,10 +324,6 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         home.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(home);
         finish();
-    }
-
-    private void navigateStay() {
-        updateUIFromState(viewModel.getTimerState().getValue());
     }
 
     private void vibrateShort() {
@@ -300,6 +338,21 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             }
         } catch (Exception e) {
             AppLog.w("TimerActivity", "Vibration failed", e);
+        }
+    }
+
+    private void applyScreenState(@Nullable TimerScreenUiState screen) {
+        if (sessionHintText == null || screen == null) {
+            return;
+        }
+        if (screen.pauseHintVisible && screen.pauseHintText != null) {
+            sessionHintText.setVisibility(View.VISIBLE);
+            sessionHintText.setText(screen.pauseHintText);
+            if (screen.pauseHintUrgent) {
+                sessionHintText.setTextColor(ContextCompat.getColor(this, R.color.semantic_warning));
+            } else {
+                sessionHintText.setTextColor(defaultHintColor);
+            }
         }
     }
 
@@ -325,11 +378,12 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
                 taskTitleText.setVisibility(View.GONE);
             }
         }
-        if (sessionHintText != null && state != null) {
+        if (sessionHintText != null && state != null && !state.paused) {
             int hintRes = viewModel.resolveSessionHintResId(state);
             if (hintRes != 0) {
                 sessionHintText.setVisibility(View.VISIBLE);
                 sessionHintText.setText(hintRes);
+                sessionHintText.setTextColor(defaultHintColor);
             } else {
                 sessionHintText.setVisibility(View.GONE);
             }
@@ -355,7 +409,6 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             return;
         }
         if (state.running) {
-            // 与通知栏一致：达暂停上限后不再提供暂停入口
             if (state.isStudySession() && !state.canPause) {
                 primaryButton.setVisibility(View.GONE);
             } else {
@@ -383,49 +436,18 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
     }
 
-    // 暂停原因选择回调
     @Override
     public void onReasonSelected(String reason) {
-        if (timerService != null && !timerService.canPause()) {
-            Toast.makeText(this, getString(R.string.timer_toast_max_pause_reached), Toast.LENGTH_SHORT).show();
-            updateControls(viewModel.getTimerState().getValue());
-            return;
-        }
-        Intent intent = new Intent(this, TimerService.class);
-        intent.setAction(TimerService.ACTION_PAUSE_WITH_REASON);
-        intent.putExtra("pause_reason", reason);
-        TimerServiceLauncher.deliverAction(this, intent);
+        viewModel.dispatch(TimerIntent.reasonPicked(reason));
     }
 
     @Override
-    public void resumeTimer() {
-        TimerServiceLauncher.deliverAction(this, TimerService.ACTION_RESUME);
+    public void onReasonSkipped() {
+        viewModel.dispatch(TimerIntent.reasonSkipped());
     }
 
     @Override
-    public void onBackPressed() {
-        if (!confirmExitIfRunning()) {
-            super.onBackPressed();
-        }
-    }
-
-    private boolean confirmExitIfRunning() {
-        if (timerService != null && timerService.isRunning() && timerService.getSessionType() == 0) {
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(R.string.timer_dialog_exit_title)
-                    .setMessage(R.string.timer_dialog_exit_message)
-                    .setPositiveButton(R.string.timer_dialog_exit_confirm, (d, w) -> {
-                        sendAction(TimerService.ACTION_RESET);
-                        Toast.makeText(this, getString(R.string.timer_toast_activity_ended), Toast.LENGTH_SHORT).show();
-                        navigateHome();
-                    })
-                    .setNegativeButton(R.string.timer_dialog_exit_continue, (d, w) -> d.dismiss())
-                    .setCancelable(true)
-                    .show();
-            return true;
-        }
-        return false;
+    public void onReasonQuickResume() {
+        viewModel.dispatch(TimerIntent.reasonQuickResume());
     }
 }
-
-

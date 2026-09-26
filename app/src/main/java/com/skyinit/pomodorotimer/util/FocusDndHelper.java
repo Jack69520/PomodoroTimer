@@ -10,16 +10,18 @@ import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.FocusDndStore;
 
 /**
- * 学习计时期间临时启用系统勿扰（DND），结束后恢复先前模式。
+ * 学习计时 <b>进行中</b> 临时启用系统勿扰（DND）；暂停或会话结束后恢复先前模式；休息不加勿扰。
  * <p>
  * <b>持久化：</b>开启前的 interruption filter 与拥有权写入 {@link FocusDndStore}，
  * 不以进程内静态字段为唯一真相源，从而在杀进程 / Alarm 唤醒后仍可恢复。
  * <p>
  * <b>恢复策略（产品约定，详见方法注释）：</b>
  * <ul>
- *   <li>会话结束路径 {@link #restoreDnd}：始终写回开始前保存的原状态（策略 2-A）。</li>
+ *   <li>暂停 / 会话结束路径 {@link #restoreDnd}：始终写回开始前保存的原状态（策略 2-A）。</li>
  *   <li>冷启动孤儿路径 {@link #recoverOrphanIfNeeded}：仅当系统当前仍为本 App
- *       所设模式时才恢复；用户已在系统设置中改过则只清盘（策略 3-A1）。</li>
+ *       所设模式时才恢复；用户已在系统设置中改过则只清盘（策略 3-A1）。
+ *       若仍有活跃会话 checkpoint（含 paused），本路径跳过——paused 恢复须由
+ *       {@code TimerService} 主动调用 {@link #restoreDnd}。</li>
  * </ul>
  * 全部入口经同一把类锁串行，保证多线程与「App 启动 + Service 同时进」的竞态安全。
  */
@@ -92,9 +94,9 @@ public final class FocusDndHelper {
     }
 
     /**
-     * 计时结束 / 失败 / 重置 / 切号时恢复先前勿扰模式（策略 2-A）。
+     * 学习暂停 / 计时结束 / 失败 / 重置 / 切号时恢复先前勿扰模式（策略 2-A）。
      * <p>
-     * <b>意图：</b>本会话内 App 视为临时接管勿扰，结束时始终写回开始前保存的原 filter，
+     * <b>意图：</b>本会话内 App 视为临时接管勿扰，释放时始终写回开始前保存的原 filter，
      * 即使用户在专注期间手动改过系统勿扰也会被覆盖回原状态。
      * <p>
      * <b>日后若改为「尊重用户中途改动」：</b>可在写回前比较

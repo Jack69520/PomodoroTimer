@@ -24,6 +24,7 @@ public final class PomodoroSettingsEffect {
     public enum ChoiceKind {
         BREAK_DURATION,
         PAUSE_COUNT,
+        PAUSE_REASON_PROMPT,
         LONG_BREAK_INTERVAL,
         LONG_BREAK_DURATION
     }

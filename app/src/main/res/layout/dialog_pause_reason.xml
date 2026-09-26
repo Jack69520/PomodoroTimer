@@ -4,15 +4,29 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:id="@+id/pause_reason_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/timer_dialog_pause_reason_subtitle"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/timer_dialog_pause_reason_prompt"
-        android:textSize="18sp"
+        android:textSize="15sp"
         android:textStyle="bold"
-        android:layout_marginBottom="20dp"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="12dp"
         android:gravity="center" />
 
     <LinearLayout
@@ -23,28 +37,29 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_1"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:textSize="16sp"
+            android:layout_marginEnd="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="16dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_2"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:textSize="16sp"
+            android:layout_marginStart="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
-
     </LinearLayout>
 
     <LinearLayout
@@ -55,28 +70,29 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_3"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:textSize="16sp"
+            android:layout_marginEnd="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_4"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:textSize="16sp"
+            android:layout_marginStart="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
-
     </LinearLayout>
 
     <LinearLayout
@@ -87,36 +103,47 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_5"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:textSize="16sp"
+            android:layout_marginEnd="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_reason_6"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:textSize="16sp"
+            android:layout_marginStart="6dp"
+            android:textSize="15sp"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
+            app:cornerRadius="14dp"
             app:strokeWidth="1dp"
             app:strokeColor="@color/stroke_subtle" />
-
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_skip"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="@string/timer_pause_reason_skip"
+        android:textSize="16sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_resume"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="52dp"
         android:text="@string/timer_resume_timer"
-        android:textSize="18sp"
+        android:textSize="17sp"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/brand"
         app:cornerRadius="16dp" />

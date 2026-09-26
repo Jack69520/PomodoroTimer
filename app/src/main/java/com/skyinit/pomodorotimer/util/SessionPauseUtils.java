@@ -8,10 +8,14 @@ import java.util.List;
 
 /**
  * 专注记录暂停原因的编解码工具。
+ * <p>
+ * 空槽（尚未标注）编码为 {@link #EMPTY_SLOT_TOKEN}，以保持与 pauseCount 对齐。
  */
 public final class SessionPauseUtils {
 
     private static final String REASON_DELIMITER = "||";
+    /** 与 PauseReasonPolicy.UNSETTLED 对应的持久化占位。 */
+    static final String EMPTY_SLOT_TOKEN = "\u200B";
 
     private SessionPauseUtils() {
     }
@@ -22,23 +26,28 @@ public final class SessionPauseUtils {
         }
         StringBuilder builder = new StringBuilder();
         for (String reason : reasons) {
-            if (TextUtils.isEmpty(reason)) {
-                continue;
-            }
             if (builder.length() > 0) {
                 builder.append(REASON_DELIMITER);
             }
-            builder.append(reason.trim());
+            if (reason == null || reason.isEmpty()) {
+                builder.append(EMPTY_SLOT_TOKEN);
+            } else {
+                builder.append(reason.trim());
+            }
         }
         return builder.length() > 0 ? builder.toString() : null;
     }
 
     public static List<String> decodeReasons(String encoded, String fallbackReason) {
         if (!TextUtils.isEmpty(encoded)) {
-            String[] parts = encoded.split("\\Q" + REASON_DELIMITER + "\\E");
+            String[] parts = encoded.split("\\Q" + REASON_DELIMITER + "\\E", -1);
             List<String> reasons = new ArrayList<>();
             for (String part : parts) {
-                if (!TextUtils.isEmpty(part)) {
+                if (part == null) {
+                    reasons.add("");
+                } else if (EMPTY_SLOT_TOKEN.equals(part) || part.isEmpty()) {
+                    reasons.add("");
+                } else {
                     reasons.add(part.trim());
                 }
             }

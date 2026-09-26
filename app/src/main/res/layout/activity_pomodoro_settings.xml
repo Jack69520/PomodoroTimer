@@ -135,6 +135,51 @@
                     android:src="@drawable/ic_arrow_right"
                     app:tint="@color/text_secondary" />
             </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:alpha="0.65"
+                android:background="@drawable/bg_profile_divider" />
+
+            <LinearLayout
+                android:id="@+id/row_pause_reason_prompt"
+                style="@style/SettingsValueRow">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_pause_reason_prompt"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="@string/settings_pause_reason_prompt_hint"
+                        android:textColor="@color/text_hint"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/pause_reason_prompt_value"
+                    style="@style/SettingsNavRowValue" />
+
+                <ImageView
+                    style="@style/ProfileMenuRowArrow"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- 流程 -->

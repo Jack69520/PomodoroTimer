@@ -25,11 +25,14 @@ public final class TimerUiState {
     public final boolean exactAlarmReliable;
     /** 当前学习会话是否仍可暂停（已达上限时为 false）。 */
     public final boolean canPause;
+    /** 暂停态下当前这次暂停原因是否已标注。 */
+    public final boolean pauseReasonSettled;
+    public final int pauseCount;
 
     public TimerUiState(long timeLeftMillis, boolean running, boolean paused, int sessionType,
                         boolean awaitingPostBreakChoice, boolean longBreak) {
         this(timeLeftMillis, running, paused, sessionType, awaitingPostBreakChoice, longBreak,
-                0L, 0, 0L, true, false);
+                0L, 0, 0L, true, false, true, 0);
     }
 
     public TimerUiState(long timeLeftMillis, boolean running, boolean paused, int sessionType,
@@ -37,7 +40,7 @@ public final class TimerUiState {
                         long sessionId, int generation,
                         long pauseTimeoutRemainingMs, boolean exactAlarmReliable) {
         this(timeLeftMillis, running, paused, sessionType, awaitingPostBreakChoice, longBreak,
-                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, false);
+                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, false, true, 0);
     }
 
     public TimerUiState(long timeLeftMillis, boolean running, boolean paused, int sessionType,
@@ -45,6 +48,15 @@ public final class TimerUiState {
                         long sessionId, int generation,
                         long pauseTimeoutRemainingMs, boolean exactAlarmReliable,
                         boolean canPause) {
+        this(timeLeftMillis, running, paused, sessionType, awaitingPostBreakChoice, longBreak,
+                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, canPause, true, 0);
+    }
+
+    public TimerUiState(long timeLeftMillis, boolean running, boolean paused, int sessionType,
+                        boolean awaitingPostBreakChoice, boolean longBreak,
+                        long sessionId, int generation,
+                        long pauseTimeoutRemainingMs, boolean exactAlarmReliable,
+                        boolean canPause, boolean pauseReasonSettled, int pauseCount) {
         this.timeLeftMillis = timeLeftMillis;
         this.running = running;
         this.paused = paused;
@@ -56,6 +68,8 @@ public final class TimerUiState {
         this.pauseTimeoutRemainingMs = pauseTimeoutRemainingMs;
         this.exactAlarmReliable = exactAlarmReliable;
         this.canPause = canPause;
+        this.pauseReasonSettled = pauseReasonSettled;
+        this.pauseCount = pauseCount;
     }
 
     public boolean isBreakSession() {

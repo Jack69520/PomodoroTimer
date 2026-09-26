@@ -94,8 +94,15 @@
     <string name="timer_dialog_exit_message">当前正在计时，确认要退出计时活动并返回主页吗？</string>
     <string name="timer_dialog_exit_confirm">退出计时活动</string>
     <string name="timer_dialog_exit_continue">继续计时</string>
-    <string name="timer_dialog_pause_reason_title">为什么暂停？</string>
+    <string name="timer_dialog_pause_reason_title">记录暂停原因</string>
+    <string name="timer_dialog_pause_reason_subtitle">计时已暂停，可选择原因或稍后再说</string>
     <string name="timer_pause_reason_timeout">暂停超时</string>
+    <string name="timer_pause_reason_unfilled">未填写</string>
+    <string name="timer_pause_reason_quick_resume">快速恢复</string>
+    <string name="timer_pause_reason_skip">跳过</string>
+    <string name="timer_pause_fail_countdown">已暂停 · 失败倒计时 %1$s</string>
+    <string name="timer_pause_fail_countdown_urgent">即将判定失败 · %1$s</string>
+    <string name="timer_notification_paused_dual">番茄剩余 %1$s · 失败倒计时 %2$s</string>
     <string name="timer_category_default">默认</string>
     <string name="timer_notification_ready">准备就绪</string>
     <string name="timer_notification_recovery_prompt">番茄钟进行中，点击返回</string>
@@ -272,7 +279,7 @@
     <string name="home_quick_duration_180min">180分钟</string>
     <string name="home_duration_unit_hour">小时</string>
     <string name="home_duration_unit_minute">分钟</string>
-    <string name="timer_dialog_pause_reason_prompt">请选择暂停原因：</string>
+    <string name="timer_dialog_pause_reason_prompt">请选择暂停原因</string>
     <string name="timer_resume_timer">继续计时</string>
 
     <!-- Calendar -->
@@ -477,7 +484,7 @@
     <string name="settings_auto_start_after_break">休息结束后自动开始下一轮番茄</string>
     <string name="settings_auto_start_after_break_hint">开启后，短/长休息结束将自动进入下一轮专注计时</string>
     <string name="settings_dnd_during_focus">专注期间启用勿扰</string>
-    <string name="settings_dnd_during_focus_hint">学习计时开始后自动开启系统勿扰，结束后恢复（需授予勿扰访问权限）</string>
+    <string name="settings_dnd_during_focus_hint">学习计时进行中自动开启系统勿扰；暂停或结束后恢复；休息不加勿扰（需授予勿扰访问权限）</string>
     <string name="settings_lock_screen_fullscreen">锁屏全屏显示计时</string>
     <string name="settings_lock_screen_fullscreen_hint">专注与休息期间在锁屏上全屏显示计时页（仅展示）；操作设备请长按解锁。部分系统可能仅显示通知倒计时。</string>
     <string name="settings_lock_screen_permission_title">需要额外权限</string>
@@ -546,6 +553,11 @@
     <string name="settings_toast_custom_ringtone_success">自定义铃声设置成功</string>
     <string name="settings_section_pomodoro_task">番茄钟和待办设置</string>
     <string name="settings_max_pause_count">一次番茄钟最大暂停次数</string>
+    <string name="settings_pause_reason_prompt">暂停原因采集</string>
+    <string name="settings_pause_reason_prompt_hint">点击暂停后立即停表，再按此设置询问原因</string>
+    <string name="settings_pause_reason_mode_ask">询问（可跳过）</string>
+    <string name="settings_pause_reason_mode_required">必须选择原因</string>
+    <string name="settings_pause_reason_mode_off">不询问</string>
     <string name="settings_auto_delete_completed">自动删除已完成任务</string>
     <string name="settings_auto_delete_completed_hint">开启后，系统将自动删除3天前标记完成的待办任务</string>
     <string name="settings_collection_progress_details">待办集显示进度详情</string>
@@ -567,7 +579,7 @@
     <string name="faq_timer_q_quick_duration">如何快速选择常用时长？</string>
     <string name="faq_timer_a_quick_duration">时长设置弹窗提供45/60/90/120/150/180分钟快捷按钮，点击即可填入并确认；也可通过小时/分钟滚轮精确调整。计时进行中无法修改时长。</string>
     <string name="faq_timer_q_pause_rules">暂停有哪些规则？</string>
-    <string name="faq_timer_a_pause_rules">仅学习阶段可暂停。暂停时会弹出原因选择（临时有事、被打断等），原因会记入统计。每轮最多暂停次数可在设置中调节（1～5次，默认2次），达上限后无法继续暂停但计时仍会继续。单次暂停超过5分钟将判定失败并结束本轮，同时发送通知。</string>
+    <string name="faq_timer_a_pause_rules">仅学习阶段可暂停。点击暂停后计时立即停止，随后可按设置询问原因（默认可跳过；也可设为必须选择或不询问）。原因记入统计。每轮最多暂停次数可在设置中调节（1～5次，默认2次），达上限后无法继续暂停但计时仍会继续。单次暂停超过5分钟将判定失败并结束本轮；暂停期间界面与通知会显示失败倒计时。</string>
     <string name="faq_timer_q_after_study">学习结束后可以做什么？</string>
     <string name="faq_timer_a_after_study">学习计时结束后会自动进入休息：默认使用设置的短休息时长；若开启了“每 N 个番茄钟后长休息”，达到轮数后将进入 10～15 分钟长休息。休息进行中可在计时页点击“结束休息”提前结束。休息自然结束后：若开启了“休息结束后自动开始下一轮”，将自动进入下一轮学习；否则可选择“开始新一轮番茄”或“结束活动”。</string>
     <string name="faq_timer_q_long_break">长休息是什么？如何设置？</string>
@@ -1216,6 +1228,12 @@
         <item>3次</item>
         <item>4次</item>
         <item>5次</item>
+    </string-array>
+
+    <string-array name="settings_pause_reason_prompt_options">
+        <item>@string/settings_pause_reason_mode_ask</item>
+        <item>@string/settings_pause_reason_mode_required</item>
+        <item>@string/settings_pause_reason_mode_off</item>
     </string-array>
 
     <string-array name="dev_lab_log_levels">

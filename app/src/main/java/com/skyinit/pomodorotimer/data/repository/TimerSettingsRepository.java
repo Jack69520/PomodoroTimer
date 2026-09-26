@@ -1,6 +1,7 @@
 package com.skyinit.pomodorotimer.data.repository;
 
 import com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings;
+import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 
 /**
  * 用户级计时偏好（学习/休息时长、暂停上限），持久化于 Room {@link UserPomodoroSettings}。
@@ -49,6 +50,18 @@ public class TimerSettingsRepository {
         int clamped = clampMaxPauseCount(count);
         pomodoroSettingsRepository.applyUpdate(settings -> settings.maxPauseCount = clamped);
         return clamped;
+    }
+
+    public PauseReasonPromptMode getPauseReasonPromptMode() {
+        return PauseReasonPromptMode.fromStorage(
+                pomodoroSettingsRepository.getSettings().pauseReasonPromptMode);
+    }
+
+    public PauseReasonPromptMode setPauseReasonPromptMode(PauseReasonPromptMode mode) {
+        PauseReasonPromptMode resolved = mode != null ? mode : PauseReasonPromptMode.ASK_SKIPPABLE;
+        pomodoroSettingsRepository.applyUpdate(
+                settings -> settings.pauseReasonPromptMode = resolved.storageValue);
+        return resolved;
     }
 
     public boolean isDndDuringFocusEnabled() {

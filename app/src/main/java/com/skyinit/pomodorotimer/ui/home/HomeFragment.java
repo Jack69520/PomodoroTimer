@@ -56,9 +56,7 @@ import java.util.Locale;
  * 待办交互全部经 {@link HomeTodoViewModel#dispatch(HomeTodoIntent)}；
  * 计时仍由 {@link HomeViewModel} + {@link HomeTimerUiHelper} 负责。
  */
-public class HomeFragment extends Fragment implements
-        PauseReasonDialog.PauseReasonListener,
-        HomeTimerUiHelper.Host {
+public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
 
     private ActivityResultLauncher<Intent> taskEditLauncher;
 
@@ -568,7 +566,14 @@ public class HomeFragment extends Fragment implements
                 return;
             }
             if (state.paused) {
-                timerPhaseText.setText(R.string.home_phase_paused);
+                if (state.pauseTimeoutRemainingMs > 0L) {
+                    long totalSeconds = Math.max(0L, state.pauseTimeoutRemainingMs / 1000L);
+                    String countdown = String.format(Locale.getDefault(), "%02d:%02d",
+                            totalSeconds / 60, totalSeconds % 60);
+                    timerPhaseText.setText(getString(R.string.timer_pause_fail_countdown, countdown));
+                } else {
+                    timerPhaseText.setText(R.string.home_phase_paused);
+                }
             } else if (state.running && state.isBreakSession()) {
                 timerPhaseText.setText(R.string.home_phase_break);
             } else if (state.running) {
@@ -679,23 +684,6 @@ public class HomeFragment extends Fragment implements
         if (todoListAdapter != null) {
             todoListAdapter.notifyDataSetChanged();
         }
-    }
-
-    @Override
-    public void onReasonSelected(String reason) {
-        if (timerService != null && !timerService.canPause()) {
-            Toast.makeText(requireContext(), R.string.timer_toast_max_pause_reached, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Intent intent = new Intent(requireContext(), TimerService.class);
-        intent.setAction(TimerService.ACTION_PAUSE_WITH_REASON);
-        intent.putExtra("pause_reason", reason);
-        TimerServiceLauncher.deliverAction(requireContext(), intent);
-    }
-
-    @Override
-    public void resumeTimer() {
-        TimerServiceLauncher.deliverAction(requireContext(), TimerService.ACTION_RESUME);
     }
 
     @Override

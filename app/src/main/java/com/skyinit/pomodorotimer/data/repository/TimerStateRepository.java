@@ -37,9 +37,19 @@ public class TimerStateRepository {
                         long sessionId, int generation,
                         long pauseTimeoutRemainingMs, boolean exactAlarmReliable,
                         boolean canPause) {
+        publish(timeLeftMillis, running, paused, sessionType, awaitingPostBreakChoice, longBreak,
+                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, canPause, true, 0);
+    }
+
+    public void publish(long timeLeftMillis, boolean running, boolean paused, int sessionType,
+                        boolean awaitingPostBreakChoice, boolean longBreak,
+                        long sessionId, int generation,
+                        long pauseTimeoutRemainingMs, boolean exactAlarmReliable,
+                        boolean canPause, boolean pauseReasonSettled, int pauseCount) {
         state.postValue(new TimerUiState(
                 timeLeftMillis, running, paused, sessionType, awaitingPostBreakChoice, longBreak,
-                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, canPause));
+                sessionId, generation, pauseTimeoutRemainingMs, exactAlarmReliable, canPause,
+                pauseReasonSettled, pauseCount));
     }
 
     public void syncFromService(TimerService service) {

@@ -12,6 +12,7 @@ public final class PomodoroSettingsIntent {
         SET_STUDY_DURATION,
         SET_BREAK_DURATION,
         SET_MAX_PAUSE,
+        SET_PAUSE_REASON_PROMPT_MODE,
         SET_AUTO_START,
         SET_LONG_BREAK_ENABLED,
         SET_LONG_BREAK_INTERVAL,
@@ -24,6 +25,7 @@ public final class PomodoroSettingsIntent {
         OPEN_STUDY_DURATION_PICKER,
         OPEN_BREAK_DURATION_PICKER,
         OPEN_PAUSE_COUNT_PICKER,
+        OPEN_PAUSE_REASON_PROMPT_PICKER,
         OPEN_LONG_BREAK_INTERVAL_PICKER,
         OPEN_LONG_BREAK_DURATION_PICKER,
         REQUEST_DND_PERMISSION,
@@ -62,6 +64,11 @@ public final class PomodoroSettingsIntent {
     @NonNull
     public static PomodoroSettingsIntent setMaxPause(int count) {
         return new PomodoroSettingsIntent(Type.SET_MAX_PAUSE, 0, count, false);
+    }
+
+    @NonNull
+    public static PomodoroSettingsIntent setPauseReasonPromptMode(int mode) {
+        return new PomodoroSettingsIntent(Type.SET_PAUSE_REASON_PROMPT_MODE, 0, mode, false);
     }
 
     @NonNull
@@ -122,6 +129,11 @@ public final class PomodoroSettingsIntent {
     @NonNull
     public static PomodoroSettingsIntent openPauseCountPicker() {
         return new PomodoroSettingsIntent(Type.OPEN_PAUSE_COUNT_PICKER, 0, 0, false);
+    }
+
+    @NonNull
+    public static PomodoroSettingsIntent openPauseReasonPromptPicker() {
+        return new PomodoroSettingsIntent(Type.OPEN_PAUSE_REASON_PROMPT_PICKER, 0, 0, false);
     }
 
     @NonNull

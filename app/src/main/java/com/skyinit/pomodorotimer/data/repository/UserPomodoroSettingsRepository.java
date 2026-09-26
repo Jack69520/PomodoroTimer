@@ -148,6 +148,7 @@ public class UserPomodoroSettingsRepository {
         copy.defaultStudyTimeMs = src.defaultStudyTimeMs;
         copy.defaultBreakTimeMs = src.defaultBreakTimeMs;
         copy.maxPauseCount = src.maxPauseCount;
+        copy.pauseReasonPromptMode = src.pauseReasonPromptMode;
         copy.dndDuringFocusEnabled = src.dndDuringFocusEnabled;
         copy.autoBlockDuringPomodoro = src.autoBlockDuringPomodoro;
         copy.lockScreenFullscreenEnabled = src.lockScreenFullscreenEnabled;

@@ -21,6 +21,9 @@ public class UserPomodoroSettings {
     public static final int MIN_MAX_PAUSE_COUNT = 1;
     public static final int MAX_MAX_PAUSE_COUNT = 5;
 
+    /** {@link com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode#ASK_SKIPPABLE} */
+    public static final int DEFAULT_PAUSE_REASON_PROMPT_MODE = 0;
+
     /** 兼容旧调用；设备级设置下可为空。 */
     @NonNull
     public String userId = "";
@@ -28,6 +31,11 @@ public class UserPomodoroSettings {
     public long defaultStudyTimeMs;
     public long defaultBreakTimeMs;
     public int maxPauseCount;
+    /**
+     * 暂停原因采集模式：0=询问可跳过，1=必须选原因，2=不询问。
+     * @see com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode
+     */
+    public int pauseReasonPromptMode;
     public boolean dndDuringFocusEnabled;
     public boolean autoBlockDuringPomodoro;
     /** 专注/休息期间锁屏全屏显示计时页（默认关）。 */
@@ -51,6 +59,7 @@ public class UserPomodoroSettings {
         defaultStudyTimeMs = DEFAULT_STUDY_TIME_MS;
         defaultBreakTimeMs = DEFAULT_BREAK_TIME_MS;
         maxPauseCount = DEFAULT_MAX_PAUSE_COUNT;
+        pauseReasonPromptMode = DEFAULT_PAUSE_REASON_PROMPT_MODE;
         dndDuringFocusEnabled = false;
         autoBlockDuringPomodoro = false;
         lockScreenFullscreenEnabled = false;

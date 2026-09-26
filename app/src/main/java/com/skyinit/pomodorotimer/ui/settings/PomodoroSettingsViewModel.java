@@ -15,6 +15,7 @@ import com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings;
 import com.skyinit.pomodorotimer.data.repository.SettingsManager;
 import com.skyinit.pomodorotimer.data.repository.TimerSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.UserPomodoroSettingsRepository;
+import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.FocusDndHelper;
 import com.skyinit.pomodorotimer.util.LockScreenTimerGate;
@@ -80,6 +81,10 @@ public class PomodoroSettingsViewModel extends ViewModel {
                 updateSettings(s -> s.maxPauseCount =
                         TimerSettingsRepository.clampMaxPauseCount(intent.intValue), false);
                 break;
+            case SET_PAUSE_REASON_PROMPT_MODE:
+                updateSettings(s -> s.pauseReasonPromptMode =
+                        PauseReasonPromptMode.fromStorage(intent.intValue).storageValue, false);
+                break;
             case SET_AUTO_START:
                 updateSettings(s -> s.autoStartAfterBreak = intent.boolValue, false);
                 break;
@@ -130,6 +135,13 @@ public class PomodoroSettingsViewModel extends ViewModel {
                 int idx = state == null ? 1 : clampIndex(state.maxPauseCount - 1, 5);
                 effects.setValue(PomodoroSettingsEffect.showSingleChoice(
                         PomodoroSettingsEffect.ChoiceKind.PAUSE_COUNT, idx));
+                break;
+            }
+            case OPEN_PAUSE_REASON_PROMPT_PICKER: {
+                PomodoroSettingsUiState state = uiState.getValue();
+                int idx = state == null ? 0 : clampIndex(state.pauseReasonPromptMode, 3);
+                effects.setValue(PomodoroSettingsEffect.showSingleChoice(
+                        PomodoroSettingsEffect.ChoiceKind.PAUSE_REASON_PROMPT, idx));
                 break;
             }
             case OPEN_LONG_BREAK_INTERVAL_PICKER: {
@@ -288,6 +300,8 @@ public class PomodoroSettingsViewModel extends ViewModel {
                                               boolean hasAccess) {
         int breakMin = (int) (settings.defaultBreakTimeMs / 60_000L);
         int longBreakMin = (int) (settings.longBreakDurationMs / 60_000L);
+        PauseReasonPromptMode promptMode =
+                PauseReasonPromptMode.fromStorage(settings.pauseReasonPromptMode);
         return new PomodoroSettingsUiState(
                 true,
                 settings.defaultStudyTimeMs,
@@ -296,6 +310,8 @@ public class PomodoroSettingsViewModel extends ViewModel {
                 application.getString(R.string.settings_duration_minutes_format, breakMin),
                 settings.maxPauseCount,
                 application.getString(R.string.settings_pause_count_format, settings.maxPauseCount),
+                promptMode.storageValue,
+                labelForPauseReasonPrompt(promptMode),
                 settings.autoStartAfterBreak,
                 settings.longBreakEnabled,
                 settings.pomodorosBeforeLongBreak,
@@ -310,6 +326,19 @@ public class PomodoroSettingsViewModel extends ViewModel {
                 autoDelete,
                 collectionProgressDetails
         );
+    }
+
+    @NonNull
+    private String labelForPauseReasonPrompt(@NonNull PauseReasonPromptMode mode) {
+        switch (mode) {
+            case REQUIRED:
+                return application.getString(R.string.settings_pause_reason_mode_required);
+            case OFF:
+                return application.getString(R.string.settings_pause_reason_mode_off);
+            case ASK_SKIPPABLE:
+            default:
+                return application.getString(R.string.settings_pause_reason_mode_ask);
+        }
     }
 
     private static int clampIndex(int index, int size) {

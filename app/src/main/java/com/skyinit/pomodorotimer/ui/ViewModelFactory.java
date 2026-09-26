@@ -65,7 +65,9 @@ public class ViewModelFactory implements ViewModelProvider.Factory {
             );
         }
         if (modelClass.isAssignableFrom(TimerViewModel.class)) {
+            Application application = (Application) container.getAppContext();
             return (T) new TimerViewModel(
+                    application,
                     container.getTimerSettingsRepository(),
                     container.getUserSessionRepository(),
                     container.getTimerStateRepository()

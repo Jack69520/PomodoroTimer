@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * {@link FocusDndHelper}：启用落盘、会话结束无条件恢复（2-A）、孤儿条件恢复（3-A1）。
+ * {@link FocusDndHelper}：启用落盘、暂停/会话结束无条件恢复（2-A）、孤儿条件恢复（3-A1）。
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, application = TestApp.class)

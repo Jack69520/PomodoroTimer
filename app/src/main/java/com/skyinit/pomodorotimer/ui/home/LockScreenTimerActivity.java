@@ -199,12 +199,26 @@ public class LockScreenTimerActivity extends AppCompatActivity {
             }
         }
         if (sessionHintText != null) {
-            int hintRes = viewModel.resolveSessionHintResId(state);
-            if (hintRes != 0) {
+            if (state.paused) {
+                TimerScreenUiState screen = TimerScreenUiState.from(
+                        state, viewModel::formatTime, this);
                 sessionHintText.setVisibility(View.VISIBLE);
-                sessionHintText.setText(hintRes);
+                sessionHintText.setText(screen.pauseHintText);
+                if (screen.pauseHintUrgent) {
+                    sessionHintText.setTextColor(
+                            ContextCompat.getColor(this, R.color.semantic_warning));
+                } else {
+                    sessionHintText.setTextColor(0x99FFFFFF);
+                }
             } else {
-                sessionHintText.setVisibility(View.GONE);
+                int hintRes = viewModel.resolveSessionHintResId(state);
+                if (hintRes != 0) {
+                    sessionHintText.setVisibility(View.VISIBLE);
+                    sessionHintText.setText(hintRes);
+                    sessionHintText.setTextColor(0x99FFFFFF);
+                } else {
+                    sessionHintText.setVisibility(View.GONE);
+                }
             }
         }
     }

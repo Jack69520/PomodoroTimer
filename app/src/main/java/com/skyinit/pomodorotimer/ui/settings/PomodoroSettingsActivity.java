@@ -30,6 +30,7 @@ public class PomodoroSettingsActivity extends SubpageActivity {
     private TextView studyDurationValue;
     private TextView breakDurationValue;
     private TextView maxPauseValue;
+    private TextView pauseReasonPromptValue;
     private TextView longBreakIntervalValue;
     private TextView longBreakDurationValue;
     private View longBreakDetails;
@@ -68,6 +69,7 @@ public class PomodoroSettingsActivity extends SubpageActivity {
         studyDurationValue = findViewById(R.id.study_duration_value);
         breakDurationValue = findViewById(R.id.break_duration_value);
         maxPauseValue = findViewById(R.id.max_pause_value);
+        pauseReasonPromptValue = findViewById(R.id.pause_reason_prompt_value);
         longBreakIntervalValue = findViewById(R.id.long_break_interval_value);
         longBreakDurationValue = findViewById(R.id.long_break_duration_value);
         longBreakDetails = findViewById(R.id.long_break_details);
@@ -87,6 +89,8 @@ public class PomodoroSettingsActivity extends SubpageActivity {
                 viewModel.dispatch(PomodoroSettingsIntent.openBreakDurationPicker()));
         findViewById(R.id.row_max_pause).setOnClickListener(v ->
                 viewModel.dispatch(PomodoroSettingsIntent.openPauseCountPicker()));
+        findViewById(R.id.row_pause_reason_prompt).setOnClickListener(v ->
+                viewModel.dispatch(PomodoroSettingsIntent.openPauseReasonPromptPicker()));
         findViewById(R.id.row_long_break_interval).setOnClickListener(v ->
                 viewModel.dispatch(PomodoroSettingsIntent.openLongBreakIntervalPicker()));
         findViewById(R.id.row_long_break_duration).setOnClickListener(v ->
@@ -148,6 +152,9 @@ public class PomodoroSettingsActivity extends SubpageActivity {
         studyDurationValue.setText(state.studyDurationLabel);
         breakDurationValue.setText(state.breakDurationLabel);
         maxPauseValue.setText(state.maxPauseLabel);
+        if (pauseReasonPromptValue != null) {
+            pauseReasonPromptValue.setText(state.pauseReasonPromptLabel);
+        }
         longBreakIntervalValue.setText(state.longBreakIntervalLabel);
         longBreakDurationValue.setText(state.longBreakDurationLabel);
         longBreakDetails.setVisibility(state.longBreakEnabled ? View.VISIBLE : View.GONE);
@@ -266,6 +273,10 @@ public class PomodoroSettingsActivity extends SubpageActivity {
                 options = getResources().getStringArray(R.array.settings_pause_count_options);
                 title = getString(R.string.settings_max_pause_count);
                 break;
+            case PAUSE_REASON_PROMPT:
+                options = getResources().getStringArray(R.array.settings_pause_reason_prompt_options);
+                title = getString(R.string.settings_pause_reason_prompt);
+                break;
             case LONG_BREAK_INTERVAL:
                 options = getResources().getStringArray(R.array.pomodoros_before_long_break_options);
                 title = getString(R.string.settings_pomodoros_before_long_break);
@@ -295,6 +306,9 @@ public class PomodoroSettingsActivity extends SubpageActivity {
                 break;
             case PAUSE_COUNT:
                 viewModel.dispatch(PomodoroSettingsIntent.setMaxPause(which + 1));
+                break;
+            case PAUSE_REASON_PROMPT:
+                viewModel.dispatch(PomodoroSettingsIntent.setPauseReasonPromptMode(which));
                 break;
             case LONG_BREAK_INTERVAL:
                 viewModel.dispatch(PomodoroSettingsIntent.setLongBreakInterval(

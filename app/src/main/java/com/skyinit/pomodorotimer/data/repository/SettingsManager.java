@@ -24,6 +24,7 @@ public class SettingsManager {
     private static final String KEY_DEFAULT_STUDY_MS = "pomodoro_default_study_ms";
     private static final String KEY_DEFAULT_BREAK_MS = "pomodoro_default_break_ms";
     private static final String KEY_MAX_PAUSE_COUNT = "pomodoro_max_pause_count";
+    private static final String KEY_PAUSE_REASON_PROMPT_MODE = "pomodoro_pause_reason_prompt_mode";
     private static final String KEY_DND_DURING_FOCUS = "pomodoro_dnd_during_focus";
     private static final String KEY_AUTO_BLOCK_DURING = "pomodoro_auto_block_during";
     private static final String KEY_LOCK_SCREEN_FULLSCREEN = "pomodoro_lock_screen_fullscreen";
@@ -97,6 +98,8 @@ public class SettingsManager {
         s.defaultStudyTimeMs = prefs.getLong(KEY_DEFAULT_STUDY_MS, UserPomodoroSettings.DEFAULT_STUDY_TIME_MS);
         s.defaultBreakTimeMs = prefs.getLong(KEY_DEFAULT_BREAK_MS, UserPomodoroSettings.DEFAULT_BREAK_TIME_MS);
         s.maxPauseCount = prefs.getInt(KEY_MAX_PAUSE_COUNT, UserPomodoroSettings.DEFAULT_MAX_PAUSE_COUNT);
+        s.pauseReasonPromptMode = prefs.getInt(
+                KEY_PAUSE_REASON_PROMPT_MODE, UserPomodoroSettings.DEFAULT_PAUSE_REASON_PROMPT_MODE);
         s.dndDuringFocusEnabled = prefs.getBoolean(KEY_DND_DURING_FOCUS, false);
         s.autoBlockDuringPomodoro = prefs.getBoolean(KEY_AUTO_BLOCK_DURING, false);
         s.lockScreenFullscreenEnabled = prefs.getBoolean(KEY_LOCK_SCREEN_FULLSCREEN, false);
@@ -115,6 +118,7 @@ public class SettingsManager {
                 .putLong(KEY_DEFAULT_STUDY_MS, settings.defaultStudyTimeMs)
                 .putLong(KEY_DEFAULT_BREAK_MS, settings.defaultBreakTimeMs)
                 .putInt(KEY_MAX_PAUSE_COUNT, settings.maxPauseCount)
+                .putInt(KEY_PAUSE_REASON_PROMPT_MODE, settings.pauseReasonPromptMode)
                 .putBoolean(KEY_DND_DURING_FOCUS, settings.dndDuringFocusEnabled)
                 .putBoolean(KEY_AUTO_BLOCK_DURING, settings.autoBlockDuringPomodoro)
                 .putBoolean(KEY_LOCK_SCREEN_FULLSCREEN, settings.lockScreenFullscreenEnabled)

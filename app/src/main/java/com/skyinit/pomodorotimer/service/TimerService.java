@@ -51,6 +51,8 @@ import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.LockScreenPresenter;
 import com.skyinit.pomodorotimer.util.PermissionUtils;
 import com.skyinit.pomodorotimer.util.SessionPauseUtils;
+import com.skyinit.pomodorotimer.domain.timer.PauseReasonPolicy;
+import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 import com.skyinit.pomodorotimer.domain.timer.SessionPhase;
 import com.skyinit.pomodorotimer.domain.timer.SettleDecision;
 import com.skyinit.pomodorotimer.domain.timer.TimerSessionPolicy;
@@ -99,7 +101,12 @@ public class TimerService extends Service {
     public static final String ACTION_RESET = "RESET";
     public static final String ACTION_ACCOUNT_SWITCH_RESET = "ACCOUNT_SWITCH_RESET";
     public static final String ACTION_PAUSE_WITH_REASON = "PAUSE_WITH_REASON";
+    /** 仅为当前暂停标注原因，不增加 pauseCount。 */
+    public static final String ACTION_SET_PAUSE_REASON = "SET_PAUSE_REASON";
+    /** 原子：settle「快速恢复」并 resume，消除双 Intent 竞态。 */
+    public static final String ACTION_RESUME_WITH_QUICK_REASON = "RESUME_WITH_QUICK_REASON";
     public static final String ACTION_PAUSE_TIMEOUT = "PAUSE_TIMEOUT";
+    public static final String EXTRA_PAUSE_REASON = "pause_reason";
     /** Alarm 触发的会话到点完成（进程被杀后的兜底入口）。 */
     public static final String ACTION_SESSION_COMPLETE = "SESSION_COMPLETE";
     /** 从快照恢复或评估结算。 */
@@ -126,6 +133,7 @@ public class TimerService extends Service {
     private Runnable tickRunnable;
     private Handler pauseTimeoutHandler;
     private Runnable pauseTimeoutRunnable;
+    private Runnable pauseTickRunnable;
 
     private long timeLeftInMillis;
     private long timerEndElapsedRealtime;
@@ -291,7 +299,9 @@ public class TimerService extends Service {
                 sessionGeneration,
                 pauseRemaining,
                 ExactAlarmPermissionHelperCanSchedule(),
-                canPause());
+                canPause(),
+                isCurrentPauseReasonSettled(),
+                pauseCount);
         syncLockScreenPresenter();
     }
 
@@ -393,12 +403,16 @@ public class TimerService extends Service {
                 pauseTimer();
             } else if (ACTION_RESUME.equals(action)) {
                 resumeTimer();
+            } else if (ACTION_RESUME_WITH_QUICK_REASON.equals(action)) {
+                resumeWithQuickReason();
             } else if (ACTION_RESET.equals(action)) {
                 resetTimer();
             } else if (ACTION_ACCOUNT_SWITCH_RESET.equals(action)) {
                 resetTimerForAccountSwitch();
+            } else if (ACTION_SET_PAUSE_REASON.equals(action)) {
+                setPauseReason(intent.getStringExtra(EXTRA_PAUSE_REASON));
             } else if (ACTION_PAUSE_WITH_REASON.equals(action)) {
-                pauseTimerWithReason(intent.getStringExtra("pause_reason"));
+                pauseTimerWithReason(intent.getStringExtra(EXTRA_PAUSE_REASON));
             } else if (ACTION_FORCE_FAIL.equals(action)) {
                 endSessionDueToLeave();
             } else if (ACTION_PAUSE_TIMEOUT.equals(action)) {
@@ -536,6 +550,7 @@ public class TimerService extends Service {
             startTimerLoop();
             if (sessionType == 0 && isRunning && !isPaused) {
                 maybeStartTimerBlocking();
+                syncStudyDndForRunning();
             }
             notifyStateChanged();
             return true;
@@ -547,6 +562,10 @@ public class TimerService extends Service {
             sessionGeneration = cp.generation;
             long pauseElapsed = ActiveSessionStore.computePauseElapsedMillis(cp);
             restoredFromCheckpoint = true;
+            // 决策2-A：paused 仍可能残留旧版/杀进程留下的 owned，须立即无条件恢复
+            if (sessionType == 0) {
+                releaseStudyDnd();
+            }
             if (pauseElapsed >= PAUSE_TIMEOUT) {
                 timerHandler.post(this::endSessionDueToTimeout);
                 return true;
@@ -554,6 +573,7 @@ public class TimerService extends Service {
             // 校正暂停起点为“剩余超时”对应的 elapsed
             pauseStartElapsedRealtime = SystemClock.elapsedRealtime() - pauseElapsed;
             startPauseTimeoutCheck();
+            startPauseTick();
             startForegroundWithNotification();
             notifyStateChanged();
             return true;
@@ -609,9 +629,7 @@ public class TimerService extends Service {
 
         if (sessionType == 0 && isRunning && !isPaused) {
             maybeStartTimerBlocking();
-        }
-        if (sessionType == 0) {
-            FocusDndHelper.maybeEnableDnd(this, timerSettingsRepository.isDndDuringFocusEnabled());
+            syncStudyDndForRunning();
         }
 
         startForegroundWithNotification();
@@ -635,6 +653,7 @@ public class TimerService extends Service {
             statisticsRepository.deletePauseSnapshotsForSession(
                     getSessionUserIdOrActive(), sessionStartTime);
             maybeStartTimerBlocking();
+            syncStudyDndForRunning();
         }
 
         startForegroundWithNotification();
@@ -696,15 +715,18 @@ public class TimerService extends Service {
 
             notifyTimerFinish();
             stopTimerBlocking();
-            FocusDndHelper.restoreDnd(this);
+            releaseStudyDnd();
 
             if (completedSessionType == 0) {
                 long duration = System.currentTimeMillis() - sessionStartTime;
                 String userId = getSessionUserIdOrActive();
+                List<String> reasons = PauseReasonPolicy.normalizeForPersist(
+                        sessionPauseReasons, pauseCount,
+                        getString(R.string.timer_pause_reason_unfilled));
                 statisticsRepository.recordSession(
                         userId, sessionStartTime, duration, currentTaskId, currentSubTaskId,
                         currentCategory, currentTags,
-                        pauseCount, new ArrayList<>(sessionPauseReasons), false, null);
+                        pauseCount, reasons, false, null);
                 if (currentTaskId >= 0) {
                     incrementTaskCompletedPomodoros(currentTaskId, userId);
                 }
@@ -879,10 +901,14 @@ public class TimerService extends Service {
             return;
         }
 
-        pauseSessionInternal(false, null);
+        pauseSessionInternal(null);
     }
 
     private void pauseTimerWithReason(String reason) {
+        if (isPaused && !isRunning) {
+            setPauseReason(reason);
+            return;
+        }
         if (!isRunning || sessionType != 0) {
             return;
         }
@@ -893,10 +919,37 @@ public class TimerService extends Service {
             return;
         }
 
-        pauseSessionInternal(true, reason);
+        pauseSessionInternal(reason);
     }
 
-    private void pauseSessionInternal(boolean recordReason, String reason) {
+    private void setPauseReason(String reason) {
+        if (!isPaused || isRunning || sessionType != 0 || pauseCount <= 0) {
+            return;
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            return;
+        }
+        List<String> updated = PauseReasonPolicy.settleCurrentReason(
+                sessionPauseReasons, pauseCount, reason.trim());
+        sessionPauseReasons.clear();
+        sessionPauseReasons.addAll(updated);
+        saveCheckpoint();
+        notifyStateChanged();
+    }
+
+    private void resumeWithQuickReason() {
+        if (!isPaused || isRunning) {
+            return;
+        }
+        String quick = getString(R.string.timer_pause_reason_quick_resume);
+        List<String> updated = PauseReasonPolicy.settleCurrentReason(
+                sessionPauseReasons, pauseCount, quick);
+        sessionPauseReasons.clear();
+        sessionPauseReasons.addAll(updated);
+        resumeTimer();
+    }
+
+    private void pauseSessionInternal(String reasonOrNull) {
         stopTimerLoop();
         timeLeftInMillis = Math.max(0L, timerEndElapsedRealtime - SystemClock.elapsedRealtime());
         isRunning = false;
@@ -904,19 +957,51 @@ public class TimerService extends Service {
         sessionGeneration++;
         pauseStartElapsedRealtime = SystemClock.elapsedRealtime();
 
-        if (recordReason && sessionType == 0 && reason != null && !reason.isEmpty()) {
-            sessionPauseReasons.add(reason);
-        }
         pauseCount++;
+        List<String> withSlot = PauseReasonPolicy.appendUnsettledSlot(sessionPauseReasons, pauseCount);
+        sessionPauseReasons.clear();
+        sessionPauseReasons.addAll(withSlot);
+        if (reasonOrNull != null && !reasonOrNull.trim().isEmpty()) {
+            List<String> settled = PauseReasonPolicy.settleCurrentReason(
+                    sessionPauseReasons, pauseCount, reasonOrNull.trim());
+            sessionPauseReasons.clear();
+            sessionPauseReasons.addAll(settled);
+        }
 
         if (sessionType == 0) {
             stopTimerBlocking();
+            releaseStudyDnd();
         }
 
         startPauseTimeoutCheck();
+        startPauseTick();
         startForegroundWithNotification();
         saveCheckpoint();
         notifyStateChanged();
+    }
+
+    private void startPauseTick() {
+        cancelPauseTick();
+        if (!isPaused || isRunning) {
+            return;
+        }
+        pauseTickRunnable = () -> {
+            if (isPaused && !isRunning) {
+                publishState();
+                updateNotification();
+                if (pauseTimeoutHandler != null && pauseTickRunnable != null) {
+                    pauseTimeoutHandler.postDelayed(pauseTickRunnable, TICK_INTERVAL_MS);
+                }
+            }
+        };
+        pauseTimeoutHandler.postDelayed(pauseTickRunnable, TICK_INTERVAL_MS);
+    }
+
+    private void cancelPauseTick() {
+        if (pauseTimeoutHandler != null && pauseTickRunnable != null) {
+            pauseTimeoutHandler.removeCallbacks(pauseTickRunnable);
+        }
+        pauseTickRunnable = null;
     }
 
     private void startPauseTimeoutCheck() {
@@ -954,6 +1039,7 @@ public class TimerService extends Service {
             pauseTimeoutHandler.removeCallbacks(pauseTimeoutRunnable);
         }
         pauseTimeoutRunnable = null;
+        cancelPauseTick();
         TimerAlarmScheduler.cancelPauseTimeout(this);
     }
 
@@ -962,6 +1048,7 @@ public class TimerService extends Service {
         if (pauseTimeoutHandler != null && pauseTimeoutRunnable != null) {
             pauseTimeoutHandler.removeCallbacks(pauseTimeoutRunnable);
         }
+        cancelPauseTick();
     }
 
     private void handlePauseTimeoutAlarm(int alarmGeneration) {
@@ -999,14 +1086,17 @@ public class TimerService extends Service {
             if (sessionType == 0) {
                 long duration = System.currentTimeMillis() - sessionStartTime;
                 String userId = getSessionUserIdOrActive();
-                List<String> reasons = new ArrayList<>(sessionPauseReasons);
                 String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
+                List<String> reasons = PauseReasonPolicy.normalizeForPersist(
+                        sessionPauseReasons, pauseCount,
+                        getString(R.string.timer_pause_reason_unfilled));
+                reasons = new ArrayList<>(reasons);
                 reasons.add(pauseReasonTimeout);
                 statisticsRepository.recordFailedSession(
                         userId, sessionStartTime, duration, pauseReasonTimeout, currentTaskId, currentCategory,
                         Math.max(pauseCount, 1), reasons, null);
                 stopTimerBlocking();
-                FocusDndHelper.restoreDnd(this);
+                releaseStudyDnd();
             }
 
             ActiveSessionStore.markSettledResult(
@@ -1032,7 +1122,7 @@ public class TimerService extends Service {
         if (sessionType == 0) {
             discardCurrentSessionBlockRecords();
             stopTimerBlocking();
-            FocusDndHelper.restoreDnd(this);
+            releaseStudyDnd();
         }
 
         notifyTimerFinish();
@@ -1071,7 +1161,7 @@ public class TimerService extends Service {
         if (wasStudy) {
             discardCurrentSessionBlockRecords();
             stopTimerBlocking();
-            FocusDndHelper.restoreDnd(this);
+            releaseStudyDnd();
         }
 
         if (notifyListeners) {
@@ -1532,7 +1622,17 @@ public class TimerService extends Service {
             builder.setWhen(endWallClock);
             builder.setContentText(getString(R.string.timer_notification_remaining, getTimerText()));
         } else if (isPaused) {
-            builder.setContentText(getString(R.string.timer_notification_paused_remaining, getTimerText()));
+            long pauseRemaining = 0L;
+            if (pauseStartElapsedRealtime > 0L) {
+                pauseRemaining = Math.max(0L,
+                        PAUSE_TIMEOUT - (SystemClock.elapsedRealtime() - pauseStartElapsedRealtime));
+            }
+            builder.setUsesChronometer(false);
+            builder.setShowWhen(false);
+            builder.setContentText(getString(
+                    R.string.timer_notification_paused_dual,
+                    getTimerText(),
+                    formatCountdown(pauseRemaining)));
         } else {
             builder.setContentText(sessionType == 0
                     ? getString(R.string.timer_notification_study_time, getTimerText())
@@ -1588,9 +1688,13 @@ public class TimerService extends Service {
     }
 
     private String getTimerText() {
-        long millis = getTimeLeft();
-        int minutes = (int) (millis / 1000) / 60;
-        int seconds = (int) (millis / 1000) % 60;
+        return formatCountdown(getTimeLeft());
+    }
+
+    private String formatCountdown(long millis) {
+        long totalSeconds = Math.max(0L, millis / 1000L);
+        int minutes = (int) (totalSeconds / 60);
+        int seconds = (int) (totalSeconds % 60);
         return String.format("%02d:%02d", minutes, seconds);
     }
 
@@ -1719,6 +1823,14 @@ public class TimerService extends Service {
         return isPaused;
     }
 
+    public boolean isCurrentPauseReasonSettled() {
+        return PauseReasonPolicy.isCurrentReasonSettled(sessionPauseReasons, pauseCount);
+    }
+
+    public PauseReasonPromptMode getPauseReasonPromptMode() {
+        return timerSettingsRepository.getPauseReasonPromptMode();
+    }
+
     public int getPauseCount() {
         return pauseCount;
     }
@@ -1812,6 +1924,24 @@ public class TimerService extends Service {
 
     private void stopTimerBlocking() {
         AppBlockingServiceUtils.stopTimerBlocking(this);
+    }
+
+    /**
+     * 学习 running 时按偏好尝试启用勿扰；休息/暂停不调用。
+     * 已 owned 时 Helper 只 re-apply、不重采样（进程恢复安全）。
+     */
+    private void syncStudyDndForRunning() {
+        if (sessionType != 0 || isPaused || !isRunning) {
+            return;
+        }
+        FocusDndHelper.maybeEnableDnd(this, timerSettingsRepository.isDndDuringFocusEnabled());
+    }
+
+    /**
+     * 学习暂停或会话结束时无条件恢复开局勿扰状态（策略 2-A）；幂等。
+     */
+    private void releaseStudyDnd() {
+        FocusDndHelper.restoreDnd(this);
     }
 
     private void discardCurrentSessionBlockRecords() {
