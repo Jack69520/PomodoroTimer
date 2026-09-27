@@ -54,29 +54,43 @@ public class StatisticsRepository {
 
     public void recordSession(String userId, long startTime, long duration,
                               int taskId, String category, String tags) {
-        recordSession(userId, startTime, duration, taskId, -1, category, tags, 0, null, false, null);
+        long endTime = Math.max(System.currentTimeMillis(), startTime);
+        recordSession(userId, startTime, duration, taskId, -1, category, tags,
+                0, null, false, null, endTime, 0L, 0L);
     }
 
     public void recordSession(String userId, long startTime, long duration,
                               int taskId, String category, String tags,
                               int pauseCount, List<String> pauseReasonList,
                               boolean earlyEnd, String notes) {
+        long endTime = Math.max(System.currentTimeMillis(), startTime);
         recordSession(userId, startTime, duration, taskId, -1, category, tags,
-                pauseCount, pauseReasonList, earlyEnd, notes);
+                pauseCount, pauseReasonList, earlyEnd, notes, endTime, 0L, 0L);
     }
 
+    /**
+     * @param duration          有效专注毫秒（不含暂停）
+     * @param endTime           真实墙钟结束
+     * @param pausedDurationMs  累计暂停毫秒
+     * @param plannedDurationMs 开局计划时长
+     */
     public void recordSession(String userId, long startTime, long duration,
                               int taskId, int subTaskId, String category, String tags,
                               int pauseCount, List<String> pauseReasonList,
-                              boolean earlyEnd, String notes) {
+                              boolean earlyEnd, String notes,
+                              long endTime, long pausedDurationMs, long plannedDurationMs) {
+        final long safeDuration = Math.max(0L, duration);
+        final long safeEnd = Math.max(endTime, startTime);
+        final long safePaused = Math.max(0L, pausedDurationMs);
+        final long safePlanned = Math.max(0L, plannedDurationMs);
         AppExecutors.getInstance().diskIo(() -> {
             try {
                 deletePauseSnapshotsSync(userId, startTime);
                 PomodoroSession session = new PomodoroSession();
                 session.userId = userId;
                 session.startTime = startTime;
-                session.endTime = startTime + duration;
-                session.duration = duration;
+                session.endTime = safeEnd;
+                session.duration = safeDuration;
                 session.completed = true;
                 session.taskId = taskId;
                 session.subTaskId = subTaskId;
@@ -90,6 +104,8 @@ public class StatisticsRepository {
                 session.earlyEnd = earlyEnd;
                 session.notes = notes;
                 session.blockEventCount = resolveBlockEventCount(userId, startTime);
+                session.pausedDurationMs = safePaused;
+                session.plannedDurationMs = safePlanned;
                 sessionDao.insert(session);
             } catch (Exception e) {
                 AppLog.e("StatisticsRepository", "Failed to record session", e);
@@ -106,19 +122,29 @@ public class StatisticsRepository {
 
     /**
      * 记录终态失败会话（如暂停超时），暂停过程中不落库。
+     *
+     * @param duration          有效专注毫秒（不含暂停）
+     * @param endTime           真实墙钟结束
+     * @param pausedDurationMs  累计暂停毫秒
+     * @param plannedDurationMs 开局计划时长
      */
     public void recordFailedSession(String userId, long startTime, long duration,
                                     String pauseReason, int taskId, String category,
                                     int pauseCount, List<String> pauseReasonList,
-                                    String notes) {
+                                    String notes,
+                                    long endTime, long pausedDurationMs, long plannedDurationMs) {
+        final long safeDuration = Math.max(0L, duration);
+        final long safeEnd = Math.max(endTime, startTime);
+        final long safePaused = Math.max(0L, pausedDurationMs);
+        final long safePlanned = Math.max(0L, plannedDurationMs);
         AppExecutors.getInstance().diskIo(() -> {
             try {
                 deletePauseSnapshotsSync(userId, startTime);
                 PomodoroSession session = new PomodoroSession();
                 session.userId = userId;
                 session.startTime = startTime;
-                session.endTime = startTime + duration;
-                session.duration = duration;
+                session.endTime = safeEnd;
+                session.duration = safeDuration;
                 session.completed = false;
                 session.pauseReason = pauseReason;
                 session.pauseCount = Math.max(0, pauseCount);
@@ -131,6 +157,8 @@ public class StatisticsRepository {
                 session.blockEventCount = resolveBlockEventCount(userId, startTime);
                 session.taskId = taskId;
                 session.category = category;
+                session.pausedDurationMs = safePaused;
+                session.plannedDurationMs = safePlanned;
                 sessionDao.insert(session);
             } catch (Exception e) {
                 AppLog.e("StatisticsRepository", "Failed to record failed session", e);

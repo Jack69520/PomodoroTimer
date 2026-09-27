@@ -289,8 +289,11 @@
     <string name="session_detail_pause_info">暂停信息</string>
     <string name="session_detail_start_time">开始时间</string>
     <string name="session_detail_end_time">结束时间</string>
-    <string name="session_detail_duration">时长</string>
+    <string name="session_detail_duration">专注时长</string>
     <string name="session_detail_duration_minutes">%d 分钟</string>
+    <string name="session_detail_paused_duration">暂停累计</string>
+    <string name="session_detail_paused_duration_minutes">%d 分钟</string>
+    <string name="session_detail_paused_duration_unknown">未记录</string>
     <string name="session_detail_category">分类</string>
     <string name="session_detail_uncategorized">未分类</string>
     <string name="session_detail_completion_status">完成状态</string>

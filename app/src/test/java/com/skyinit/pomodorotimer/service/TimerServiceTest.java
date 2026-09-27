@@ -6,14 +6,18 @@ import android.content.Intent;
 import android.os.SystemClock;
 
 import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.AppDatabase;
 import com.skyinit.pomodorotimer.TestApp;
 import com.skyinit.pomodorotimer.AppContainer;
+import com.skyinit.pomodorotimer.data.entity.PomodoroSession;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.data.model.TimerUiState;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.FocusDndStore;
 import com.skyinit.pomodorotimer.util.AppExecutors;
+
+import org.robolectric.shadows.ShadowSystemClock;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -177,6 +181,7 @@ public class TimerServiceTest {
                 0,
                 0L,
                 60_000L,
+                0L,
                 -1,
                 -1,
                 "",
@@ -439,6 +444,7 @@ public class TimerServiceTest {
                 1,
                 now - 1_000L,
                 60_000L,
+                0L,
                 -1,
                 -1,
                 "",
@@ -458,6 +464,116 @@ public class TimerServiceTest {
         assertFalse(FocusDndStore.isOwned(context));
         assertEquals(NotificationManager.INTERRUPTION_FILTER_PRIORITY,
                 nm().getCurrentInterruptionFilter());
+    }
+
+    @Test
+    public void completeAfterPause_recordsActiveDurationNotWallSpan() throws Exception {
+        waitForPomodoroSettingsCache();
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 60_000L);
+        service.onStartCommand(start, 0, 1);
+        assertTrue(service.isRunning());
+        long planned = 60_000L;
+
+        deliver(TimerService.ACTION_PAUSE);
+        assertTrue(service.isPaused());
+        ShadowSystemClock.advanceBy(30, TimeUnit.SECONDS);
+
+        deliver(TimerService.ACTION_RESUME_WITH_QUICK_REASON);
+        assertTrue(service.isRunning());
+
+        forceTimerExpired(service);
+        Field left = TimerService.class.getDeclaredField("timeLeftInMillis");
+        left.setAccessible(true);
+        left.setLong(service, 0L);
+        deliver(TimerService.ACTION_SESSION_COMPLETE);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+
+        PomodoroSession session = latestSessionForActiveUser();
+        assertTrue(session.completed);
+        assertEquals(planned, session.plannedDurationMs);
+        assertEquals(planned, session.duration);
+        // ShadowSystemClock 主要推进 elapsedRealtime；暂停累计应反映暂停段
+        assertTrue("pausedDurationMs=" + session.pausedDurationMs,
+                session.pausedDurationMs >= 25_000L);
+        assertTrue(session.endTime >= session.startTime);
+    }
+
+    @Test
+    public void pauseTimeout_recordsActiveFocusExcludingPause() throws Exception {
+        waitForPomodoroSettingsCache();
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 120_000L);
+        service.onStartCommand(start, 0, 1);
+        assertTrue(service.isRunning());
+
+        // 先消耗约 40s 专注
+        ShadowSystemClock.advanceBy(40, TimeUnit.SECONDS);
+        ShadowLooper.idleMainLooper();
+
+        deliver(TimerService.ACTION_PAUSE);
+        assertTrue(service.isPaused());
+        long remainingAtPause = service.getTimeLeft();
+        assertTrue(remainingAtPause > 0L && remainingAtPause < 120_000L);
+
+        // 暂停超时（5 分钟）
+        ShadowSystemClock.advanceBy(5, TimeUnit.MINUTES);
+        deliver(TimerService.ACTION_PAUSE_TIMEOUT);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+
+        PomodoroSession session = latestSessionForActiveUser();
+        assertFalse(session.completed);
+        assertTrue(session.earlyEnd);
+        long expectedActive = 120_000L - remainingAtPause;
+        assertEquals(expectedActive, session.duration);
+        assertTrue(session.pausedDurationMs >= 4L * 60L * 1000L);
+        assertEquals(120_000L, session.plannedDurationMs);
+    }
+
+    @Test
+    public void forceFail_doesNotRecordSession() throws Exception {
+        waitForPomodoroSettingsCache();
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 60_000L);
+        service.onStartCommand(start, 0, 1);
+        int before = countSessionsForActiveUser();
+        deliver(TimerService.ACTION_FORCE_FAIL);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+        assertEquals(before, countSessionsForActiveUser());
+    }
+
+    private void drainDiskIo() throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        AppExecutors.getInstance().diskIo(latch::countDown);
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        ShadowLooper.idleMainLooper();
+    }
+
+    private PomodoroSession latestSessionForActiveUser() {
+        String userId = AccountManager.getInstance(context).getCurrentUserId();
+        android.database.Cursor c = AppDatabase.getDatabase(context).getOpenHelper()
+                .getReadableDatabase()
+                .query("SELECT id FROM pomodoro_sessions WHERE userId=? ORDER BY id DESC LIMIT 1",
+                        new String[]{userId});
+        assertTrue(c.moveToFirst());
+        int id = c.getInt(0);
+        c.close();
+        return AppDatabase.getDatabase(context).pomodoroSessionDao().getSessionByIdSync(id);
+    }
+
+    private int countSessionsForActiveUser() {
+        String userId = AccountManager.getInstance(context).getCurrentUserId();
+        android.database.Cursor c = AppDatabase.getDatabase(context).getOpenHelper()
+                .getReadableDatabase()
+                .query("SELECT COUNT(*) FROM pomodoro_sessions WHERE userId=?",
+                        new String[]{userId});
+        assertTrue(c.moveToFirst());
+        int count = c.getInt(0);
+        c.close();
+        return count;
     }
 
     private void enableDndPreference(boolean enabled) {

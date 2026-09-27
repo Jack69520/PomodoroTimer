@@ -35,6 +35,7 @@ public final class ActiveSessionStore {
     private static final String KEY_PAUSE_START_ELAPSED = "pause_start_elapsed";
     private static final String KEY_PAUSE_START_WALL = "pause_start_wall";
     private static final String KEY_PLANNED_DURATION = "planned_duration";
+    private static final String KEY_TOTAL_PAUSED_ELAPSED = "total_paused_elapsed";
     private static final String KEY_TASK_ID = "task_id";
     private static final String KEY_SUB_TASK_ID = "sub_task_id";
     private static final String KEY_TASK_TITLE = "task_title";
@@ -76,6 +77,8 @@ public final class ActiveSessionStore {
         public final long pauseStartElapsedRealtime;
         public final long pauseStartWallClockMs;
         public final long plannedDurationMs;
+        /** 已结束暂停段累计（不含当前未结束段）；旧 checkpoint 缺省为 0。 */
+        public final long totalPausedElapsedMs;
         public final int taskId;
         public final int subTaskId;
         public final String taskTitle;
@@ -101,6 +104,7 @@ public final class ActiveSessionStore {
                    long pauseStartElapsedRealtime,
                    long pauseStartWallClockMs,
                    long plannedDurationMs,
+                   long totalPausedElapsedMs,
                    int taskId,
                    int subTaskId,
                    String taskTitle,
@@ -125,6 +129,7 @@ public final class ActiveSessionStore {
             this.pauseStartElapsedRealtime = pauseStartElapsedRealtime;
             this.pauseStartWallClockMs = pauseStartWallClockMs;
             this.plannedDurationMs = plannedDurationMs;
+            this.totalPausedElapsedMs = Math.max(0L, totalPausedElapsedMs);
             this.taskId = taskId;
             this.subTaskId = subTaskId;
             this.taskTitle = taskTitle != null ? taskTitle : "";
@@ -186,6 +191,7 @@ public final class ActiveSessionStore {
                 prefs.getLong(KEY_PAUSE_START_ELAPSED, 0L),
                 prefs.getLong(KEY_PAUSE_START_WALL, 0L),
                 prefs.getLong(KEY_PLANNED_DURATION, 0L),
+                prefs.getLong(KEY_TOTAL_PAUSED_ELAPSED, 0L),
                 prefs.getInt(KEY_TASK_ID, -1),
                 prefs.getInt(KEY_SUB_TASK_ID, -1),
                 prefs.getString(KEY_TASK_TITLE, ""),
@@ -210,6 +216,7 @@ public final class ActiveSessionStore {
                             int pauseCount,
                             long pauseStartElapsedRealtime,
                             long plannedDurationMs,
+                            long totalPausedElapsedMs,
                             int taskId,
                             int subTaskId,
                             String taskTitle,
@@ -250,6 +257,7 @@ public final class ActiveSessionStore {
                 .putLong(KEY_PAUSE_START_ELAPSED, pauseStartElapsedRealtime)
                 .putLong(KEY_PAUSE_START_WALL, pauseWall)
                 .putLong(KEY_PLANNED_DURATION, plannedDurationMs)
+                .putLong(KEY_TOTAL_PAUSED_ELAPSED, Math.max(0L, totalPausedElapsedMs))
                 .putInt(KEY_TASK_ID, taskId)
                 .putInt(KEY_SUB_TASK_ID, subTaskId)
                 .putString(KEY_TASK_TITLE, taskTitle != null ? taskTitle : "")
@@ -345,16 +353,22 @@ public final class ActiveSessionStore {
                 System.currentTimeMillis());
     }
 
+    /**
+     * 有效专注已流逝毫秒：{@code planned - remaining}。
+     * 暂停中 remaining 冻结，故不会被暂停墙钟抬高。
+     * planned 缺失时回退为 0（避免用墙钟差在暂停中虚高）。
+     */
     public static long computeElapsedMillis(Checkpoint cp) {
         if (cp == null) {
             return 0L;
         }
         long planned = cp.plannedDurationMs;
         if (planned <= 0L) {
-            planned = cp.timeLeftInMillis + Math.max(0L, System.currentTimeMillis() - cp.sessionStartTime);
+            return 0L;
         }
         long remaining = computeRemainingMillis(cp);
-        return Math.max(0L, planned - remaining);
+        return com.skyinit.pomodorotimer.domain.timer.SessionAccountingPolicy
+                .resolveActiveDurationMs(planned, remaining);
     }
 
     public static boolean isSaveEligible(Checkpoint cp) {

@@ -218,6 +218,16 @@ public class SessionDetailFragment extends Fragment {
                 state.hasPause ? getString(R.string.yes) : getString(R.string.no));
         setDetailRow(R.id.row_pause_count, R.string.session_detail_pause_count,
                 String.valueOf(state.pauseCount));
+        String pausedDurationText;
+        if (state.pausedDurationUnknown) {
+            pausedDurationText = getString(R.string.session_detail_paused_duration_unknown);
+        } else if (state.pausedDurationMs <= 0L) {
+            pausedDurationText = getString(R.string.session_detail_paused_duration_minutes, 0);
+        } else {
+            pausedDurationText = formatPausedDurationMinutes(state.pausedDurationMs);
+        }
+        setDetailRow(R.id.row_paused_duration, R.string.session_detail_paused_duration,
+                pausedDurationText);
         setDetailRow(R.id.row_early_end, R.string.session_detail_early_end,
                 state.earlyEnd ? getString(R.string.yes) : getString(R.string.no));
         setDetailRow(R.id.row_block_count, R.string.session_detail_block_count,
@@ -411,6 +421,11 @@ public class SessionDetailFragment extends Fragment {
     private String formatDurationMinutes(long durationMs) {
         long minutes = Math.max(0L, durationMs / (1000L * 60L));
         return getString(R.string.session_detail_duration_minutes, minutes);
+    }
+
+    private String formatPausedDurationMinutes(long durationMs) {
+        long minutes = Math.max(0L, durationMs / (1000L * 60L));
+        return getString(R.string.session_detail_paused_duration_minutes, minutes);
     }
 
     private void hideKeyboard() {

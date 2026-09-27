@@ -89,6 +89,7 @@ public class FocusBlockNavigationTest {
                 0,
                 0L,
                 25 * 60_000L,
+                0L,
                 -1,
                 -1,
                 "测试任务",

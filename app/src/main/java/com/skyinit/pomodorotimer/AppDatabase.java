@@ -26,7 +26,8 @@ import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.data.entity.UserAppBlocking;
 
 /**
- * Room 本地数据库。version 保持 1；schema 以卸载重装方式覆写，无 Migration。
+ * Room 本地数据库。版本见 {@link DatabaseMigrations#CURRENT_VERSION}；
+ * 仅通过 {@link DatabaseMigrations#ALL} 升级，禁止 destructive fallback。
  */
 @Database(entities = {
         TodoItem.class,

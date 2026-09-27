@@ -35,12 +35,14 @@ public class StatisticsManager {
                 PomodoroSession session = new PomodoroSession();
                 session.userId = userId;
                 session.startTime = startTime;
-                session.endTime = startTime + duration;
-                session.duration = duration;
+                session.endTime = Math.max(System.currentTimeMillis(), startTime);
+                session.duration = Math.max(0L, duration);
                 session.completed = true;
                 session.taskId = taskId;
                 session.category = category;
                 session.tags = tags;
+                session.pausedDurationMs = 0L;
+                session.plannedDurationMs = 0L;
                 sessionDao.insert(session);
                 AppLog.d("StatisticsManager", "Session recorded, duration: " + duration);
             } catch (Exception e) {

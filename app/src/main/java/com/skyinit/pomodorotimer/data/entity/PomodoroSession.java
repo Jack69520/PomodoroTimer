@@ -7,7 +7,10 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 /**
- * 已完成的番茄钟会话记录，供统计页与日历页查询展示。
+ * 番茄钟会话记录，供统计页与日历页查询展示。
+ * <p>
+ * {@link #duration} 为<strong>有效专注毫秒</strong>（不含暂停）；{@link #endTime} 为真实墙钟结束。
+ * {@link #pausedDurationMs} / {@link #plannedDurationMs} 自 DB v2 起写入；历史行为 0（未知）。
  * <p>
  * {@link #taskId} / {@link #subTaskId} 为历史关联字段，<strong>故意不建立外键</strong>：
  * 删除待办后仍保留计时统计（本项目以计时数据为核心，待办仅为辅助维度）。
@@ -48,6 +51,10 @@ public class PomodoroSession {
     public String tags;
     /** 本次专注期间的应用拦截总次数。 */
     public int blockEventCount;
+    /** 累计暂停毫秒（elapsed 段累加）；历史迁移行可能为 0（未知）。 */
+    public long pausedDurationMs;
+    /** 开局计划学习时长快照；历史迁移行可能为 0（未知）。 */
+    public long plannedDurationMs;
 
     public PomodoroSession() {
         this.startTime = System.currentTimeMillis();
@@ -55,6 +62,8 @@ public class PomodoroSession {
         this.pauseCount = 0;
         this.earlyEnd = false;
         this.subTaskId = -1;
+        this.pausedDurationMs = 0L;
+        this.plannedDurationMs = 0L;
     }
 
     @Ignore

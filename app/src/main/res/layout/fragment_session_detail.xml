@@ -85,6 +85,10 @@
                 layout="@layout/item_session_detail_row" />
 
             <include
+                android:id="@+id/row_paused_duration"
+                layout="@layout/item_session_detail_row" />
+
+            <include
                 android:id="@+id/row_early_end"
                 layout="@layout/item_session_detail_row" />
 

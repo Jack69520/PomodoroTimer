@@ -23,6 +23,10 @@ public final class SessionDetailUiState {
     public final long startTime;
     public final long endTime;
     public final long durationMs;
+    /** 暂停累计毫秒；历史未知时为 0 且 {@link #pausedDurationUnknown} 为 true。 */
+    public final long pausedDurationMs;
+    /** pauseCount&gt;0 但库中无暂停累计（迁移前数据）。 */
+    public final boolean pausedDurationUnknown;
     @Nullable
     public final String category;
     @NonNull
@@ -45,6 +49,8 @@ public final class SessionDetailUiState {
                                  long startTime,
                                  long endTime,
                                  long durationMs,
+                                 long pausedDurationMs,
+                                 boolean pausedDurationUnknown,
                                  @Nullable String category,
                                  @NonNull CompletionStatus completionStatus,
                                  boolean hasPause,
@@ -61,6 +67,8 @@ public final class SessionDetailUiState {
         this.startTime = startTime;
         this.endTime = endTime;
         this.durationMs = durationMs;
+        this.pausedDurationMs = pausedDurationMs;
+        this.pausedDurationUnknown = pausedDurationUnknown;
         this.category = category;
         this.completionStatus = completionStatus;
         this.hasPause = hasPause;
@@ -77,7 +85,7 @@ public final class SessionDetailUiState {
     public static SessionDetailUiState loading() {
         return new SessionDetailUiState(
                 true, false, false,
-                0L, 0L, 0L, null,
+                0L, 0L, 0L, 0L, false, null,
                 CompletionStatus.INCOMPLETE,
                 false, 0, Collections.emptyList(),
                 false, 0, "", "", false);
@@ -87,7 +95,7 @@ public final class SessionDetailUiState {
     public SessionDetailUiState withSaving(boolean saving) {
         return new SessionDetailUiState(
                 loading, saving, hasData,
-                startTime, endTime, durationMs, category,
+                startTime, endTime, durationMs, pausedDurationMs, pausedDurationUnknown, category,
                 completionStatus, hasPause, pauseCount, pauseReasons,
                 earlyEnd, blockEventCount, blockEncouragement, notes, canOpenBlockRecords);
     }
@@ -96,6 +104,8 @@ public final class SessionDetailUiState {
     public static SessionDetailUiState of(long startTime,
                                          long endTime,
                                          long durationMs,
+                                         long pausedDurationMs,
+                                         boolean pausedDurationUnknown,
                                          @Nullable String category,
                                          @NonNull CompletionStatus completionStatus,
                                          boolean hasPause,
@@ -117,6 +127,8 @@ public final class SessionDetailUiState {
                 startTime,
                 endTime,
                 durationMs,
+                Math.max(0L, pausedDurationMs),
+                pausedDurationUnknown,
                 category,
                 completionStatus,
                 hasPause,

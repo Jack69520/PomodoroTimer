@@ -204,10 +204,14 @@ public class SessionDetailViewModel extends ViewModel {
         }
         boolean earlyEnd = session.earlyEnd || !session.completed;
         int blockCount = Math.max(0, session.blockEventCount);
+        long pausedMs = Math.max(0L, session.pausedDurationMs);
+        boolean pausedUnknown = hasPause && pausedMs <= 0L;
         uiState.setValue(SessionDetailUiState.of(
                 session.startTime,
                 session.endTime,
                 session.duration,
+                pausedMs,
+                pausedUnknown,
                 session.category,
                 status,
                 hasPause,

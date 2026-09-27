@@ -53,6 +53,8 @@ import com.skyinit.pomodorotimer.util.PermissionUtils;
 import com.skyinit.pomodorotimer.util.SessionPauseUtils;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPolicy;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
+import com.skyinit.pomodorotimer.domain.timer.SessionAccountingPolicy;
+import com.skyinit.pomodorotimer.domain.timer.SessionAccountingResult;
 import com.skyinit.pomodorotimer.domain.timer.SessionPhase;
 import com.skyinit.pomodorotimer.domain.timer.SettleDecision;
 import com.skyinit.pomodorotimer.domain.timer.TimerSessionPolicy;
@@ -188,6 +190,8 @@ public class TimerService extends Service {
     private final List<String> sessionPauseReasons = new ArrayList<>();
     private long pauseStartElapsedRealtime;
     private long plannedDurationMs;
+    /** 已结束暂停段累计（elapsed）；当前未结束段在结算时另计。 */
+    private long totalPausedElapsedMs;
     private long lastCheckpointSaveElapsed;
     /** 标记是否已从磁盘恢复，避免 onCreate 与 onStartCommand 重复恢复。 */
     private boolean restoredFromCheckpoint;
@@ -524,6 +528,7 @@ public class TimerService extends Service {
         currentCategory = cp.category;
         currentTags = cp.tags;
         plannedDurationMs = cp.plannedDurationMs;
+        totalPausedElapsedMs = cp.totalPausedElapsedMs;
 
         AppLog.d(TAG, "Restoring active session: running=" + cp.running + ", paused=" + cp.paused);
 
@@ -600,6 +605,7 @@ public class TimerService extends Service {
         sessionPauseReasons.clear();
         pauseStartElapsedRealtime = 0L;
         plannedDurationMs = 0L;
+        totalPausedElapsedMs = 0L;
         timeLeftInMillis = getDefaultStudyTimeMs();
         sessionType = 0;
         isLongBreak = false;
@@ -624,6 +630,7 @@ public class TimerService extends Service {
         pauseCount = 0;
         sessionPauseReasons.clear();
         pauseStartElapsedRealtime = 0L;
+        totalPausedElapsedMs = 0L;
         sessionStartTime = System.currentTimeMillis();
         plannedDurationMs = timeLeftInMillis;
 
@@ -645,6 +652,7 @@ public class TimerService extends Service {
 
         cancelPauseTimeoutCheck();
         sessionGeneration++;
+        totalPausedElapsedMs += resolveCurrentPauseElapsedMs();
         isPaused = false;
         pauseStartElapsedRealtime = 0L;
         isRunning = true;
@@ -706,27 +714,34 @@ public class TimerService extends Service {
             return;
         }
         try {
+            int completedSessionType = sessionType;
+            SessionAccountingResult accounting = null;
+            if (completedSessionType == 0) {
+                // 完成路径 remaining 通常已为 0；仍先快照再改状态，避免竞态丢字段
+                accounting = snapshotStudyAccounting();
+            }
             stopTimerLoop();
             isRunning = false;
             isPaused = false;
             cancelPauseTimeoutCheck();
             long settledId = sessionStartTime;
-            int completedSessionType = sessionType;
 
             notifyTimerFinish();
             stopTimerBlocking();
             releaseStudyDnd();
 
-            if (completedSessionType == 0) {
-                long duration = System.currentTimeMillis() - sessionStartTime;
+            if (completedSessionType == 0 && accounting != null) {
                 String userId = getSessionUserIdOrActive();
                 List<String> reasons = PauseReasonPolicy.normalizeForPersist(
                         sessionPauseReasons, pauseCount,
                         getString(R.string.timer_pause_reason_unfilled));
                 statisticsRepository.recordSession(
-                        userId, sessionStartTime, duration, currentTaskId, currentSubTaskId,
+                        userId, sessionStartTime, accounting.activeDurationMs,
+                        currentTaskId, currentSubTaskId,
                         currentCategory, currentTags,
-                        pauseCount, reasons, false, null);
+                        pauseCount, reasons, false, null,
+                        accounting.endTimeMs, accounting.pausedDurationMs,
+                        accounting.plannedDurationMs);
                 if (currentTaskId >= 0) {
                     incrementTaskCompletedPomodoros(currentTaskId, userId);
                 }
@@ -1076,6 +1091,11 @@ public class TimerService extends Service {
             return;
         }
         try {
+            // 必须先快照剩余与暂停累计，再清零状态，避免 duration 丢失
+            SessionAccountingResult accounting = null;
+            if (sessionType == 0) {
+                accounting = snapshotStudyAccounting();
+            }
             cancelPauseTimeoutCheck();
             stopTimerLoop();
             isRunning = false;
@@ -1083,8 +1103,7 @@ public class TimerService extends Service {
             timeLeftInMillis = 0L;
             long settledId = sessionStartTime;
 
-            if (sessionType == 0) {
-                long duration = System.currentTimeMillis() - sessionStartTime;
+            if (sessionType == 0 && accounting != null) {
                 String userId = getSessionUserIdOrActive();
                 String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
                 List<String> reasons = PauseReasonPolicy.normalizeForPersist(
@@ -1093,8 +1112,11 @@ public class TimerService extends Service {
                 reasons = new ArrayList<>(reasons);
                 reasons.add(pauseReasonTimeout);
                 statisticsRepository.recordFailedSession(
-                        userId, sessionStartTime, duration, pauseReasonTimeout, currentTaskId, currentCategory,
-                        Math.max(pauseCount, 1), reasons, null);
+                        userId, sessionStartTime, accounting.activeDurationMs,
+                        pauseReasonTimeout, currentTaskId, currentCategory,
+                        Math.max(pauseCount, 1), reasons, null,
+                        accounting.endTimeMs, accounting.pausedDurationMs,
+                        accounting.plannedDurationMs);
                 stopTimerBlocking();
                 releaseStudyDnd();
             }
@@ -1109,6 +1131,33 @@ public class TimerService extends Service {
         } finally {
             isCompletingSession.set(false);
         }
+    }
+
+    /**
+     * 结算前快照：有效专注 = planned − remaining；暂停含当前未结束段。
+     */
+    private SessionAccountingResult snapshotStudyAccounting() {
+        long remaining = Math.max(0L, timeLeftInMillis);
+        long currentPause = isPaused ? resolveCurrentPauseElapsedMs() : 0L;
+        return SessionAccountingPolicy.settle(
+                plannedDurationMs,
+                remaining,
+                totalPausedElapsedMs,
+                currentPause,
+                isPaused,
+                System.currentTimeMillis(),
+                sessionStartTime);
+    }
+
+    private long resolveCurrentPauseElapsedMs() {
+        if (!isPaused || pauseStartElapsedRealtime <= 0L) {
+            return 0L;
+        }
+        return TimerSessionPolicy.resolvePauseElapsed(
+                pauseStartElapsedRealtime,
+                0L,
+                SystemClock.elapsedRealtime(),
+                System.currentTimeMillis());
     }
 
     private void endSessionDueToLeave() {
@@ -1151,6 +1200,7 @@ public class TimerService extends Service {
         sessionPauseReasons.clear();
         pauseStartElapsedRealtime = 0L;
         plannedDurationMs = 0L;
+        totalPausedElapsedMs = 0L;
         timeLeftInMillis = getDefaultStudyTimeMs();
         sessionType = 0;
         isLongBreak = false;
@@ -1265,6 +1315,7 @@ public class TimerService extends Service {
                 pauseCount,
                 pauseStartElapsedRealtime,
                 plannedDurationMs,
+                totalPausedElapsedMs,
                 currentTaskId,
                 currentSubTaskId,
                 currentTaskTitle,
