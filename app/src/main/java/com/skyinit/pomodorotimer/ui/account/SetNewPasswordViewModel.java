@@ -82,7 +82,6 @@ public class SetNewPasswordViewModel extends AndroidViewModel {
             @Override
             public void onSuccess() {
                 loading.setValue(false);
-                sessionRepository.clearForcePasswordReset();
                 toastMessage.setValue(getApplication().getString(R.string.account_toast_password_set));
                 updateSuccess.call();
             }
@@ -122,7 +121,7 @@ public class SetNewPasswordViewModel extends AndroidViewModel {
             public void onError(String message) {
                 loading.setValue(false);
                 toastMessage.setValue(message);
-                shouldFinish.call();
+                // 硬闸门：登出失败不得离开强制改密页
             }
         });
     }

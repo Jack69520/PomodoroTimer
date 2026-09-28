@@ -28,31 +28,39 @@ import static org.junit.Assert.assertTrue;
 public class DatabaseMigrationsTest {
 
     @Test
-    public void currentVersion_isTwo() {
-        assertEquals(2, DatabaseMigrations.CURRENT_VERSION);
+    public void currentVersion_isThree() {
+        assertEquals(3, DatabaseMigrations.CURRENT_VERSION);
     }
 
     @Test
-    public void allMigrations_contains1to2() {
+    public void allMigrations_contains1to2_and2to3() {
         assertNotNull(DatabaseMigrations.ALL);
-        assertEquals(1, DatabaseMigrations.ALL.length);
+        assertEquals(2, DatabaseMigrations.ALL.length);
         assertEquals(1, DatabaseMigrations.MIGRATION_1_2.startVersion);
         assertEquals(2, DatabaseMigrations.MIGRATION_1_2.endVersion);
+        assertEquals(2, DatabaseMigrations.MIGRATION_2_3.startVersion);
+        assertEquals(3, DatabaseMigrations.MIGRATION_2_3.endVersion);
     }
 
     @Test
-    public void exportedSchema_v1_and_v2_exist() throws Exception {
+    public void exportedSchema_v1_v2_v3_exist() throws Exception {
         Path v1 = Paths.get("schemas", "com.skyinit.pomodorotimer.AppDatabase", "1.json");
         Path v2 = Paths.get("schemas", "com.skyinit.pomodorotimer.AppDatabase", "2.json");
+        Path v3 = Paths.get("schemas", "com.skyinit.pomodorotimer.AppDatabase", "3.json");
         assertTrue("Schema export missing: " + v1, v1.toFile().exists());
         assertTrue("Schema export missing: " + v2, v2.toFile().exists());
+        assertTrue("Schema export missing: " + v3, v3.toFile().exists());
         String json1 = new String(Files.readAllBytes(v1), StandardCharsets.UTF_8);
         String json2 = new String(Files.readAllBytes(v2), StandardCharsets.UTF_8);
+        String json3 = new String(Files.readAllBytes(v3), StandardCharsets.UTF_8);
         assertTrue(json1.contains("pomodoro_sessions"));
         assertTrue(json2.contains("pausedDurationMs"));
         assertTrue(json2.contains("plannedDurationMs"));
         assertFalse("v1 must not already declare pausedDurationMs",
                 json1.contains("pausedDurationMs"));
+        assertTrue(json3.contains("mustResetPassword"));
+        assertFalse("v2 must not already declare mustResetPassword",
+                json2.contains("mustResetPassword"));
     }
 
     @Test
@@ -108,6 +116,51 @@ public class DatabaseMigrationsTest {
         assertEquals(0L, c.getLong(1));
         assertEquals(0L, c.getLong(2));
         assertEquals(1, c.getInt(3));
+        c.close();
+        db.close();
+    }
+
+    @Test
+    public void migrate2to3_defaultsMustResetPasswordToFalse() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        SupportSQLiteOpenHelper.Configuration config =
+                SupportSQLiteOpenHelper.Configuration.builder(context)
+                        .name("migration_2_3_test.db")
+                        .callback(new SupportSQLiteOpenHelper.Callback(2) {
+                            @Override
+                            public void onCreate(SupportSQLiteDatabase db) {
+                                db.execSQL(
+                                        "CREATE TABLE users ("
+                                                + "userId TEXT NOT NULL, "
+                                                + "nickname TEXT, "
+                                                + "password TEXT, "
+                                                + "passwordSalt TEXT, "
+                                                + "avatarPath TEXT, "
+                                                + "signature TEXT, "
+                                                + "createdAt INTEGER NOT NULL, "
+                                                + "lastLoginAt INTEGER NOT NULL, "
+                                                + "PRIMARY KEY(userId))");
+                            }
+
+                            @Override
+                            public void onUpgrade(SupportSQLiteDatabase db, int oldVersion, int newVersion) {
+                            }
+                        })
+                        .build();
+        SupportSQLiteOpenHelper helper =
+                new FrameworkSQLiteOpenHelperFactory().create(config);
+        SupportSQLiteDatabase db = helper.getWritableDatabase();
+        db.execSQL(
+                "INSERT INTO users (userId, nickname, password, passwordSalt, avatarPath, "
+                        + "signature, createdAt, lastLoginAt) "
+                        + "VALUES ('123456789012', 'Nick', 'hash', 'salt', null, '', 1, 1)");
+
+        DatabaseMigrations.MIGRATION_2_3.migrate(db);
+
+        Cursor c = db.query(
+                "SELECT mustResetPassword FROM users WHERE userId='123456789012'");
+        assertTrue(c.moveToFirst());
+        assertEquals(0, c.getInt(0));
         c.close();
         db.close();
     }

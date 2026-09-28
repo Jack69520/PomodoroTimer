@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
  */
 public final class DatabaseMigrations {
 
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     public static final Migration MIGRATION_1_2 = new Migration(1, 2) {
         @Override
@@ -26,8 +26,17 @@ public final class DatabaseMigrations {
         }
     };
 
+    public static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(
+                    "ALTER TABLE users ADD COLUMN mustResetPassword INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
     public static final Migration[] ALL = {
-            MIGRATION_1_2
+            MIGRATION_1_2,
+            MIGRATION_2_3
     };
 
     private DatabaseMigrations() {

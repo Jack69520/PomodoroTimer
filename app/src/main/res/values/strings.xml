@@ -664,6 +664,8 @@
     <string name="account_register_success">注册成功！您的账户ID是：%1$s</string>
     <string name="account_error_register_failed">注册失败：%1$s</string>
     <string name="account_error_logout_before_register">请先退出当前账户后再注册</string>
+    <string name="account_error_logout_before_login">请先退出当前账户后再登录</string>
+    <string name="account_error_logout_before_recovery">请先退出当前账户后再找回</string>
     <string name="account_error_not_logged_in">请先登录</string>
     <string name="profile_guest_label">未登录</string>
 

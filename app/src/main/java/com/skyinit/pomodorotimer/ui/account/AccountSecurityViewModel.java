@@ -93,6 +93,10 @@ public class AccountSecurityViewModel extends ViewModel
             effects.setValue(AccountSecurityEffect.showToast(R.string.account_registered_only));
             return;
         }
+        if (sessionRepository.isForcePasswordReset()) {
+            effects.setValue(AccountSecurityEffect.startActivity(SetNewPasswordActivity.class));
+            return;
+        }
         effects.setValue(AccountSecurityEffect.startActivity(ChangePasswordActivity.class));
     }
 

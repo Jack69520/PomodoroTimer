@@ -45,4 +45,7 @@ public interface UserDao {
 
     @Query("UPDATE users SET signature = :signature WHERE userId = :userId")
     void updateSignature(String userId, String signature);
+
+    @Query("UPDATE users SET mustResetPassword = :mustResetPassword WHERE userId = :userId")
+    void updateMustResetPassword(String userId, boolean mustResetPassword);
 }

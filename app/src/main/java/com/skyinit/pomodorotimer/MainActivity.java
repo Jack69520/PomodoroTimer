@@ -52,6 +52,7 @@ import com.skyinit.pomodorotimer.data.repository.SettingsManager;
 import com.skyinit.pomodorotimer.ui.bootstrap.AppBootstrapViewModel;
 import com.skyinit.pomodorotimer.ui.consent.PrivacyConsentActivity;
 import com.skyinit.pomodorotimer.ui.onboarding.FirstRunNavigator;
+import com.skyinit.pomodorotimer.ui.account.ForcePasswordResetNavigator;
 import com.skyinit.pomodorotimer.service.AppBlockingService;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
@@ -404,6 +405,9 @@ public class MainActivity extends BaseActivity {
         if (mainContentInitialized) {
             return;
         }
+        if (ForcePasswordResetNavigator.redirectIfRequired(this)) {
+            return;
+        }
         mainContentInitialized = true;
 
         EdgeToEdge.enable(this);
@@ -527,6 +531,9 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (ForcePasswordResetNavigator.redirectIfRequired(this)) {
+            return;
+        }
         pushServiceToCurrentFragment();
     }
 

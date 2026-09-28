@@ -24,10 +24,14 @@ public class User {
     public long createdAt;
     public long lastLoginAt;
 
+    /** 找回登录后须强制重设密码；仅对该用户行有效，禁止跨账户污染。 */
+    public boolean mustResetPassword;
+
     public User() {
         this.userId = "";
         this.createdAt = System.currentTimeMillis();
         this.lastLoginAt = 0;
+        this.mustResetPassword = false;
     }
 
     @Ignore

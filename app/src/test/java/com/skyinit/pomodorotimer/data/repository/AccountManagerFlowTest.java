@@ -228,6 +228,151 @@ public class AccountManagerFlowTest {
         assertNotNull(error.get());
     }
 
+    @Test
+    public void recoverLogin_setsMustResetPassword_onlyForRecoveredUser()
+            throws InterruptedException {
+        User userA = awaitRegister("RecoverA", VALID_PASSWORD);
+        String userIdA = userA.userId;
+        awaitLogout();
+        User userB = awaitRegister("RecoverB", VALID_PASSWORD);
+        String userIdB = userB.userId;
+        awaitLogout();
+
+        awaitRecover(userIdA, "RecoverA");
+        assertTrue(accountManager.isForcePasswordReset());
+        assertNotNull(accountManager.getCurrentUser());
+        assertTrue(accountManager.getCurrentUser().mustResetPassword);
+        assertTrue(userIdA.equals(accountManager.getCurrentUserId()));
+
+        AtomicReference<User> persistedB = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        AppExecutors.getInstance().diskIo(() -> {
+            persistedB.set(AppDatabase.getDatabase(context).userDao().getUserById(userIdB));
+            latch.countDown();
+        });
+        awaitCallback(latch);
+        assertNotNull(persistedB.get());
+        assertFalse(persistedB.get().mustResetPassword);
+    }
+
+    @Test
+    public void login_whileLoggedInAfterRecover_fails_noCrossAccountForce()
+            throws InterruptedException {
+        User userA = awaitRegister("ForceA", VALID_PASSWORD);
+        String userIdA = userA.userId;
+        awaitLogout();
+        User userB = awaitRegister("ForceB", VALID_PASSWORD);
+        String userIdB = userB.userId;
+        awaitLogout();
+
+        awaitRecover(userIdA, "ForceA");
+        assertTrue(accountManager.isForcePasswordReset());
+
+        AtomicReference<String> loginError = new AtomicReference<>();
+        CountDownLatch loginLatch = new CountDownLatch(1);
+        accountManager.login(userIdB, VALID_PASSWORD, new AccountManager.LoginCallback() {
+            @Override
+            public void onSuccess(User user) {
+                fail("Must not login another account while force-reset session active");
+                loginLatch.countDown();
+            }
+
+            @Override
+            public void onError(String message) {
+                loginError.set(message);
+                loginLatch.countDown();
+            }
+        });
+        awaitCallback(loginLatch);
+        assertNotNull(loginError.get());
+        assertTrue(userIdA.equals(accountManager.getCurrentUserId()));
+        assertTrue(accountManager.isForcePasswordReset());
+
+        awaitLogout();
+        awaitLogin(userIdB, VALID_PASSWORD);
+        assertFalse(accountManager.isForcePasswordReset());
+
+        AtomicReference<String> pwError = new AtomicReference<>();
+        CountDownLatch pwLatch = new CountDownLatch(1);
+        accountManager.updatePassword("WrongPw1", "Newpass1", "Newpass1",
+                new AccountManager.PasswordUpdateCallback() {
+                    @Override
+                    public void onSuccess() {
+                        fail("B must require correct old password");
+                        pwLatch.countDown();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        pwError.set(message);
+                        pwLatch.countDown();
+                    }
+                });
+        awaitCallback(pwLatch);
+        assertNotNull(pwError.get());
+    }
+
+    @Test
+    public void recoverLogin_thenUpdatePassword_clearsMustReset_withoutOldPassword()
+            throws InterruptedException {
+        User user = awaitRegister("ResetPw", VALID_PASSWORD);
+        String userId = user.userId;
+        awaitLogout();
+
+        awaitRecover(userId, "ResetPw");
+        assertTrue(accountManager.isForcePasswordReset());
+
+        awaitUpdatePassword("", "Newpass1");
+        assertFalse(accountManager.isForcePasswordReset());
+
+        awaitLogout();
+        awaitLogin(userId, "Newpass1");
+        assertFalse(accountManager.isForcePasswordReset());
+    }
+
+    @Test
+    public void recoverLogin_thenLogout_clearsMustReset_oldPasswordStillWorks()
+            throws InterruptedException {
+        User user = awaitRegister("Abandon", VALID_PASSWORD);
+        String userId = user.userId;
+        awaitLogout();
+
+        awaitRecover(userId, "Abandon");
+        assertTrue(accountManager.isForcePasswordReset());
+        awaitLogout();
+        assertFalse(accountManager.isForcePasswordReset());
+
+        awaitLogin(userId, VALID_PASSWORD);
+        assertFalse(accountManager.isForcePasswordReset());
+    }
+
+    @Test
+    public void restoreSession_migratesLegacyForcePasswordResetPrefs()
+            throws InterruptedException {
+        User user = awaitRegister("LegacyForce", VALID_PASSWORD);
+        String userId = user.userId;
+        awaitLogout();
+
+        context.getSharedPreferences("account_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("force_password_reset", true)
+                .putString("current_user_id", userId)
+                .commit();
+
+        CountDownLatch restoreLatch = new CountDownLatch(1);
+        AppExecutors.getInstance().diskIo(() -> {
+            accountManager.restoreSessionOnDisk();
+            restoreLatch.countDown();
+        });
+        awaitCallback(restoreLatch);
+
+        assertTrue(accountManager.isLoggedIn());
+        assertTrue(userId.equals(accountManager.getCurrentUserId()));
+        assertTrue(accountManager.isForcePasswordReset());
+        assertFalse(context.getSharedPreferences("account_prefs", Context.MODE_PRIVATE)
+                .contains("force_password_reset"));
+    }
+
     private User awaitRegister(String nickname, String password) throws InterruptedException {
         AtomicReference<User> result = new AtomicReference<>();
         AtomicReference<String> error = new AtomicReference<>();
@@ -275,6 +420,30 @@ public class AccountManagerFlowTest {
         awaitCallback(latch);
         if (error.get() != null) {
             fail("Login failed: " + error.get());
+        }
+        return result.get();
+    }
+
+    private User awaitRecover(String userId, String nickname) throws InterruptedException {
+        AtomicReference<User> result = new AtomicReference<>();
+        AtomicReference<String> error = new AtomicReference<>();
+        CountDownLatch latch = new CountDownLatch(1);
+        accountManager.recoverLogin(userId, nickname, new AccountManager.LoginCallback() {
+            @Override
+            public void onSuccess(User user) {
+                result.set(user);
+                latch.countDown();
+            }
+
+            @Override
+            public void onError(String message) {
+                error.set(message);
+                latch.countDown();
+            }
+        });
+        awaitCallback(latch);
+        if (error.get() != null) {
+            fail("Recover failed: " + error.get());
         }
         return result.get();
     }

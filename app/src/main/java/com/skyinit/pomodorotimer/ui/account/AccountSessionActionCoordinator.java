@@ -175,15 +175,38 @@ public final class AccountSessionActionCoordinator {
         }
         Operation op = pendingOperation;
         if (op == Operation.SWITCH_ACCOUNT) {
-            pendingOperation = null;
-            listener.onNavigateToLogin();
-            return;
-        }
-        if (op == Operation.LOGOUT) {
+            executeSwitchAccount();
+        } else if (op == Operation.LOGOUT) {
             executeLogout();
         } else if (op == Operation.DELETE_ACCOUNT) {
             executeDelete();
         }
+    }
+
+    private void executeSwitchAccount() {
+        final int generation = opGeneration.incrementAndGet();
+        setBusy(true);
+        sessionRepository.logout(new AccountManager.LogoutCallback() {
+            @Override
+            public void onSuccess() {
+                if (generation != opGeneration.get()) {
+                    return;
+                }
+                pendingOperation = null;
+                accountOperationGuard.clearTimerSideEffects();
+                setBusy(false);
+                listener.onNavigateToLogin();
+            }
+
+            @Override
+            public void onError(String message) {
+                if (generation != opGeneration.get()) {
+                    return;
+                }
+                setBusy(false);
+                listener.onToastText(message != null ? message : "");
+            }
+        });
     }
 
     private void executeLogout() {

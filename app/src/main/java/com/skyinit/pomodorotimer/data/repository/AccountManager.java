@@ -75,8 +75,10 @@ public class AccountManager {
 
     /**
      * 冷启动：若 prefs 有合法已注册用户则恢复，否则保持 Guest。禁止创建本地档案。
+     * 同时将遗留的全局 force_password_reset prefs 一次性迁到对应用户行。
      */
     public void restoreSessionOnDisk() {
+        migrateLegacyForcePasswordResetPrefsOnDisk();
         if (currentUser != null) {
             return;
         }
@@ -91,6 +93,23 @@ public class AccountManager {
             return;
         }
         activateUserOnDisk(user, false);
+    }
+
+    /**
+     * 升级兼容：旧版全局 prefs flag 迁到对应用户 mustResetPassword，然后删除 prefs key。
+     */
+    private void migrateLegacyForcePasswordResetPrefsOnDisk() {
+        if (!prefs.contains(KEY_FORCE_PASSWORD_RESET)) {
+            return;
+        }
+        boolean legacyForce = prefs.getBoolean(KEY_FORCE_PASSWORD_RESET, false);
+        if (legacyForce) {
+            String userId = prefs.getString(KEY_CURRENT_USER_ID, null);
+            if (userId != null && !userId.isEmpty() && userDao.getUserById(userId) != null) {
+                userDao.updateMustResetPassword(userId, true);
+            }
+        }
+        prefs.edit().remove(KEY_FORCE_PASSWORD_RESET).commit();
     }
 
     public void restoreSessionAsync(@NonNull Runnable onSuccess, @NonNull Consumer<Throwable> onError) {
@@ -156,6 +175,11 @@ public class AccountManager {
     public void login(String userId, String password, LoginCallback callback) {
         appExecutors.diskIo(() -> {
             try {
+                if (currentUser != null) {
+                    dispatchLoginError(callback,
+                            context.getString(R.string.account_error_logout_before_login));
+                    return;
+                }
                 if (hasActiveTimerSession()) {
                     dispatchLoginError(callback, getActiveTimerSessionMessage());
                     return;
@@ -195,6 +219,11 @@ public class AccountManager {
     public void recoverLogin(String userId, String nickname, LoginCallback callback) {
         appExecutors.diskIo(() -> {
             try {
+                if (currentUser != null) {
+                    mainHandler.post(() -> callback.onError(
+                            context.getString(R.string.account_error_logout_before_recovery)));
+                    return;
+                }
                 if (hasActiveTimerSession()) {
                     mainHandler.post(() -> callback.onError(getActiveTimerSessionMessage()));
                     return;
@@ -211,7 +240,7 @@ public class AccountManager {
                             context.getString(R.string.account_error_recovery_mismatch)));
                     return;
                 }
-                prefs.edit().putBoolean(KEY_FORCE_PASSWORD_RESET, true).commit();
+                userDao.updateMustResetPassword(normalizedId, true);
                 userDao.updateLastLoginTime(normalizedId, System.currentTimeMillis());
                 User loggedInUser = userDao.getUserById(normalizedId);
                 activateUserOnDisk(loggedInUser, true);
@@ -225,12 +254,35 @@ public class AccountManager {
     }
 
     public boolean isForcePasswordReset() {
-        return prefs.getBoolean(KEY_FORCE_PASSWORD_RESET, false);
+        User user = currentUser;
+        return user != null && user.mustResetPassword;
     }
 
+    /**
+     * 清除当前会话用户的强制改密标志。须在 diskIo 线程调用（与 updatePassword/logout 同路径）。
+     * UI 层成功回调后的二次调用改为幂等：若无会话则直接返回。
+     */
     public void clearForcePasswordReset() {
-        // commit：与 recoverLogin 设 flag 对称，避免改密成功后进程被杀仍残留强制改密态
-        prefs.edit().putBoolean(KEY_FORCE_PASSWORD_RESET, false).commit();
+        User user = currentUser;
+        if (user == null || !user.mustResetPassword) {
+            return;
+        }
+        String userId = user.userId;
+        Runnable clear = () -> clearMustResetPasswordOnDisk(userId);
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            appExecutors.diskIo(clear,
+                    t -> AppLog.e("AccountManager", "clearForcePasswordReset failed", t));
+        } else {
+            clear.run();
+        }
+    }
+
+    private void clearMustResetPasswordOnDisk(@NonNull String userId) {
+        userDao.updateMustResetPassword(userId, false);
+        User active = currentUser;
+        if (active != null && userId.equals(active.userId)) {
+            active.mustResetPassword = false;
+        }
     }
 
     /**
@@ -273,6 +325,7 @@ public class AccountManager {
                 user.signature = signature != null ? signature : "";
                 user.createdAt = System.currentTimeMillis();
                 user.lastLoginAt = System.currentTimeMillis();
+                user.mustResetPassword = false;
                 passwordRepository.hashAndStorePassword(context, user, password);
                 userDao.insert(user);
                 database.userAppBlockingDao().upsert(
@@ -299,8 +352,9 @@ public class AccountManager {
                     mainHandler.post(() -> callback.onError(getActiveTimerSessionMessage()));
                     return;
                 }
+                // 放弃找回会话：清该用户强制改密后再清会话（对齐「退出后需重新验证」）
+                clearMustResetPasswordOnDisk(currentUser.userId);
                 clearSessionOnDisk(true);
-                clearForcePasswordReset();
                 mainHandler.post(callback::onSuccess);
             } catch (Exception e) {
                 AppLog.e("AccountManager", "Logout error", e);
@@ -341,7 +395,6 @@ public class AccountManager {
                 passwordRepository.clearStoredSalt(context, userId);
                 AvatarStorage.getInstance().deleteForUser(context, userId);
                 clearSessionOnDisk(true);
-                clearForcePasswordReset();
                 mainHandler.post(callback::onSuccess);
             } catch (Exception e) {
                 AppLog.e("AccountManager", "Delete account error", e);
@@ -359,7 +412,13 @@ public class AccountManager {
         }
         appExecutors.diskIo(() -> {
             try {
-                boolean forceReset = isForcePasswordReset();
+                User fresh = userDao.getUserById(currentUser.userId);
+                boolean forceReset = fresh != null && fresh.mustResetPassword;
+                if (fresh != null) {
+                    currentUser.mustResetPassword = fresh.mustResetPassword;
+                    currentUser.password = fresh.password;
+                    currentUser.passwordSalt = fresh.passwordSalt;
+                }
                 if (!forceReset && !passwordRepository.verifyPassword(
                         currentUser.password, oldPassword)) {
                     mainHandler.post(() -> callback.onError(
@@ -379,7 +438,7 @@ public class AccountManager {
                 }
                 // 同 diskIo 任务内同步落库；成功语义 = Room 已更新，再清强制改密并 ACK
                 passwordRepository.updatePasswordOnDisk(context, currentUser, newPassword);
-                clearForcePasswordReset();
+                clearMustResetPasswordOnDisk(currentUser.userId);
                 mainHandler.post(callback::onSuccess);
             } catch (Exception e) {
                 AppLog.e("AccountManager", "Update password error", e);
