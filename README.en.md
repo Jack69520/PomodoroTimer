@@ -52,10 +52,10 @@ All data stays on the device—no network, sync, or upload at runtime. This repo
 ### Focus aids: app blocking & DND
 
 - **App blocking**: Usage Access + overlay mask to intercept distracting apps (**no** Accessibility Service or Device Admin)
-  - Enable standalone blocking from Profile, or turn on **auto-block during Pomodoro** in settings (active only while focus is running—not while paused or on break)
+  - Enable **standalone** blocking from Profile (stays on until you turn it off), or **auto-block during Pomodoro** in settings (active only while focus is running—not while paused or on break)
   - Management UI: search, categories, all / blocked / allowed, scan installed apps; rules from a local JSON policy engine
-  - A blocking service run stops automatically after about 5 hours
-- **Do Not Disturb during focus**: optionally enable system DND when a focus session starts (notification policy access required); the prior system interruption filter is persisted to disk so it can be restored when the session ends—including after process death and alarm-driven settlement—with conditional orphan recovery on cold start when no active session remains
+  - If the process is killed, standalone blocking does **not** silently restart; the next time you open the app you are asked whether to re-enable. Timer-linked blocking restores with an active focus session
+- **Do Not Disturb during focus**: optionally enable system DND while a focus (study) session is running—not while paused or on break (notification policy access required); the prior system interruption filter is persisted to disk and restored on pause or when the session ends—including after process death and alarm-driven settlement—with conditional orphan recovery on cold start when no active session remains, and an explicit restore when a paused checkpoint is restored
 
 ### Accounts & personalization
 
