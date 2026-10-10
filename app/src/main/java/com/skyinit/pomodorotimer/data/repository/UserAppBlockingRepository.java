@@ -31,6 +31,18 @@ public final class UserAppBlockingRepository {
         this.accountManager = accountManager;
     }
 
+
+    /** 主线程可读：当前用户意图缓存是否已预热（未预热时 {@link #isEnabledForCurrentUser()} 可能假阴性）。 */
+    public boolean isCacheWarmForCurrentUser() {
+        String userId = accountManager.getCurrentUserId();
+        if (userId == null) {
+            return false;
+        }
+        synchronized (cacheLock) {
+            return userId.equals(cachedUserId);
+        }
+    }
+
     public boolean isEnabledForCurrentUser() {
         String userId = accountManager.getCurrentUserId();
         if (userId == null) {

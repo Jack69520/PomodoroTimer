@@ -7,11 +7,13 @@ import android.os.Process;
 import android.os.SystemClock;
 
 import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.AppContainer;
 import com.skyinit.pomodorotimer.TestApp;
 import com.skyinit.pomodorotimer.data.entity.BlockedApp;
 import com.skyinit.pomodorotimer.data.entity.User;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState;
 import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 
@@ -62,6 +64,7 @@ public class AppBlockingServiceTest {
         context = org.robolectric.RuntimeEnvironment.getApplication();
         ((App) context).initializeAfterConsentSyncForTest();
         ActiveSessionStore.clear(context);
+        BlockingRuntimeState.resetForTests();
         ensureLoggedIn();
         grantUsageStatsPermission();
 
@@ -78,6 +81,7 @@ public class AppBlockingServiceTest {
                 // 部分路径已 stopSelf，destroy 可能重复，忽略即可
             }
         }
+        BlockingRuntimeState.resetForTests();
     }
 
     // ---------- 生命周期：双来源启停 ----------
@@ -169,6 +173,18 @@ public class AppBlockingServiceTest {
         assertFalse(readBoolean("timerBlockingActive"));
         assertEquals(0L, readLong("timerSessionStartTime"));
         assertTrue(readBoolean("isMonitoring"));
+    }
+
+    /** 空 Intent（Sticky）不得静默恢复独立屏蔽。 */
+    @Test
+    public void nullIntent_doesNotRestoreStandalone() throws Exception {
+        AppContainer.getInstance(context)
+                .getUserAppBlockingRepository()
+                .setEnabledForCurrentUser(true);
+        service.onStartCommand(null, 0, 1);
+
+        assertFalse(readBoolean("standaloneBlockingActive"));
+        assertFalse(BlockingRuntimeState.isStandaloneActive());
     }
 
     // ---------- isAppBlocked 判定 ----------

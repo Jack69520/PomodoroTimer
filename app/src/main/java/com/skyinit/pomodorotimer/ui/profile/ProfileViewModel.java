@@ -25,11 +25,13 @@ import com.skyinit.pomodorotimer.data.repository.UserAppBlockingRepository;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.ui.account.AccountActivity;
 import com.skyinit.pomodorotimer.ui.settings.SettingsActivity;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState;
 import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.util.PermissionUtils;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
+import com.skyinit.pomodorotimer.util.StandaloneBlockingReconciler;
 
 import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -193,6 +195,7 @@ public class ProfileViewModel extends ViewModel {
         } else {
             userAppBlockingRepository.setEnabledForCurrentUser(false);
             AppBlockingServiceUtils.stopStandaloneBlocking(application);
+            StandaloneBlockingReconciler.getInstance().invalidatePendingPrompt();
             blockingBusy = false;
             publishState(sessionRepository.getCurrentUser());
         }
@@ -286,6 +289,7 @@ public class ProfileViewModel extends ViewModel {
         if (prefsEnabled && !hasAllPermissions) {
             userAppBlockingRepository.setEnabledForCurrentUser(false);
             AppBlockingServiceUtils.stopStandaloneBlocking(application);
+            StandaloneBlockingReconciler.getInstance().invalidatePendingPrompt();
             prefsEnabled = false;
             blockingBusy = false;
         }
@@ -293,7 +297,11 @@ public class ProfileViewModel extends ViewModel {
         boolean checked = (hasAllPermissions && prefsEnabled) || blockingBusy;
         int descriptionRes;
         if (hasAllPermissions && prefsEnabled) {
-            descriptionRes = R.string.blocking_description_enabled;
+            if (BlockingRuntimeState.isStandaloneActive()) {
+                descriptionRes = R.string.blocking_description_enabled;
+            } else {
+                descriptionRes = R.string.blocking_description_stopped_need_confirm;
+            }
         } else if (!hasAllPermissions) {
             descriptionRes = R.string.blocking_description_need_permission;
         } else {

@@ -165,6 +165,7 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             timerService.notifyTimerUiResumed();
         }
         viewModel.dispatch(TimerIntent.screenResumed());
+        com.skyinit.pomodorotimer.util.StandaloneBlockingReconciler.getInstance().maybeReconcile(this);
     }
 
     @Override

@@ -97,6 +97,7 @@ public final class AppBlockingEnabler {
         AppContainer.getInstance(context)
                 .getUserAppBlockingRepository()
                 .setEnabledForCurrentUser(true);
+        StandaloneBlockingReconciler.getInstance().invalidatePendingPrompt();
         AppBlockingServiceUtils.startStandaloneBlocking(context);
         host.onBlockingEnabled();
     }

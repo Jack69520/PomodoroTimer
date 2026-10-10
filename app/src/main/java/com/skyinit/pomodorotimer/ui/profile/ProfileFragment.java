@@ -30,7 +30,6 @@ import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.model.ProfileAvatarImage;
 import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
-import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.AppLog;
 
 /**
@@ -399,7 +398,6 @@ public class ProfileFragment extends Fragment {
     public void onResume() {
         super.onResume();
         viewModel.dispatch(ProfileIntent.refresh());
-        AppBlockingServiceUtils.syncStandaloneServiceStatus(requireContext());
         applyThemeToFragment();
     }
 

@@ -53,7 +53,6 @@ import com.skyinit.pomodorotimer.ui.bootstrap.AppBootstrapViewModel;
 import com.skyinit.pomodorotimer.ui.consent.PrivacyConsentActivity;
 import com.skyinit.pomodorotimer.ui.onboarding.FirstRunNavigator;
 import com.skyinit.pomodorotimer.ui.account.ForcePasswordResetNavigator;
-import com.skyinit.pomodorotimer.service.AppBlockingService;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.service.TimerServiceLauncher;
 import com.skyinit.pomodorotimer.ui.auth.AuthGate;
@@ -66,6 +65,7 @@ import com.skyinit.pomodorotimer.ui.home.TimerActivity;
 import com.skyinit.pomodorotimer.util.ColorContrastUtils;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
 import com.skyinit.pomodorotimer.util.ExactAlarmPermissionHelper;
+import com.skyinit.pomodorotimer.util.StandaloneBlockingReconciler;
 import com.skyinit.pomodorotimer.util.FocusBlockNavigation;
 import com.skyinit.pomodorotimer.util.ShortcutActions;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -76,7 +76,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
  * 统一管理 Toolbar 样式、权限申请、桌面快捷方式入口，并绑定 {@link TimerService}。
  * <p>
  * 生命周期内始终维持与计时服务的连接，将服务实例分发给 {@link HomeFragment}；
- * 离开前台时通知 {@link AppBlockingService} 检查超时，防止屏蔽服务无限常驻。
+ * 前台 resume 时协调独立屏蔽 orphan（B2 询问），不静默拉起屏蔽服务。
  */
 public class MainActivity extends BaseActivity {
     TimerService timerService;
@@ -535,6 +535,7 @@ public class MainActivity extends BaseActivity {
             return;
         }
         pushServiceToCurrentFragment();
+        StandaloneBlockingReconciler.getInstance().maybeReconcile(this);
     }
 
     @Override
@@ -758,12 +759,6 @@ public class MainActivity extends BaseActivity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        ensureAppBlockingServiceTimeout();
-    }
-
-    @Override
     protected void onDestroy() {
         if (isBound) {
             unbindService(connection);
@@ -779,17 +774,6 @@ public class MainActivity extends BaseActivity {
 
     public TimerService getTimerService() {
         return timerService;
-    }
-
-    /** 应用进入后台时触发屏蔽服务自检，防止无计时任务时服务超时未停。 */
-    private void ensureAppBlockingServiceTimeout() {
-        try {
-            Intent intent = new Intent(this, AppBlockingService.class);
-            intent.putExtra("action", "check_timeout");
-            startService(intent);
-        } catch (Exception e) {
-            AppLog.e("MainActivity", "Error ensuring service timeout", e);
-        }
     }
 
     @Override

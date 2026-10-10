@@ -119,9 +119,20 @@ public class AppBlockingServiceUtilsTest {
                 intent.getStringExtra(AppBlockingServiceUtils.EXTRA_BLOCKING_SOURCE));
     }
 
-    /** 缓存刷新：仅发 refresh_cache，不改变来源开关。 */
+    /** 未监控时缓存刷新应为 no-op，避免空拉起服务。 */
     @Test
-    public void notifyCacheRefresh_sendsRefreshAction() {
+    public void notifyCacheRefresh_whenNotMonitoring_isNoOp() {
+        com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState.resetForTests();
+        AppBlockingServiceUtils.notifyCacheRefresh(context);
+
+        assertNull(shadowApp.getNextStartedService());
+    }
+
+    /** 监控中时缓存刷新：仅发 refresh_cache。 */
+    @Test
+    public void notifyCacheRefresh_whenMonitoring_sendsRefreshAction() {
+        com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState.publish(
+                true, true, false, 0L, "u1");
         AppBlockingServiceUtils.notifyCacheRefresh(context);
 
         Intent intent = shadowApp.getNextStartedService();
@@ -129,6 +140,7 @@ public class AppBlockingServiceUtilsTest {
         assertEquals(AppBlockingServiceUtils.ACTION_REFRESH_CACHE,
                 intent.getStringExtra(AppBlockingServiceUtils.EXTRA_ACTION));
         assertNull(intent.getStringExtra(AppBlockingServiceUtils.EXTRA_BLOCKING_SOURCE));
+        com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState.resetForTests();
     }
 
     /** 常量契约：防止重构时改名导致跨模块 Intent 断裂。 */

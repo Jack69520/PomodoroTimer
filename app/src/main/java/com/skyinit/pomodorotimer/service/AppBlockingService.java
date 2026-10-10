@@ -11,6 +11,8 @@ import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 import com.skyinit.pomodorotimer.util.AppLog;
 import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyEngine;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingRecoveryPolicy;
+import com.skyinit.pomodorotimer.domain.blocking.BlockingRuntimeState;
 import com.skyinit.pomodorotimer.domain.blocking.BlockingPolicyRulesLoader;
 import com.skyinit.pomodorotimer.util.AppScanner;
 import com.skyinit.pomodorotimer.util.FocusBlockNavigation;
@@ -51,13 +53,11 @@ public class AppBlockingService extends Service {
     private static final String TAG = "AppBlockingService";
     private static final String CHANNEL_ID = "app_blocking_channel";
     private static final int NOTIFICATION_ID = 1001;
-    private static final long MAX_SERVICE_DURATION = 5 * 60 * 60 * 1000L;
     private static final long CHECK_INTERVAL_MS = 2500L;
     private static final long CACHE_REFRESH_INTERVAL_MS = 60_000L;
     private static final long MIN_BLOCK_INTERVAL_MS = 2500L;
 
     private Handler mainHandler;
-    private Handler timeoutHandler;
     private HandlerThread monitorThread;
     private Handler monitorHandler;
     private Runnable monitorRunnable;
@@ -86,7 +86,6 @@ public class AppBlockingService extends Service {
     public void onCreate() {
         super.onCreate();
         mainHandler = new Handler(Looper.getMainLooper());
-        timeoutHandler = new Handler(Looper.getMainLooper());
         overlayManager = new FocusBlockOverlayManager(this);
         blockedAppDao = AppDatabase.getDatabase(this).blockedAppDao();
         blockRecordRepository = AppContainer.getInstance(this).getSessionBlockRecordRepository();
@@ -113,33 +112,42 @@ public class AppBlockingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        boolean handled = false;
         if (intent != null) {
             String action = intent.getStringExtra(AppBlockingServiceUtils.EXTRA_ACTION);
             if (AppBlockingServiceUtils.ACTION_START_BLOCKING.equals(action)) {
                 handleStartBlocking(intent);
+                handled = true;
             } else if (AppBlockingServiceUtils.ACTION_STOP_BLOCKING.equals(action)) {
                 handleStopBlocking(intent);
+                handled = true;
             } else if (AppBlockingServiceUtils.ACTION_REFRESH_CACHE.equals(action)) {
                 if (isMonitoring) {
                     refreshBlockCacheAsync(true);
                 }
-            } else if ("check_timeout".equals(action)) {
-                checkServiceTimeout();
+                handled = true;
             }
         }
+        if (!handled) {
+            // Sticky / null Intent: only restore timer source; never silent standalone.
+            tryRestoreTimerSourceFromCheckpoint();
+        }
+        publishRuntimeState();
         if (!isAnyBlockingActive()) {
             stopSelf();
+            return START_NOT_STICKY;
         }
-        return isAnyBlockingActive() ? START_STICKY : START_NOT_STICKY;
+        return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         stopMonitoringInternal();
+        standaloneBlockingActive = false;
+        timerBlockingActive = false;
+        timerSessionStartTime = 0L;
         overlayManager.hide();
-        if (timeoutHandler != null) {
-            timeoutHandler.removeCallbacksAndMessages(null);
-        }
+        BlockingRuntimeState.clear();
         super.onDestroy();
     }
 
@@ -163,6 +171,7 @@ public class AppBlockingService extends Service {
             standaloneBlockingActive = true;
         }
         ensureMonitoringStarted();
+        publishRuntimeState();
     }
 
     private void handleStopBlocking(Intent intent) {
@@ -173,6 +182,7 @@ public class AppBlockingService extends Service {
         } else {
             standaloneBlockingActive = false;
         }
+        publishRuntimeState();
         if (!isAnyBlockingActive()) {
             stopBlockingAndService();
         }
@@ -182,12 +192,58 @@ public class AppBlockingService extends Service {
         return standaloneBlockingActive || timerBlockingActive;
     }
 
+    private void publishRuntimeState() {
+        if (!isAnyBlockingActive()) {
+            if (!isMonitoring) {
+                BlockingRuntimeState.clear();
+            } else {
+                BlockingRuntimeState.publish(
+                        true, false, false, 0L, blockingUserId);
+            }
+            return;
+        }
+        BlockingRuntimeState.publish(
+                isMonitoring,
+                standaloneBlockingActive,
+                timerBlockingActive,
+                timerSessionStartTime,
+                blockingUserId);
+    }
+
+    /**
+     * Sticky / null Intent：仅按 checkpoint 恢复 timer 源，绝不静默恢复独立屏蔽。
+     */
+    private void tryRestoreTimerSourceFromCheckpoint() {
+        if (isAnyBlockingActive()) {
+            return;
+        }
+        ActiveSessionStore.Checkpoint checkpoint = ActiveSessionStore.load(this);
+        String userId = AccountManager.getInstance(this).getCurrentUserId();
+        boolean autoBlock = AppContainer.getInstance(this)
+                .getTimerSettingsRepository()
+                .isAutoBlockDuringPomodoroEnabled();
+        boolean prefsOn = AppContainer.getInstance(this)
+                .getUserAppBlockingRepository()
+                .isEnabledForCurrentUser();
+        boolean hasUsage = PermissionUtils.hasUsageStatsPermission(this);
+        if (!BlockingRecoveryPolicy.shouldAttachTimerSource(
+                checkpoint, userId, autoBlock, isMonitoring, prefsOn, hasUsage)) {
+            return;
+        }
+        timerBlockingActive = true;
+        timerSessionStartTime = checkpoint.sessionStartTime;
+        ensureMonitoringStarted();
+        publishRuntimeState();
+    }
+
+
     private void ensureMonitoringStarted() {
         String activeUserId = AccountManager.getInstance(this).getCurrentUserId();
         if (activeUserId == null || activeUserId.isEmpty()) {
             AppLog.w(TAG, "Cannot start blocking without active user");
             standaloneBlockingActive = false;
             timerBlockingActive = false;
+            publishRuntimeState();
             return;
         }
 
@@ -196,17 +252,20 @@ public class AppBlockingService extends Service {
             isMonitoring = true;
             serviceStartTime = System.currentTimeMillis();
             startBlockingForeground();
-            scheduleAutoStop();
             lastBlockedApp = null;
             lastBlockTime = 0L;
             cacheLoaded.set(false);
             refreshBlockCacheAsync(true);
             startMonitorLoop();
             AppLog.d(TAG, "App blocking monitoring started");
+            publishRuntimeState();
         } else if (!activeUserId.equals(blockingUserId)) {
             blockingUserId = activeUserId;
             cacheLoaded.set(false);
             refreshBlockCacheAsync(true);
+            publishRuntimeState();
+        } else {
+            publishRuntimeState();
         }
     }
 
@@ -247,8 +306,10 @@ public class AppBlockingService extends Service {
         standaloneBlockingActive = false;
         timerBlockingActive = false;
         timerSessionStartTime = 0L;
+        publishRuntimeState();
 
         if (!isMonitoring && monitorThread == null) {
+            BlockingRuntimeState.clear();
             stopForeground(true);
             stopSelf();
             return;
@@ -271,6 +332,7 @@ public class AppBlockingService extends Service {
             monitorRunnable = null;
         }
 
+        BlockingRuntimeState.clear();
         stopForeground(true);
         stopSelf();
     }
@@ -312,11 +374,6 @@ public class AppBlockingService extends Service {
 
     private void checkAndBlockApps() {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - serviceStartTime > MAX_SERVICE_DURATION) {
-            AppLog.w(TAG, "Service timeout, stopping");
-            mainHandler.post(this::stopBlockingAndService);
-            return;
-        }
 
         if (currentTime - lastCacheRefreshMs >= CACHE_REFRESH_INTERVAL_MS) {
             refreshBlockCacheAsync(false);
@@ -586,18 +643,5 @@ public class AppBlockingService extends Service {
                 .build();
     }
 
-    private void scheduleAutoStop() {
-        timeoutHandler.removeCallbacksAndMessages(null);
-        timeoutHandler.postDelayed(() -> {
-            if (isMonitoring) {
-                stopBlockingAndService();
-            }
-        }, MAX_SERVICE_DURATION);
-    }
 
-    private void checkServiceTimeout() {
-        if (System.currentTimeMillis() - serviceStartTime > MAX_SERVICE_DURATION) {
-            stopBlockingAndService();
-        }
-    }
 }

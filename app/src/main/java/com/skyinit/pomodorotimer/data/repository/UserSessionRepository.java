@@ -34,6 +34,8 @@ public final class UserSessionRepository {
                 pomodoroSettingsRepository.invalidateCache();
                 pomodoroSettingsRepository.warmCache();
                 userAppBlockingRepository.clearCache();
+                com.skyinit.pomodorotimer.util.StandaloneBlockingReconciler.getInstance()
+                        .resetSessionFlags();
                 if (user != null) {
                     // Warm blocking cache asynchronously after switch
                     com.skyinit.pomodorotimer.util.AppExecutors.getInstance().diskIo(

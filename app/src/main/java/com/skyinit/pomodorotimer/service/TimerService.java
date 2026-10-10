@@ -1959,12 +1959,14 @@ public class TimerService extends Service {
         if (sessionStartTime <= 0L) {
             return;
         }
+        // 与 BlockingRecoveryPolicy 同一产品语义：自动屏蔽 / 已在监控 / 独立意图 ON
+        // 运行中以内存会话为准；Sticky 空 Intent 路径读 checkpoint + Policy。
         boolean autoBlock = timerSettingsRepository.isAutoBlockDuringPomodoroEnabled();
-        boolean blockingAlreadyRunning = AppBlockingServiceUtils.isServiceRunning(this);
-        boolean standaloneEnabled = AppContainer.getInstance(this)
+        boolean monitoringAlreadyOn = AppBlockingServiceUtils.isServiceRunning(this);
+        boolean standalonePrefsOn = AppContainer.getInstance(this)
                 .getUserAppBlockingRepository()
                 .isEnabledForCurrentUser();
-        if (!autoBlock && !blockingAlreadyRunning && !standaloneEnabled) {
+        if (!autoBlock && !monitoringAlreadyOn && !standalonePrefsOn) {
             return;
         }
         if (!PermissionUtils.hasAllAppBlockingPermissions(this)) {
