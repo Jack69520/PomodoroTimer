@@ -15,6 +15,7 @@ public final class PomodoroSettingsUiState {
     public final int pauseReasonPromptMode;
     public final String pauseReasonPromptLabel;
     public final boolean autoStartAfterBreak;
+    public final boolean strictPomodoro;
     public final boolean longBreakEnabled;
     public final int pomodorosBeforeLongBreak;
     public final String longBreakIntervalLabel;
@@ -37,6 +38,7 @@ public final class PomodoroSettingsUiState {
                                    int pauseReasonPromptMode,
                                    String pauseReasonPromptLabel,
                                    boolean autoStartAfterBreak,
+                                   boolean strictPomodoro,
                                    boolean longBreakEnabled,
                                    int pomodorosBeforeLongBreak,
                                    String longBreakIntervalLabel,
@@ -58,6 +60,7 @@ public final class PomodoroSettingsUiState {
         this.pauseReasonPromptMode = pauseReasonPromptMode;
         this.pauseReasonPromptLabel = pauseReasonPromptLabel;
         this.autoStartAfterBreak = autoStartAfterBreak;
+        this.strictPomodoro = strictPomodoro;
         this.longBreakEnabled = longBreakEnabled;
         this.pomodorosBeforeLongBreak = pomodorosBeforeLongBreak;
         this.longBreakIntervalLabel = longBreakIntervalLabel;

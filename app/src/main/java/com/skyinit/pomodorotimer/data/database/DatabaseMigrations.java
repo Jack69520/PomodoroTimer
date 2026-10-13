@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
  */
 public final class DatabaseMigrations {
 
-    public static final int CURRENT_VERSION = 3;
+    public static final int CURRENT_VERSION = 4;
 
     public static final Migration MIGRATION_1_2 = new Migration(1, 2) {
         @Override
@@ -34,9 +34,22 @@ public final class DatabaseMigrations {
         }
     };
 
+    public static final Migration MIGRATION_3_4 = new Migration(3, 4) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL(
+                    "ALTER TABLE pomodoro_sessions ADD COLUMN countedInFocusDuration "
+                            + "INTEGER NOT NULL DEFAULT 0");
+            db.execSQL(
+                    "UPDATE pomodoro_sessions SET countedInFocusDuration = 1 "
+                            + "WHERE completed = 1 OR earlyEnd = 1");
+        }
+    };
+
     public static final Migration[] ALL = {
             MIGRATION_1_2,
-            MIGRATION_2_3
+            MIGRATION_2_3,
+            MIGRATION_3_4
     };
 
     private DatabaseMigrations() {

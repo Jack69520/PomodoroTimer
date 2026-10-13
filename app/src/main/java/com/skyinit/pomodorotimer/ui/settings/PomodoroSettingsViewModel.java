@@ -88,6 +88,20 @@ public class PomodoroSettingsViewModel extends ViewModel {
             case SET_AUTO_START:
                 updateSettings(s -> s.autoStartAfterBreak = intent.boolValue, false);
                 break;
+            case SET_STRICT_POMODORO:
+                if (intent.boolValue) {
+                    PomodoroSettingsUiState cur = uiState.getValue();
+                    if (cur != null && !cur.strictPomodoro) {
+                        effects.setValue(PomodoroSettingsEffect.showStrictPomodoroConfirm());
+                        refresh();
+                        return;
+                    }
+                }
+                updateSettings(s -> s.strictPomodoro = intent.boolValue, false);
+                break;
+            case CONFIRM_ENABLE_STRICT_POMODORO:
+                updateSettings(s -> s.strictPomodoro = true, false);
+                break;
             case SET_LONG_BREAK_ENABLED:
                 updateSettings(s -> s.longBreakEnabled = intent.boolValue, false);
                 break;
@@ -313,6 +327,7 @@ public class PomodoroSettingsViewModel extends ViewModel {
                 promptMode.storageValue,
                 labelForPauseReasonPrompt(promptMode),
                 settings.autoStartAfterBreak,
+                settings.strictPomodoro,
                 settings.longBreakEnabled,
                 settings.pomodorosBeforeLongBreak,
                 application.getString(R.string.settings_pomodoro_count_format,

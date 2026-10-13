@@ -47,14 +47,24 @@ public final class ActiveSessionStore {
     private static final String KEY_LAST_RESULT = "last_result";
     private static final String KEY_LAST_RESULT_SESSION_ID = "last_result_session_id";
 
-    /** 学习满此时长才建议保存为完成记录（5 分钟）。 */
-    public static final long SAVE_ELIGIBLE_MS = 5L * 60L * 1000L;
+    /**
+     * 有效专注满此时长才可保存为计入/留痕记录（与
+     * {@link com.skyinit.pomodorotimer.domain.timer.SessionSettlePolicy#SAVE_ELIGIBLE_MS} 一致）。
+     */
+    public static final long SAVE_ELIGIBLE_MS =
+            com.skyinit.pomodorotimer.domain.timer.SessionSettlePolicy.SAVE_ELIGIBLE_MS;
 
     /** 最近一次自动结算结果，供 UI 展示结果态。 */
     public static final String RESULT_NONE = "";
     public static final String RESULT_COMPLETED = "completed";
     public static final String RESULT_FAILED_TIMEOUT = "failed_timeout";
     public static final String RESULT_BREAK_STARTED = "break_started";
+    /** 用户提前结束并已保存专注时长。 */
+    public static final String RESULT_EARLY_ENDED = "early_ended";
+    /** 有效专注不足门槛，已丢弃。 */
+    public static final String RESULT_DISCARDED_SHORT = "discarded_short";
+    /** 严格模式下用户结束，已丢弃。 */
+    public static final String RESULT_DISCARDED_STRICT = "discarded_strict";
 
     private ActiveSessionStore() {
     }

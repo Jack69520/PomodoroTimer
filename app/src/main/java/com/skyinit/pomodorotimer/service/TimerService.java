@@ -55,8 +55,11 @@ import com.skyinit.pomodorotimer.domain.timer.PauseReasonPolicy;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 import com.skyinit.pomodorotimer.domain.timer.SessionAccountingPolicy;
 import com.skyinit.pomodorotimer.domain.timer.SessionAccountingResult;
+import com.skyinit.pomodorotimer.domain.timer.SessionEndReason;
 import com.skyinit.pomodorotimer.domain.timer.SessionPhase;
+import com.skyinit.pomodorotimer.domain.timer.SessionSettlePolicy;
 import com.skyinit.pomodorotimer.domain.timer.SettleDecision;
+import com.skyinit.pomodorotimer.domain.timer.SettleOutcome;
 import com.skyinit.pomodorotimer.domain.timer.TimerSessionPolicy;
 
 import java.util.ArrayList;
@@ -410,9 +413,9 @@ public class TimerService extends Service {
             } else if (ACTION_RESUME_WITH_QUICK_REASON.equals(action)) {
                 resumeWithQuickReason();
             } else if (ACTION_RESET.equals(action)) {
-                resetTimer();
+                resetTimer(SessionEndReason.USER_ABORT);
             } else if (ACTION_ACCOUNT_SWITCH_RESET.equals(action)) {
-                resetTimerForAccountSwitch();
+                resetTimer(SessionEndReason.ACCOUNT_SWITCH);
             } else if (ACTION_SET_PAUSE_REASON.equals(action)) {
                 setPauseReason(intent.getStringExtra(EXTRA_PAUSE_REASON));
             } else if (ACTION_PAUSE_WITH_REASON.equals(action)) {
@@ -715,40 +718,33 @@ public class TimerService extends Service {
         }
         try {
             int completedSessionType = sessionType;
-            SessionAccountingResult accounting = null;
+            long settledId = sessionStartTime;
+            SettleOutcome studyOutcome = null;
+
             if (completedSessionType == 0) {
-                // 完成路径 remaining 通常已为 0；仍先快照再改状态，避免竞态丢字段
-                accounting = snapshotStudyAccounting();
+                studyOutcome = settleStudySessionLocked(SessionEndReason.NATURAL_COMPLETE);
             }
+
             stopTimerLoop();
             isRunning = false;
             isPaused = false;
             cancelPauseTimeoutCheck();
-            long settledId = sessionStartTime;
 
             notifyTimerFinish();
             stopTimerBlocking();
             releaseStudyDnd();
 
-            if (completedSessionType == 0 && accounting != null) {
+            if (completedSessionType == 0 && studyOutcome == SettleOutcome.COMPLETE) {
                 String userId = getSessionUserIdOrActive();
-                List<String> reasons = PauseReasonPolicy.normalizeForPersist(
-                        sessionPauseReasons, pauseCount,
-                        getString(R.string.timer_pause_reason_unfilled));
-                statisticsRepository.recordSession(
-                        userId, sessionStartTime, accounting.activeDurationMs,
-                        currentTaskId, currentSubTaskId,
-                        currentCategory, currentTags,
-                        pauseCount, reasons, false, null,
-                        accounting.endTimeMs, accounting.pausedDurationMs,
-                        accounting.plannedDurationMs);
                 if (currentTaskId >= 0) {
                     incrementTaskCompletedPomodoros(currentTaskId, userId);
                 }
-
                 ActiveSessionStore.markSettledResult(
                         this, settledId, ActiveSessionStore.RESULT_BREAK_STARTED);
                 prepareAndAutoStartBreak();
+            } else if (completedSessionType == 0) {
+                ActiveSessionStore.markSettledResult(
+                        this, settledId, resultCodeForOutcome(studyOutcome));
             } else {
                 ActiveSessionStore.markSettledResult(
                         this, settledId, ActiveSessionStore.RESULT_COMPLETED);
@@ -1091,38 +1087,28 @@ public class TimerService extends Service {
             return;
         }
         try {
-            // 必须先快照剩余与暂停累计，再清零状态，避免 duration 丢失
-            SessionAccountingResult accounting = null;
-            if (sessionType == 0) {
-                accounting = snapshotStudyAccounting();
+            SettleOutcome outcome = SettleOutcome.DISCARD_SHORT;
+            long settledId = sessionStartTime;
+            boolean wasStudy = sessionType == 0;
+            if (wasStudy) {
+                outcome = settleStudySessionLocked(SessionEndReason.PAUSE_TIMEOUT);
             }
+
             cancelPauseTimeoutCheck();
             stopTimerLoop();
             isRunning = false;
             isPaused = false;
             timeLeftInMillis = 0L;
-            long settledId = sessionStartTime;
 
-            if (sessionType == 0 && accounting != null) {
-                String userId = getSessionUserIdOrActive();
-                String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
-                List<String> reasons = PauseReasonPolicy.normalizeForPersist(
-                        sessionPauseReasons, pauseCount,
-                        getString(R.string.timer_pause_reason_unfilled));
-                reasons = new ArrayList<>(reasons);
-                reasons.add(pauseReasonTimeout);
-                statisticsRepository.recordFailedSession(
-                        userId, sessionStartTime, accounting.activeDurationMs,
-                        pauseReasonTimeout, currentTaskId, currentCategory,
-                        Math.max(pauseCount, 1), reasons, null,
-                        accounting.endTimeMs, accounting.pausedDurationMs,
-                        accounting.plannedDurationMs);
+            if (wasStudy) {
+                if (!outcome.shouldPersist()) {
+                    discardCurrentSessionBlockRecords();
+                }
                 stopTimerBlocking();
                 releaseStudyDnd();
             }
 
-            ActiveSessionStore.markSettledResult(
-                    this, settledId, ActiveSessionStore.RESULT_FAILED_TIMEOUT);
+            ActiveSessionStore.markSettledResult(this, settledId, resultCodeForOutcome(outcome));
             notifyTimerFinish();
 
             dispatchSessionAlert(SessionAlert.SESSION_FAILED);
@@ -1137,7 +1123,8 @@ public class TimerService extends Service {
      * 结算前快照：有效专注 = planned − remaining；暂停含当前未结束段。
      */
     private SessionAccountingResult snapshotStudyAccounting() {
-        long remaining = Math.max(0L, timeLeftInMillis);
+        // 运行中用 getTimeLeft()（基于 elapsedRealtime），避免字段节流导致门槛误判
+        long remaining = Math.max(0L, getTimeLeft());
         long currentPause = isPaused ? resolveCurrentPauseElapsedMs() : 0L;
         return SessionAccountingPolicy.settle(
                 plannedDurationMs,
@@ -1161,35 +1148,42 @@ public class TimerService extends Service {
     }
 
     private void endSessionDueToLeave() {
-        cancelPauseTimeoutCheck();
-        stopTimerLoop();
-        isRunning = false;
-        isPaused = false;
-        timeLeftInMillis = 0L;
-        clearCheckpoint();
-
-        if (sessionType == 0) {
-            discardCurrentSessionBlockRecords();
-            stopTimerBlocking();
-            releaseStudyDnd();
-        }
-
-        notifyTimerFinish();
-
-        dispatchSessionAlert(SessionAlert.SESSION_FAILED);
-        stopForeground(STOP_FOREGROUND_REMOVE);
-        stopSelf();
+        resetTimerInternal(true, true, SessionEndReason.FORCE_FAIL, true);
     }
 
     public void resetTimer() {
-        resetTimerInternal(true, true);
+        resetTimer(SessionEndReason.USER_ABORT);
     }
 
-    private void resetTimerForAccountSwitch() {
-        resetTimerInternal(true, true);
+    public void resetTimer(SessionEndReason reason) {
+        resetTimerInternal(true, true, reason, false);
     }
 
-    private void resetTimerInternal(boolean notifyListeners, boolean stopServiceWhenDone) {
+    private void resetTimerInternal(boolean notifyListeners,
+                                    boolean stopServiceWhenDone,
+                                    SessionEndReason reason,
+                                    boolean forceFailAlert) {
+        boolean wasActiveStudy = sessionType == 0
+                && sessionStartTime > 0L
+                && (isRunning || isPaused);
+        SettleOutcome outcome = SettleOutcome.DISCARD_FORCE;
+        long settledId = sessionStartTime;
+
+        if (wasActiveStudy) {
+            if (!isCompletingSession.compareAndSet(false, true)) {
+                AppLog.d(TAG, "Ignoring reset: settle already in progress");
+                return;
+            }
+            try {
+                SessionEndReason endReason = reason != null ? reason : SessionEndReason.USER_ABORT;
+                outcome = settleStudySessionLocked(endReason);
+                ActiveSessionStore.markSettledResult(
+                        this, settledId, resultCodeForOutcome(outcome));
+            } finally {
+                isCompletingSession.set(false);
+            }
+        }
+
         cancelPauseTimeoutCheck();
         stopTimerLoop();
         boolean wasStudy = sessionType == 0;
@@ -1209,7 +1203,9 @@ public class TimerService extends Service {
         clearCheckpoint();
 
         if (wasStudy) {
-            discardCurrentSessionBlockRecords();
+            if (!outcome.shouldPersist()) {
+                discardCurrentSessionBlockRecords();
+            }
             stopTimerBlocking();
             releaseStudyDnd();
         }
@@ -1222,9 +1218,117 @@ public class TimerService extends Service {
             publishState();
         }
 
+        if (forceFailAlert) {
+            notifyTimerFinish();
+            dispatchSessionAlert(SessionAlert.SESSION_FAILED);
+        }
+
         stopForeground(STOP_FOREGROUND_REMOVE);
         if (stopServiceWhenDone) {
             stopSelf();
+        }
+    }
+
+    /**
+     * 学习会话唯一结算入口（调用方须已持有 {@link #isCompletingSession} CAS）。
+     * 先快照再决策再落库，避免与状态清理竞态。
+     */
+    private SettleOutcome settleStudySessionLocked(SessionEndReason reason) {
+        boolean isStudy = sessionType == 0 && sessionStartTime > 0L;
+        SessionAccountingResult accounting = isStudy ? snapshotStudyAccounting() : null;
+        long activeMs = accounting != null ? accounting.activeDurationMs : 0L;
+        boolean strict = pomodoroSettingsRepository.getSettings().strictPomodoro;
+        SettleOutcome outcome = SessionSettlePolicy.decide(
+                reason != null ? reason : SessionEndReason.FORCE_FAIL,
+                strict,
+                activeMs,
+                isStudy);
+        if (accounting != null) {
+            persistSettleOutcome(outcome, accounting, sessionStartTime);
+        }
+        return outcome;
+    }
+
+    /** 当前学习有效专注毫秒（供 UI Preview，与结算快照算法一致）。 */
+    public long getActiveFocusDurationMs() {
+        if (sessionType != 0 || sessionStartTime <= 0L || (!isRunning && !isPaused)) {
+            return 0L;
+        }
+        return snapshotStudyAccounting().activeDurationMs;
+    }
+
+    /**
+     * 按结算结果落库。写入走 diskIo，仅捕获不可变快照字段。
+     */
+    private void persistSettleOutcome(SettleOutcome outcome,
+                                      SessionAccountingResult accounting,
+                                      long settledId) {
+        if (outcome == null || accounting == null || !outcome.shouldPersist()) {
+            return;
+        }
+        String userId = getSessionUserIdOrActive();
+        List<String> reasons = PauseReasonPolicy.normalizeForPersist(
+                sessionPauseReasons, pauseCount,
+                getString(R.string.timer_pause_reason_unfilled));
+        int taskId = currentTaskId;
+        int subTaskId = currentSubTaskId;
+        String category = currentCategory;
+        String tags = currentTags;
+        int pauses = pauseCount;
+        long startTime = settledId > 0L ? settledId : sessionStartTime;
+
+        if (outcome == SettleOutcome.COMPLETE) {
+            statisticsRepository.recordSession(
+                    userId, startTime, accounting.activeDurationMs,
+                    taskId, subTaskId, category, tags,
+                    pauses, reasons, false, null,
+                    accounting.endTimeMs, accounting.pausedDurationMs,
+                    accounting.plannedDurationMs);
+            return;
+        }
+        if (outcome == SettleOutcome.SAVE_EARLY_END) {
+            statisticsRepository.recordEarlyEndedSession(
+                    userId, startTime, accounting.activeDurationMs,
+                    taskId, subTaskId, category, tags,
+                    pauses, reasons, null,
+                    accounting.endTimeMs, accounting.pausedDurationMs,
+                    accounting.plannedDurationMs);
+            return;
+        }
+        if (outcome.isFailureShape()) {
+            String pauseReasonTimeout = getString(R.string.timer_pause_reason_timeout);
+            List<String> failReasons = new ArrayList<>(reasons);
+            if (!failReasons.contains(pauseReasonTimeout)) {
+                failReasons.add(pauseReasonTimeout);
+            }
+            statisticsRepository.recordFailedSession(
+                    userId, startTime, accounting.activeDurationMs,
+                    pauseReasonTimeout, taskId, category,
+                    Math.max(pauses, 1), failReasons, null,
+                    accounting.endTimeMs, accounting.pausedDurationMs,
+                    accounting.plannedDurationMs,
+                    outcome.countsTowardFocusDuration());
+        }
+    }
+
+    private static String resultCodeForOutcome(SettleOutcome outcome) {
+        if (outcome == null) {
+            return ActiveSessionStore.RESULT_NONE;
+        }
+        switch (outcome) {
+            case SAVE_EARLY_END:
+                return ActiveSessionStore.RESULT_EARLY_ENDED;
+            case DISCARD_SHORT:
+                return ActiveSessionStore.RESULT_DISCARDED_SHORT;
+            case DISCARD_STRICT:
+                return ActiveSessionStore.RESULT_DISCARDED_STRICT;
+            case SAVE_FAILED_COUNTED:
+            case SAVE_FAILED_RECORD_ONLY:
+                return ActiveSessionStore.RESULT_FAILED_TIMEOUT;
+            case COMPLETE:
+                return ActiveSessionStore.RESULT_COMPLETED;
+            default:
+                return ActiveSessionStore.RESULT_NONE;
         }
     }
 

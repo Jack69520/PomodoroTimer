@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings;
@@ -35,6 +36,7 @@ public class PomodoroSettingsActivity extends SubpageActivity {
     private TextView longBreakDurationValue;
     private View longBreakDetails;
     private SwitchCompat autoStartSwitch;
+    private SwitchCompat strictPomodoroSwitch;
     private SwitchCompat longBreakSwitch;
     private SwitchCompat dndSwitch;
     private SwitchCompat autoBlockSwitch;
@@ -74,6 +76,7 @@ public class PomodoroSettingsActivity extends SubpageActivity {
         longBreakDurationValue = findViewById(R.id.long_break_duration_value);
         longBreakDetails = findViewById(R.id.long_break_details);
         autoStartSwitch = findViewById(R.id.auto_start_after_break_switch);
+        strictPomodoroSwitch = findViewById(R.id.strict_pomodoro_switch);
         longBreakSwitch = findViewById(R.id.long_break_enabled_switch);
         dndSwitch = findViewById(R.id.dnd_during_focus_switch);
         autoBlockSwitch = findViewById(R.id.auto_block_during_pomodoro_switch);
@@ -101,6 +104,12 @@ public class PomodoroSettingsActivity extends SubpageActivity {
                 return;
             }
             viewModel.dispatch(PomodoroSettingsIntent.setAutoStart(isChecked));
+        });
+        strictPomodoroSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallbacks) {
+                return;
+            }
+            viewModel.dispatch(PomodoroSettingsIntent.setStrictPomodoro(isChecked));
         });
         longBreakSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchCallbacks) {
@@ -161,6 +170,7 @@ public class PomodoroSettingsActivity extends SubpageActivity {
 
         suppressSwitchCallbacks = true;
         autoStartSwitch.setChecked(state.autoStartAfterBreak);
+        strictPomodoroSwitch.setChecked(state.strictPomodoro);
         longBreakSwitch.setChecked(state.longBreakEnabled);
         dndSwitch.setChecked(state.dndEnabled);
         autoBlockSwitch.setChecked(state.autoBlockDuringPomodoro);
@@ -189,6 +199,17 @@ public class PomodoroSettingsActivity extends SubpageActivity {
                 break;
             case SHOW_SINGLE_CHOICE:
                 showSingleChoice(effect.choiceKind, effect.selectedIndex);
+                break;
+            case SHOW_STRICT_POMODORO_CONFIRM:
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.settings_strict_pomodoro_confirm_title)
+                        .setMessage(R.string.settings_strict_pomodoro_confirm_message)
+                        .setPositiveButton(R.string.confirm, (d, w) ->
+                                viewModel.dispatch(PomodoroSettingsIntent.confirmEnableStrictPomodoro()))
+                        .setNegativeButton(R.string.cancel, (d, w) -> viewModel.dispatch(
+                                PomodoroSettingsIntent.refresh()))
+                        .setOnCancelListener(d -> viewModel.dispatch(PomodoroSettingsIntent.refresh()))
+                        .show();
                 break;
             case SHOW_DND_PERMISSION_DIALOG:
                 new AlertDialog.Builder(this)

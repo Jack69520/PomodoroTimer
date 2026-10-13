@@ -18,7 +18,8 @@ public final class PomodoroSettingsEffect {
         OPEN_DND_SETTINGS,
         SHOW_LOCK_SCREEN_PERMISSION_DIALOG,
         OPEN_FULL_SCREEN_INTENT_SETTINGS,
-        OPEN_NOTIFICATION_SETTINGS
+        OPEN_NOTIFICATION_SETTINGS,
+        SHOW_STRICT_POMODORO_CONFIRM
     }
 
     public enum ChoiceKind {
@@ -84,5 +85,9 @@ public final class PomodoroSettingsEffect {
 
     public static PomodoroSettingsEffect openNotificationSettings() {
         return new PomodoroSettingsEffect(Type.OPEN_NOTIFICATION_SETTINGS, 0, 0, null, 0, null);
+    }
+
+    public static PomodoroSettingsEffect showStrictPomodoroConfirm() {
+        return new PomodoroSettingsEffect(Type.SHOW_STRICT_POMODORO_CONFIRM, 0, 0, null, 0, null);
     }
 }

@@ -218,6 +218,7 @@ public class SessionDetailViewModel extends ViewModel {
                 displayPauseCount,
                 reasons,
                 earlyEnd,
+                session.countedInFocusDuration,
                 blockCount,
                 encouragementForBlockCount(blockCount),
                 session.notes,

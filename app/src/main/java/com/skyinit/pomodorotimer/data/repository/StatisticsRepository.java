@@ -102,6 +102,7 @@ public class StatisticsRepository {
                         ? pauseReasonList.get(pauseReasonList.size() - 1)
                         : null;
                 session.earlyEnd = earlyEnd;
+                session.countedInFocusDuration = true;
                 session.notes = notes;
                 session.blockEventCount = resolveBlockEventCount(userId, startTime);
                 session.pausedDurationMs = safePaused;
@@ -111,6 +112,19 @@ public class StatisticsRepository {
                 AppLog.e("StatisticsRepository", "Failed to record session", e);
             }
         });
+    }
+
+    /**
+     * 提前结束：计入专注时长，不计入完成番茄。
+     */
+    public void recordEarlyEndedSession(String userId, long startTime, long duration,
+                                        int taskId, int subTaskId, String category, String tags,
+                                        int pauseCount, List<String> pauseReasonList,
+                                        String notes,
+                                        long endTime, long pausedDurationMs, long plannedDurationMs) {
+        recordIncompleteSession(userId, startTime, duration, null, taskId, subTaskId, category, tags,
+                pauseCount, pauseReasonList, notes, endTime, pausedDurationMs, plannedDurationMs,
+                true, true);
     }
 
     private int resolveBlockEventCount(String userId, long sessionStartTime) {
@@ -133,10 +147,37 @@ public class StatisticsRepository {
                                     int pauseCount, List<String> pauseReasonList,
                                     String notes,
                                     long endTime, long pausedDurationMs, long plannedDurationMs) {
+        recordFailedSession(userId, startTime, duration, pauseReason, taskId, category,
+                pauseCount, pauseReasonList, notes, endTime, pausedDurationMs, plannedDurationMs,
+                true);
+    }
+
+    /**
+     * @param countedInFocusDuration 是否计入专注时长（严格模式下超时留痕可为 false）
+     */
+    public void recordFailedSession(String userId, long startTime, long duration,
+                                    String pauseReason, int taskId, String category,
+                                    int pauseCount, List<String> pauseReasonList,
+                                    String notes,
+                                    long endTime, long pausedDurationMs, long plannedDurationMs,
+                                    boolean countedInFocusDuration) {
+        recordIncompleteSession(userId, startTime, duration, pauseReason, taskId, -1, category, null,
+                pauseCount, pauseReasonList, notes, endTime, pausedDurationMs, plannedDurationMs,
+                true, countedInFocusDuration);
+    }
+
+    private void recordIncompleteSession(String userId, long startTime, long duration,
+                                         String pauseReason, int taskId, int subTaskId,
+                                         String category, String tags,
+                                         int pauseCount, List<String> pauseReasonList,
+                                         String notes,
+                                         long endTime, long pausedDurationMs, long plannedDurationMs,
+                                         boolean earlyEnd, boolean countedInFocusDuration) {
         final long safeDuration = Math.max(0L, duration);
         final long safeEnd = Math.max(endTime, startTime);
         final long safePaused = Math.max(0L, pausedDurationMs);
         final long safePlanned = Math.max(0L, plannedDurationMs);
+        final int safeSubTaskId = subTaskId;
         AppExecutors.getInstance().diskIo(() -> {
             try {
                 deletePauseSnapshotsSync(userId, startTime);
@@ -152,16 +193,19 @@ public class StatisticsRepository {
                 if (session.pauseReasons == null && pauseReason != null) {
                     session.pauseReasons = pauseReason;
                 }
-                session.earlyEnd = true;
+                session.earlyEnd = earlyEnd;
+                session.countedInFocusDuration = countedInFocusDuration;
                 session.notes = notes;
                 session.blockEventCount = resolveBlockEventCount(userId, startTime);
                 session.taskId = taskId;
+                session.subTaskId = safeSubTaskId;
                 session.category = category;
+                session.tags = tags;
                 session.pausedDurationMs = safePaused;
                 session.plannedDurationMs = safePlanned;
                 sessionDao.insert(session);
             } catch (Exception e) {
-                AppLog.e("StatisticsRepository", "Failed to record failed session", e);
+                AppLog.e("StatisticsRepository", "Failed to record incomplete session", e);
             }
         });
     }

@@ -41,6 +41,10 @@ public class UserPomodoroSettings {
     /** 专注/休息期间锁屏全屏显示计时页（默认关）。 */
     public boolean lockScreenFullscreenEnabled;
     public boolean autoStartAfterBreak;
+    /**
+     * 严格番茄：开启后仅完整番茄计入专注时长与完成数（默认关闭；仅影响后续写入）。
+     */
+    public boolean strictPomodoro;
     public boolean longBreakEnabled;
     public int pomodorosBeforeLongBreak;
     public long longBreakDurationMs;
@@ -64,6 +68,7 @@ public class UserPomodoroSettings {
         autoBlockDuringPomodoro = false;
         lockScreenFullscreenEnabled = false;
         autoStartAfterBreak = false;
+        strictPomodoro = false;
         longBreakEnabled = false;
         pomodorosBeforeLongBreak = DEFAULT_POMODOROS_BEFORE_LONG_BREAK;
         longBreakDurationMs = DEFAULT_LONG_BREAK_MS;

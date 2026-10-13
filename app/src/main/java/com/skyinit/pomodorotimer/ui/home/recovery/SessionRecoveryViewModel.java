@@ -420,6 +420,12 @@ public class SessionRecoveryViewModel extends AndroidViewModel {
         if (ActiveSessionStore.RESULT_FAILED_TIMEOUT.equals(result)) {
             return RecoveryDecision.ResultKind.FAILED_TIMEOUT;
         }
+        if (ActiveSessionStore.RESULT_EARLY_ENDED.equals(result)) {
+            return RecoveryDecision.ResultKind.EARLY_ENDED;
+        }
+        if (ActiveSessionStore.RESULT_DISCARDED_SHORT.equals(result)) {
+            return RecoveryDecision.ResultKind.DISCARDED_SHORT;
+        }
         return RecoveryDecision.ResultKind.NONE;
     }
 

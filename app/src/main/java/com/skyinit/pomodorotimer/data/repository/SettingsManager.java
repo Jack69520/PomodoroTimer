@@ -29,6 +29,7 @@ public class SettingsManager {
     private static final String KEY_AUTO_BLOCK_DURING = "pomodoro_auto_block_during";
     private static final String KEY_LOCK_SCREEN_FULLSCREEN = "pomodoro_lock_screen_fullscreen";
     private static final String KEY_AUTO_START_AFTER_BREAK = "pomodoro_auto_start_after_break";
+    private static final String KEY_STRICT_POMODORO = "pomodoro_strict_pomodoro";
     private static final String KEY_LONG_BREAK_ENABLED = "pomodoro_long_break_enabled";
     private static final String KEY_POMODOROS_BEFORE_LONG = "pomodoro_pomodoros_before_long";
     private static final String KEY_LONG_BREAK_DURATION_MS = "pomodoro_long_break_duration_ms";
@@ -104,6 +105,7 @@ public class SettingsManager {
         s.autoBlockDuringPomodoro = prefs.getBoolean(KEY_AUTO_BLOCK_DURING, false);
         s.lockScreenFullscreenEnabled = prefs.getBoolean(KEY_LOCK_SCREEN_FULLSCREEN, false);
         s.autoStartAfterBreak = prefs.getBoolean(KEY_AUTO_START_AFTER_BREAK, false);
+        s.strictPomodoro = prefs.getBoolean(KEY_STRICT_POMODORO, false);
         s.longBreakEnabled = prefs.getBoolean(KEY_LONG_BREAK_ENABLED, false);
         s.pomodorosBeforeLongBreak = prefs.getInt(
                 KEY_POMODOROS_BEFORE_LONG, UserPomodoroSettings.DEFAULT_POMODOROS_BEFORE_LONG_BREAK);
@@ -123,6 +125,7 @@ public class SettingsManager {
                 .putBoolean(KEY_AUTO_BLOCK_DURING, settings.autoBlockDuringPomodoro)
                 .putBoolean(KEY_LOCK_SCREEN_FULLSCREEN, settings.lockScreenFullscreenEnabled)
                 .putBoolean(KEY_AUTO_START_AFTER_BREAK, settings.autoStartAfterBreak)
+                .putBoolean(KEY_STRICT_POMODORO, settings.strictPomodoro)
                 .putBoolean(KEY_LONG_BREAK_ENABLED, settings.longBreakEnabled)
                 .putInt(KEY_POMODOROS_BEFORE_LONG, settings.pomodorosBeforeLongBreak)
                 .putLong(KEY_LONG_BREAK_DURATION_MS, settings.longBreakDurationMs)

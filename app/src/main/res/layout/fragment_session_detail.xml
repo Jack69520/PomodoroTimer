@@ -92,6 +92,10 @@
                 android:id="@+id/row_early_end"
                 layout="@layout/item_session_detail_row" />
 
+            <include
+                android:id="@+id/row_counted_in_focus"
+                layout="@layout/item_session_detail_row" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

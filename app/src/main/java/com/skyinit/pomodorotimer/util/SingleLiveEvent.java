@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 仅向单个观察者投递一次的事件 LiveData，适用于 Toast、导航等一次性 UI 动作。
+ * <p>
+ * {@link #setValue} 与 {@link #postValue} 均会置 pending，避免后台线程投递被静默丢弃。
  */
 public class SingleLiveEvent<T> extends MutableLiveData<T> {
 
@@ -27,9 +29,16 @@ public class SingleLiveEvent<T> extends MutableLiveData<T> {
     }
 
     @MainThread
+    @Override
     public void setValue(@Nullable T value) {
         pending.set(true);
         super.setValue(value);
+    }
+
+    @Override
+    public void postValue(@Nullable T value) {
+        pending.set(true);
+        super.postValue(value);
     }
 
     @MainThread

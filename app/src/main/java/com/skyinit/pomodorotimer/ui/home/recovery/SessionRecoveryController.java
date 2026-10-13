@@ -108,6 +108,22 @@ public final class SessionRecoveryController {
                         .primaryDanger(R.string.recovery_result_dismiss, () ->
                                 vm.dispatch(SessionRecoveryIntent.DISMISS));
                 break;
+            case EARLY_ENDED:
+                builder.icon(R.drawable.ic_timer)
+                        .accent(ModernPromptDialog.Accent.SUCCESS)
+                        .title(R.string.recovery_result_title_early_ended)
+                        .message(R.string.recovery_result_message_early_ended)
+                        .primary(R.string.recovery_result_dismiss, () ->
+                                vm.dispatch(SessionRecoveryIntent.DISMISS));
+                break;
+            case DISCARDED_SHORT:
+                builder.icon(R.drawable.ic_timer)
+                        .accent(ModernPromptDialog.Accent.BRAND)
+                        .title(R.string.recovery_result_title_discarded_short)
+                        .message(R.string.recovery_result_message_discarded_short)
+                        .primary(R.string.recovery_result_dismiss, () ->
+                                vm.dispatch(SessionRecoveryIntent.DISMISS));
+                break;
             case COMPLETED:
             default:
                 builder.icon(R.drawable.ic_timer)

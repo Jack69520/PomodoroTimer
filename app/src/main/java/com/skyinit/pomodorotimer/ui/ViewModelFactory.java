@@ -70,7 +70,8 @@ public class ViewModelFactory implements ViewModelProvider.Factory {
                     application,
                     container.getTimerSettingsRepository(),
                     container.getUserSessionRepository(),
-                    container.getTimerStateRepository()
+                    container.getTimerStateRepository(),
+                    container.getUserPomodoroSettingsRepository()
             );
         }
         if (modelClass.isAssignableFrom(CalendarViewModel.class)) {

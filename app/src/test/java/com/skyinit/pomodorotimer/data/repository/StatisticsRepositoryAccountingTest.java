@@ -63,6 +63,7 @@ public class StatisticsRepositoryAccountingTest {
         drainDiskIo();
         PomodoroSession session = latestSession();
         assertTrue(session.completed);
+        assertTrue(session.countedInFocusDuration);
         assertEquals(active, session.duration);
         assertEquals(end, session.endTime);
         assertEquals(paused, session.pausedDurationMs);
@@ -86,10 +87,51 @@ public class StatisticsRepositoryAccountingTest {
         PomodoroSession session = latestSession();
         assertFalse(session.completed);
         assertTrue(session.earlyEnd);
+        assertTrue(session.countedInFocusDuration);
         assertEquals(active, session.duration);
         assertEquals(paused, session.pausedDurationMs);
         assertEquals(planned, session.plannedDurationMs);
         assertEquals(end, session.endTime);
+    }
+
+    @Test
+    public void recordEarlyEnded_countsDuration_notCompleted() throws Exception {
+        long start = 1_700_000_200_000L;
+        long active = 18L * 60L * 1000L;
+        long end = start + active;
+        repository.recordEarlyEndedSession(
+                userId, start, active, -1, -1, "学习", null,
+                0, null, null, end, 0L, 25L * 60L * 1000L);
+        drainDiskIo();
+        PomodoroSession session = latestSession();
+        assertFalse(session.completed);
+        assertTrue(session.earlyEnd);
+        assertTrue(session.countedInFocusDuration);
+        assertEquals(active, session.duration);
+
+        long sum = AppDatabase.getDatabase(context).pomodoroSessionDao()
+                .getTotalDurationInRangeForUser(userId, start - 1, end + 1);
+        assertEquals(active, sum);
+        int completed = AppDatabase.getDatabase(context).pomodoroSessionDao()
+                .getCompletedCountInRangeForUser(userId, start - 1, end + 1);
+        assertEquals(0, completed);
+    }
+
+    @Test
+    public void recordFailed_notCounted_excludedFromDurationSum() throws Exception {
+        long start = 1_700_000_300_000L;
+        long active = 10L * 60L * 1000L;
+        long end = start + active;
+        repository.recordFailedSession(
+                userId, start, active, "暂停超时", -1, "学习",
+                1, Collections.singletonList("暂停超时"), null,
+                end, 0L, 25L * 60L * 1000L, false);
+        drainDiskIo();
+        PomodoroSession session = latestSession();
+        assertFalse(session.countedInFocusDuration);
+        long sum = AppDatabase.getDatabase(context).pomodoroSessionDao()
+                .getTotalDurationInRangeForUser(userId, start - 1, end + 1);
+        assertEquals(0L, sum);
     }
 
     private void drainDiskIo() throws InterruptedException {

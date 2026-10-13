@@ -36,6 +36,7 @@ public final class SessionDetailUiState {
     @NonNull
     public final List<String> pauseReasons;
     public final boolean earlyEnd;
+    public final boolean countedInFocusDuration;
     public final int blockEventCount;
     @NonNull
     public final String blockEncouragement;
@@ -57,6 +58,7 @@ public final class SessionDetailUiState {
                                  int pauseCount,
                                  @NonNull List<String> pauseReasons,
                                  boolean earlyEnd,
+                                 boolean countedInFocusDuration,
                                  int blockEventCount,
                                  @NonNull String blockEncouragement,
                                  @NonNull String notes,
@@ -75,6 +77,7 @@ public final class SessionDetailUiState {
         this.pauseCount = pauseCount;
         this.pauseReasons = pauseReasons;
         this.earlyEnd = earlyEnd;
+        this.countedInFocusDuration = countedInFocusDuration;
         this.blockEventCount = blockEventCount;
         this.blockEncouragement = blockEncouragement;
         this.notes = notes;
@@ -88,7 +91,7 @@ public final class SessionDetailUiState {
                 0L, 0L, 0L, 0L, false, null,
                 CompletionStatus.INCOMPLETE,
                 false, 0, Collections.emptyList(),
-                false, 0, "", "", false);
+                false, false, 0, "", "", false);
     }
 
     @NonNull
@@ -97,7 +100,8 @@ public final class SessionDetailUiState {
                 loading, saving, hasData,
                 startTime, endTime, durationMs, pausedDurationMs, pausedDurationUnknown, category,
                 completionStatus, hasPause, pauseCount, pauseReasons,
-                earlyEnd, blockEventCount, blockEncouragement, notes, canOpenBlockRecords);
+                earlyEnd, countedInFocusDuration, blockEventCount, blockEncouragement, notes,
+                canOpenBlockRecords);
     }
 
     @NonNull
@@ -112,6 +116,7 @@ public final class SessionDetailUiState {
                                          int pauseCount,
                                          @NonNull List<String> pauseReasons,
                                          boolean earlyEnd,
+                                         boolean countedInFocusDuration,
                                          int blockEventCount,
                                          @NonNull String blockEncouragement,
                                          @Nullable String notes,
@@ -135,6 +140,7 @@ public final class SessionDetailUiState {
                 Math.max(0, pauseCount),
                 safeReasons,
                 earlyEnd,
+                countedInFocusDuration,
                 Math.max(0, blockEventCount),
                 blockEncouragement != null ? blockEncouragement : "",
                 safeNotes,

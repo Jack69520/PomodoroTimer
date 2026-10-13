@@ -14,6 +14,7 @@ public final class PomodoroSettingsIntent {
         SET_MAX_PAUSE,
         SET_PAUSE_REASON_PROMPT_MODE,
         SET_AUTO_START,
+        SET_STRICT_POMODORO,
         SET_LONG_BREAK_ENABLED,
         SET_LONG_BREAK_INTERVAL,
         SET_LONG_BREAK_DURATION,
@@ -31,7 +32,8 @@ public final class PomodoroSettingsIntent {
         REQUEST_DND_PERMISSION,
         REQUEST_FULL_SCREEN_INTENT_PERMISSION,
         REQUEST_NOTIFICATION_PERMISSION_SETTINGS,
-        CONFIRM_ENABLE_LOCK_SCREEN_DEGRADED
+        CONFIRM_ENABLE_LOCK_SCREEN_DEGRADED,
+        CONFIRM_ENABLE_STRICT_POMODORO
     }
 
     public final Type type;
@@ -74,6 +76,11 @@ public final class PomodoroSettingsIntent {
     @NonNull
     public static PomodoroSettingsIntent setAutoStart(boolean enabled) {
         return new PomodoroSettingsIntent(Type.SET_AUTO_START, 0, 0, enabled);
+    }
+
+    @NonNull
+    public static PomodoroSettingsIntent setStrictPomodoro(boolean enabled) {
+        return new PomodoroSettingsIntent(Type.SET_STRICT_POMODORO, 0, 0, enabled);
     }
 
     @NonNull
@@ -164,5 +171,10 @@ public final class PomodoroSettingsIntent {
     @NonNull
     public static PomodoroSettingsIntent confirmEnableLockScreenDegraded() {
         return new PomodoroSettingsIntent(Type.CONFIRM_ENABLE_LOCK_SCREEN_DEGRADED, 0, 0, false);
+    }
+
+    @NonNull
+    public static PomodoroSettingsIntent confirmEnableStrictPomodoro() {
+        return new PomodoroSettingsIntent(Type.CONFIRM_ENABLE_STRICT_POMODORO, 0, 0, false);
     }
 }

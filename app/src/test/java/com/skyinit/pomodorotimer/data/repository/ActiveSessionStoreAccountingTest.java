@@ -75,16 +75,17 @@ public class ActiveSessionStoreAccountingTest {
     @Test
     public void saveEligible_requiresActiveFocus_notPauseWall() {
         long now = SystemClock.elapsedRealtime();
-        // planned 25m, remaining 22m → active 3m < 5m SAVE_ELIGIBLE
+        // planned 25m, remaining 24m30s → active 30s < 60s SAVE_ELIGIBLE
         ActiveSessionStore.save(
-                context, "u1", 1L, 1, now + 60_000L, 22 * 60_000L,
+                context, "u1", 1L, 1, now + 60_000L, 24 * 60_000L + 30_000L,
                 false, true, 0, System.currentTimeMillis() - 30 * 60_000L,
                 1, now - 30 * 60_000L, 25 * 60_000L, 0L,
                 -1, -1, "", "学习", "", "", false, false);
         assertFalse(ActiveSessionStore.isSaveEligible(ActiveSessionStore.load(context)));
 
+        // planned 25m, remaining 24m → active 60s >= SAVE_ELIGIBLE
         ActiveSessionStore.save(
-                context, "u1", 1L, 1, now + 60_000L, 19 * 60_000L,
+                context, "u1", 1L, 1, now + 60_000L, 24 * 60_000L,
                 false, true, 0, System.currentTimeMillis(),
                 1, now, 25 * 60_000L, 0L,
                 -1, -1, "", "学习", "", "", false, false);

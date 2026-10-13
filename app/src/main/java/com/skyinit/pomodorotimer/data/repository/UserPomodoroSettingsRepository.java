@@ -153,6 +153,7 @@ public class UserPomodoroSettingsRepository {
         copy.autoBlockDuringPomodoro = src.autoBlockDuringPomodoro;
         copy.lockScreenFullscreenEnabled = src.lockScreenFullscreenEnabled;
         copy.autoStartAfterBreak = src.autoStartAfterBreak;
+        copy.strictPomodoro = src.strictPomodoro;
         copy.longBreakEnabled = src.longBreakEnabled;
         copy.pomodorosBeforeLongBreak = src.pomodorosBeforeLongBreak;
         copy.longBreakDurationMs = src.longBreakDurationMs;

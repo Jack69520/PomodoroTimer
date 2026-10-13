@@ -54,7 +54,7 @@ import java.util.Locale;
  * 首页 Fragment：计时舞台 + 待办工作台（时间分组）。
  * <p>
  * 待办交互全部经 {@link HomeTodoViewModel#dispatch(HomeTodoIntent)}；
- * 计时仍由 {@link HomeViewModel} + {@link HomeTimerUiHelper} 负责。
+ * 计时展示由 {@link HomeViewModel}；结束本轮经 {@link TimerViewModel} MVI（与计时页同策略）。
  */
 public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
 
@@ -68,8 +68,11 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
 
     private HomeViewModel viewModel;
     private HomeTodoViewModel todoViewModel;
+    /** 结束本轮确认/结算（与 TimerActivity 共用同一策略与 Effect 管道）。 */
+    private TimerViewModel timerStopViewModel;
     private HomeTimerUiHelper timerUiHelper;
     private TimerService timerService;
+    private boolean stopConfirmInFlight;
 
     private RecyclerView todoRecyclerView;
     private View filterPanelRoot;
@@ -110,6 +113,8 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
                 .get(HomeViewModel.class);
         todoViewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
                 .get(HomeTodoViewModel.class);
+        timerStopViewModel = new ViewModelProvider(this, app.getContainer().getViewModelFactory())
+                .get(TimerViewModel.class);
         timerUiHelper = new HomeTimerUiHelper(this);
 
         taskEditLauncher = registerForActivityResult(
@@ -143,6 +148,7 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
 
         setupButtonListeners();
         observeTimerViewModel();
+        observeTimerStopEffects();
         observeTodoViewModel();
         return view;
     }
@@ -528,15 +534,8 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
 
         resetButton.setOnClickListener(v -> {
             if (timerService != null && (timerService.isRunning() || timerService.isPaused())) {
-                new MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(R.string.timer_confirm_reset_title)
-                        .setMessage(R.string.timer_confirm_reset_message)
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(R.string.stop_button, (d, w) -> {
-                            timerService.resetTimer();
-                            Toast.makeText(requireContext(), R.string.timer_toast_timer_ended, Toast.LENGTH_SHORT).show();
-                        })
-                        .show();
+                timerStopViewModel.syncFromService(timerService);
+                timerStopViewModel.dispatch(TimerIntent.requestStopConfirm());
                 return;
             }
             viewModel.resetStudyTimeToDefault();
@@ -545,6 +544,78 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
             }
             Toast.makeText(requireContext(), R.string.reset_to_default_minutes, Toast.LENGTH_SHORT).show();
         });
+    }
+
+    private void observeTimerStopEffects() {
+        timerStopViewModel.getEffects().observe(getViewLifecycleOwner(), this::handleTimerStopEffect);
+    }
+
+    private void handleTimerStopEffect(@Nullable TimerEffect effect) {
+        if (effect == null || !isAdded()) {
+            return;
+        }
+        switch (effect.type) {
+            case SHOW_TOAST:
+                Toast.makeText(requireContext(), effect.toastRes, Toast.LENGTH_SHORT).show();
+                break;
+            case SHOW_STOP_CONFIRM:
+                showHomeStopConfirm(effect.confirmMessageRes != 0
+                        ? effect.confirmMessageRes
+                        : R.string.timer_confirm_reset_message);
+                break;
+            case FINISH_SESSION:
+                if (effect.serviceAction != null) {
+                    if (timerService != null
+                            && TimerService.ACTION_RESET.equals(effect.serviceAction)) {
+                        timerService.resetTimer();
+                    } else {
+                        TimerServiceLauncher.deliverAction(requireContext(), effect.serviceAction);
+                    }
+                }
+                if (effect.toastText != null && !effect.toastText.isEmpty()) {
+                    Toast.makeText(requireContext(), effect.toastText, Toast.LENGTH_SHORT).show();
+                } else if (effect.toastRes != 0) {
+                    Toast.makeText(requireContext(), effect.toastRes, Toast.LENGTH_SHORT).show();
+                }
+                stopConfirmInFlight = false;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void showHomeStopConfirm(int messageRes) {
+        if (stopConfirmInFlight) {
+            return;
+        }
+        stopConfirmInFlight = true;
+        final boolean[] confirmed = {false};
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.timer_confirm_reset_title)
+                .setMessage(messageRes)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.stop_button, null)
+                .setOnCancelListener(d -> stopConfirmInFlight = false)
+                .create();
+        dialog.setOnShowListener(d -> {
+            android.widget.Button positive = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+            positive.setOnClickListener(v -> {
+                if (confirmed[0]) {
+                    return;
+                }
+                confirmed[0] = true;
+                positive.setEnabled(false);
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).setEnabled(false);
+                timerStopViewModel.dispatch(TimerIntent.confirmStop());
+                dialog.dismiss();
+            });
+        });
+        dialog.setOnDismissListener(d -> {
+            if (!confirmed[0]) {
+                stopConfirmInFlight = false;
+            }
+        });
+        dialog.show();
     }
 
     private void observeTimerViewModel() {
@@ -653,6 +724,9 @@ public class HomeFragment extends Fragment implements HomeTimerUiHelper.Host {
         }
         timerService.addListener(timerListener);
         viewModel.syncFromService(timerService);
+        if (timerStopViewModel != null) {
+            timerStopViewModel.syncFromService(timerService);
+        }
     }
 
     private void refreshTimerService() {

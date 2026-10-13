@@ -1,6 +1,5 @@
 package com.skyinit.pomodorotimer.data.dao;
 
-import com.skyinit.pomodorotimer.data.entity.User;
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
@@ -66,7 +65,8 @@ public interface PomodoroSessionDao {
     @Query("SELECT COUNT(*) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime")
     LiveData<Integer> getCompletedSessionsCount(String userId, long startTime, long endTime);
 
-    @Query("SELECT SUM(duration) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime")
+    @Query("SELECT SUM(duration) FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND countedInFocusDuration = 1 AND startTime >= :startTime AND startTime <= :endTime")
     LiveData<Long> getTotalDuration(String userId, long startTime, long endTime);
 
     @Query("SELECT * FROM pomodoro_sessions WHERE userId = :userId AND startTime >= :startTime AND startTime <= :endTime AND category = :category ORDER BY startTime DESC")
@@ -75,10 +75,20 @@ public interface PomodoroSessionDao {
     @Query("SELECT * FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime AND category = :category ORDER BY startTime DESC")
     List<PomodoroSession> getSessionsByCategoryAndDateRangeSync(String userId, long startTime, long endTime, String category);
 
-    @Query("SELECT category, COUNT(*) as count, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY category")
+    @Query("SELECT category, "
+            + "SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as count, "
+            + "SUM(CASE WHEN countedInFocusDuration = 1 THEN duration ELSE 0 END) as totalDuration "
+            + "FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND (completed = 1 OR countedInFocusDuration = 1) "
+            + "AND startTime >= :startTime AND startTime <= :endTime GROUP BY category")
     LiveData<List<CategoryStats>> getCategoryStats(String userId, long startTime, long endTime);
 
-    @Query("SELECT category, COUNT(*) as count, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY category")
+    @Query("SELECT category, "
+            + "SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as count, "
+            + "SUM(CASE WHEN countedInFocusDuration = 1 THEN duration ELSE 0 END) as totalDuration "
+            + "FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND (completed = 1 OR countedInFocusDuration = 1) "
+            + "AND startTime >= :startTime AND startTime <= :endTime GROUP BY category")
     List<CategoryStats> getCategoryStatsSync(String userId, long startTime, long endTime);
 
     @Query("SELECT startTime FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime")
@@ -90,22 +100,41 @@ public interface PomodoroSessionDao {
     @Query("SELECT COUNT(*) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1")
     int getTotalCompletedCountForUser(String userId);
 
-    @Query("SELECT COALESCE(SUM(duration), 0) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1")
+    @Query("SELECT COALESCE(SUM(duration), 0) FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND countedInFocusDuration = 1")
     long getTotalCompletedDurationForUser(String userId);
 
-    @Query("SELECT SUM(duration) FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime")
+    @Query("SELECT SUM(duration) FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND countedInFocusDuration = 1 AND startTime >= :startTime AND startTime <= :endTime")
     long getTotalDurationInRangeForUser(String userId, long startTime, long endTime);
 
-    @Query("SELECT date(startTime/1000, 'unixepoch') as date, COUNT(*) as count, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY date(startTime/1000, 'unixepoch') ORDER BY date")
+    @Query("SELECT date(startTime/1000, 'unixepoch') as date, "
+            + "SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as count, "
+            + "SUM(CASE WHEN countedInFocusDuration = 1 THEN duration ELSE 0 END) as totalDuration "
+            + "FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND (completed = 1 OR countedInFocusDuration = 1) "
+            + "AND startTime >= :startTime AND startTime <= :endTime "
+            + "GROUP BY date(startTime/1000, 'unixepoch') ORDER BY date")
     LiveData<List<DailyStats>> getDailyStatsInRange(String userId, long startTime, long endTime);
 
-    @Query("SELECT date(startTime/1000, 'unixepoch') as date, COUNT(*) as count, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY date(startTime/1000, 'unixepoch') ORDER BY date")
+    @Query("SELECT date(startTime/1000, 'unixepoch') as date, "
+            + "SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as count, "
+            + "SUM(CASE WHEN countedInFocusDuration = 1 THEN duration ELSE 0 END) as totalDuration "
+            + "FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND (completed = 1 OR countedInFocusDuration = 1) "
+            + "AND startTime >= :startTime AND startTime <= :endTime "
+            + "GROUP BY date(startTime/1000, 'unixepoch') ORDER BY date")
     List<DailyStats> getDailyStatsInRangeSync(String userId, long startTime, long endTime);
 
-
-    @Query("SELECT CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) as hour, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) ORDER BY hour")
+    @Query("SELECT CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) as hour, "
+            + "SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND countedInFocusDuration = 1 AND startTime >= :startTime AND startTime <= :endTime "
+            + "GROUP BY CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) ORDER BY hour")
     LiveData<List<HourlyStats>> getHourlyStatsInRange(String userId, long startTime, long endTime);
 
-    @Query("SELECT CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) as hour, SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId AND completed = 1 AND startTime >= :startTime AND startTime <= :endTime GROUP BY CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) ORDER BY hour")
+    @Query("SELECT CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) as hour, "
+            + "SUM(duration) as totalDuration FROM pomodoro_sessions WHERE userId = :userId "
+            + "AND countedInFocusDuration = 1 AND startTime >= :startTime AND startTime <= :endTime "
+            + "GROUP BY CAST(strftime('%H', startTime/1000, 'unixepoch', 'localtime') AS INTEGER) ORDER BY hour")
     List<HourlyStats> getHourlyStatsInRangeSync(String userId, long startTime, long endTime);
 }

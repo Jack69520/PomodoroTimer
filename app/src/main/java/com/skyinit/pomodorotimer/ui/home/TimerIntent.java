@@ -18,6 +18,8 @@ public final class TimerIntent {
         REASON_SKIPPED,
         REASON_QUICK_RESUME,
         DIALOG_DISMISSED_AS_SKIP,
+        /** 首页/计时页请求展示「结束本轮」确认（仅学习活跃时）。 */
+        REQUEST_STOP_CONFIRM,
         CONFIRM_STOP,
         CONFIRM_END_BREAK,
         CONFIRM_EXIT_RESET
@@ -64,6 +66,10 @@ public final class TimerIntent {
 
     public static TimerIntent dialogDismissedAsSkip() {
         return new TimerIntent(Type.DIALOG_DISMISSED_AS_SKIP, null, null);
+    }
+
+    public static TimerIntent requestStopConfirm() {
+        return new TimerIntent(Type.REQUEST_STOP_CONFIRM, null, null);
     }
 
     public static TimerIntent confirmStop() {

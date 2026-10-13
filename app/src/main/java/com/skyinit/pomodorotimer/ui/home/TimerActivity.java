@@ -227,7 +227,9 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
                 dismissPauseReasonDialog();
                 break;
             case SHOW_STOP_CONFIRM:
-                showStopConfirm();
+                showStopConfirm(effect.confirmMessageRes != 0
+                        ? effect.confirmMessageRes
+                        : R.string.timer_confirm_reset_message);
                 break;
             case SHOW_END_BREAK_CONFIRM:
                 showEndBreakConfirm();
@@ -240,7 +242,9 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
                     TimerServiceLauncher.deliverAction(this, effect.serviceAction);
                 }
                 vibrateShort();
-                if (effect.toastRes != 0) {
+                if (effect.toastText != null && !effect.toastText.isEmpty()) {
+                    Toast.makeText(this, effect.toastText, Toast.LENGTH_SHORT).show();
+                } else if (effect.toastRes != 0) {
                     Toast.makeText(this, effect.toastRes, Toast.LENGTH_SHORT).show();
                 }
                 navigateHome();
@@ -266,14 +270,30 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
         }
     }
 
-    private void showStopConfirm() {
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.timer_confirm_reset_title)
-                .setMessage(R.string.timer_confirm_reset_message)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.stop_button, (d, w) ->
-                        viewModel.dispatch(TimerIntent.confirmStop()))
-                .show();
+    private void showStopConfirm(int messageRes) {
+        final boolean[] confirmed = {false};
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.timer_confirm_reset_title)
+                        .setMessage(messageRes)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.stop_button, null)
+                        .create();
+        dialog.setOnShowListener(d -> {
+            android.widget.Button positive =
+                    dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+            positive.setOnClickListener(v -> {
+                if (confirmed[0]) {
+                    return;
+                }
+                confirmed[0] = true;
+                positive.setEnabled(false);
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE).setEnabled(false);
+                viewModel.dispatch(TimerIntent.confirmStop());
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
     }
 
     private void showEndBreakConfirm() {

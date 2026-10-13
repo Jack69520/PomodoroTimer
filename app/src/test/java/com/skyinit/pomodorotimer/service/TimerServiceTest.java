@@ -15,6 +15,7 @@ import com.skyinit.pomodorotimer.data.model.TimerUiState;
 import com.skyinit.pomodorotimer.data.repository.AccountManager;
 import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.FocusDndStore;
+import com.skyinit.pomodorotimer.data.repository.UserPomodoroSettingsRepository;
 import com.skyinit.pomodorotimer.util.AppExecutors;
 
 import org.robolectric.shadows.ShadowSystemClock;
@@ -503,19 +504,20 @@ public class TimerServiceTest {
     @Test
     public void pauseTimeout_recordsActiveFocusExcludingPause() throws Exception {
         waitForPomodoroSettingsCache();
+        setStrictPomodoro(false);
         Intent start = serviceIntent(TimerService.ACTION_START);
-        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 120_000L);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 180_000L);
         service.onStartCommand(start, 0, 1);
         assertTrue(service.isRunning());
 
-        // 先消耗约 40s 专注
-        ShadowSystemClock.advanceBy(40, TimeUnit.SECONDS);
+        // 先消耗约 90s 专注（≥60s 门槛，超时才会落库）
+        ShadowSystemClock.advanceBy(90, TimeUnit.SECONDS);
         ShadowLooper.idleMainLooper();
 
         deliver(TimerService.ACTION_PAUSE);
         assertTrue(service.isPaused());
         long remainingAtPause = service.getTimeLeft();
-        assertTrue(remainingAtPause > 0L && remainingAtPause < 120_000L);
+        assertTrue(remainingAtPause > 0L && remainingAtPause < 180_000L);
 
         // 暂停超时（5 分钟）
         ShadowSystemClock.advanceBy(5, TimeUnit.MINUTES);
@@ -526,10 +528,31 @@ public class TimerServiceTest {
         PomodoroSession session = latestSessionForActiveUser();
         assertFalse(session.completed);
         assertTrue(session.earlyEnd);
-        long expectedActive = 120_000L - remainingAtPause;
+        assertTrue(session.countedInFocusDuration);
+        long expectedActive = 180_000L - remainingAtPause;
         assertEquals(expectedActive, session.duration);
         assertTrue(session.pausedDurationMs >= 4L * 60L * 1000L);
-        assertEquals(120_000L, session.plannedDurationMs);
+        assertEquals(180_000L, session.plannedDurationMs);
+    }
+
+    @Test
+    public void pauseTimeout_under60s_doesNotRecord() throws Exception {
+        waitForPomodoroSettingsCache();
+        setStrictPomodoro(false);
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 120_000L);
+        service.onStartCommand(start, 0, 1);
+        ShadowSystemClock.advanceBy(20, TimeUnit.SECONDS);
+        ShadowLooper.idleMainLooper();
+        deliver(TimerService.ACTION_PAUSE);
+        int before = countSessionsForActiveUser();
+        ShadowSystemClock.advanceBy(5, TimeUnit.MINUTES);
+        deliver(TimerService.ACTION_PAUSE_TIMEOUT);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+        assertEquals(before, countSessionsForActiveUser());
+        assertEquals(ActiveSessionStore.RESULT_DISCARDED_SHORT,
+                ActiveSessionStore.peekLastResult(context));
     }
 
     @Test
@@ -543,6 +566,95 @@ public class TimerServiceTest {
         ShadowLooper.idleMainLooper();
         drainDiskIo();
         assertEquals(before, countSessionsForActiveUser());
+    }
+
+    @Test
+    public void reset_afterEligibleFocus_savesEarlyEnd_notCompleted() throws Exception {
+        waitForPomodoroSettingsCache();
+        setStrictPomodoro(false);
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 10 * 60_000L);
+        service.onStartCommand(start, 0, 1);
+        assertTrue(service.isRunning());
+
+        ShadowSystemClock.advanceBy(90, TimeUnit.SECONDS);
+        ShadowLooper.idleMainLooper();
+        assertTrue(service.getActiveFocusDurationMs() >= 60_000L);
+
+        int before = countSessionsForActiveUser();
+        deliver(TimerService.ACTION_RESET);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+
+        assertEquals(before + 1, countSessionsForActiveUser());
+        PomodoroSession session = latestSessionForActiveUser();
+        assertFalse(session.completed);
+        assertTrue(session.earlyEnd);
+        assertTrue(session.countedInFocusDuration);
+        assertTrue(session.duration >= 60_000L);
+        assertEquals(ActiveSessionStore.RESULT_EARLY_ENDED,
+                ActiveSessionStore.peekLastResult(context));
+    }
+
+    @Test
+    public void reset_under60s_doesNotRecord() throws Exception {
+        waitForPomodoroSettingsCache();
+        setStrictPomodoro(false);
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 10 * 60_000L);
+        service.onStartCommand(start, 0, 1);
+
+        ShadowSystemClock.advanceBy(30, TimeUnit.SECONDS);
+        ShadowLooper.idleMainLooper();
+        int before = countSessionsForActiveUser();
+        deliver(TimerService.ACTION_RESET);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+        assertEquals(before, countSessionsForActiveUser());
+        assertEquals(ActiveSessionStore.RESULT_DISCARDED_SHORT,
+                ActiveSessionStore.peekLastResult(context));
+    }
+
+    @Test
+    public void reset_strict_doesNotRecordEvenIfEligible() throws Exception {
+        waitForPomodoroSettingsCache();
+        setStrictPomodoro(true);
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 10 * 60_000L);
+        service.onStartCommand(start, 0, 1);
+        ShadowSystemClock.advanceBy(2, TimeUnit.MINUTES);
+        ShadowLooper.idleMainLooper();
+        int before = countSessionsForActiveUser();
+        deliver(TimerService.ACTION_RESET);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+        assertEquals(before, countSessionsForActiveUser());
+        assertEquals(ActiveSessionStore.RESULT_DISCARDED_STRICT,
+                ActiveSessionStore.peekLastResult(context));
+    }
+
+    @Test
+    public void accountSwitch_doesNotRecord() throws Exception {
+        waitForPomodoroSettingsCache();
+        setStrictPomodoro(false);
+        Intent start = serviceIntent(TimerService.ACTION_START);
+        start.putExtra(TimerService.EXTRA_STUDY_DURATION_MS, 10 * 60_000L);
+        service.onStartCommand(start, 0, 1);
+        ShadowSystemClock.advanceBy(2, TimeUnit.MINUTES);
+        ShadowLooper.idleMainLooper();
+        int before = countSessionsForActiveUser();
+        deliver(TimerService.ACTION_ACCOUNT_SWITCH_RESET);
+        ShadowLooper.idleMainLooper();
+        drainDiskIo();
+        assertEquals(before, countSessionsForActiveUser());
+    }
+
+    private void setStrictPomodoro(boolean enabled) {
+        UserPomodoroSettingsRepository repo =
+                AppContainer.getInstance(context).getUserPomodoroSettingsRepository();
+        com.skyinit.pomodorotimer.data.entity.UserPomodoroSettings s = repo.getSettingsSync();
+        s.strictPomodoro = enabled;
+        repo.updateSettingsSync(s);
     }
 
     private void drainDiskIo() throws InterruptedException {

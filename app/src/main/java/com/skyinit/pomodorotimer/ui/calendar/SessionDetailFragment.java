@@ -230,6 +230,8 @@ public class SessionDetailFragment extends Fragment {
                 pausedDurationText);
         setDetailRow(R.id.row_early_end, R.string.session_detail_early_end,
                 state.earlyEnd ? getString(R.string.yes) : getString(R.string.no));
+        setDetailRow(R.id.row_counted_in_focus, R.string.session_detail_counted_in_focus,
+                state.countedInFocusDuration ? getString(R.string.yes) : getString(R.string.no));
         setDetailRow(R.id.row_block_count, R.string.session_detail_block_count,
                 String.valueOf(state.blockEventCount));
         if (blockEncouragementText != null) {

@@ -42,6 +42,11 @@ public class PomodoroSession {
     public int pauseCount;
     public String pauseReasons;
     public boolean earlyEnd;
+    /**
+     * 是否计入专注时长统计（与 {@link #completed} 拆账：完成数仍看 completed）。
+     * 严格模式下超时留痕可为 false。
+     */
+    public boolean countedInFocusDuration;
     public String notes;
     /** 关联待办 ID；待办删除后保留为历史快照，不做外键级联。 */
     public int taskId;
@@ -61,6 +66,7 @@ public class PomodoroSession {
         this.completed = false;
         this.pauseCount = 0;
         this.earlyEnd = false;
+        this.countedInFocusDuration = false;
         this.subTaskId = -1;
         this.pausedDurationMs = 0L;
         this.plannedDurationMs = 0L;
@@ -75,6 +81,7 @@ public class PomodoroSession {
         this.completed = false;
         this.pauseCount = 0;
         this.earlyEnd = false;
+        this.countedInFocusDuration = false;
         this.subTaskId = -1;
     }
 }

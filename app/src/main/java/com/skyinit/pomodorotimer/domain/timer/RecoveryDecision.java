@@ -17,7 +17,9 @@ public final class RecoveryDecision {
         NONE,
         COMPLETED,
         FAILED_TIMEOUT,
-        BREAK_STARTED
+        BREAK_STARTED,
+        EARLY_ENDED,
+        DISCARDED_SHORT
     }
 
     public final Kind kind;

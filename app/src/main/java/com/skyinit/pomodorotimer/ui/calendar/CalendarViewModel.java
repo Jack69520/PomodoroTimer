@@ -144,7 +144,9 @@ public class CalendarViewModel extends ViewModel {
         for (PomodoroSession session : sessionList) {
             if (session.completed) {
                 completed++;
-                totalDuration += session.duration;
+            }
+            if (session.countedInFocusDuration) {
+                totalDuration += Math.max(0L, session.duration);
             }
         }
         return new DayStatistics(completed, totalDuration);

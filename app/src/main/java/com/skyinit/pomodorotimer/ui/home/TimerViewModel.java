@@ -12,14 +12,18 @@ import androidx.lifecycle.ViewModel;
 
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.data.model.TimerUiState;
+import com.skyinit.pomodorotimer.data.repository.ActiveSessionStore;
 import com.skyinit.pomodorotimer.data.repository.TimerSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.TimerStateRepository;
+import com.skyinit.pomodorotimer.data.repository.UserPomodoroSettingsRepository;
 import com.skyinit.pomodorotimer.data.repository.UserSessionRepository;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPolicy;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
+import com.skyinit.pomodorotimer.domain.timer.SettleOutcome;
 import com.skyinit.pomodorotimer.service.TimerService;
 import com.skyinit.pomodorotimer.util.SingleLiveEvent;
 
+import java.lang.ref.WeakReference;
 import java.util.Locale;
 
 /**
@@ -31,6 +35,7 @@ public class TimerViewModel extends ViewModel {
     private final TimerSettingsRepository timerSettings;
     private final UserSessionRepository sessionRepository;
     private final TimerStateRepository timerStateRepository;
+    private final UserPomodoroSettingsRepository pomodoroSettingsRepository;
 
     private final MutableLiveData<TimerScreenUiState> screenState = new MutableLiveData<>();
     private final SingleLiveEvent<TimerEffect> effects = new SingleLiveEvent<>();
@@ -40,15 +45,19 @@ public class TimerViewModel extends ViewModel {
     private int promptedForPauseCount = -1;
     private boolean pendingPromptAfterPause;
     private boolean wasPaused;
+    @Nullable
+    private WeakReference<TimerService> timerServiceRef;
 
     public TimerViewModel(Application application,
                           TimerSettingsRepository timerSettings,
                           UserSessionRepository sessionRepository,
-                          TimerStateRepository timerStateRepository) {
+                          TimerStateRepository timerStateRepository,
+                          UserPomodoroSettingsRepository pomodoroSettingsRepository) {
         this.application = application;
         this.timerSettings = timerSettings;
         this.sessionRepository = sessionRepository;
         this.timerStateRepository = timerStateRepository;
+        this.pomodoroSettingsRepository = pomodoroSettingsRepository;
         timerStateRepository.getState().observeForever(timerObserver);
         TimerUiState initial = timerStateRepository.getCurrentState();
         wasPaused = initial != null && initial.paused;
@@ -75,6 +84,7 @@ public class TimerViewModel extends ViewModel {
     }
 
     public void syncFromService(TimerService service) {
+        timerServiceRef = service != null ? new WeakReference<>(service) : null;
         timerStateRepository.syncFromService(service);
     }
 
@@ -110,17 +120,32 @@ public class TimerViewModel extends ViewModel {
                 effects.setValue(TimerEffect.deliver(TimerService.ACTION_RESUME_WITH_QUICK_REASON));
                 markPrompted(state);
                 break;
+            case REQUEST_STOP_CONFIRM:
+                if (!isActiveStudy(state)) {
+                    effects.setValue(TimerEffect.showToast(R.string.timer_toast_session_already_ended));
+                    break;
+                }
+                effects.setValue(TimerEffect.showStopConfirm(
+                        SessionStopUiHelper.confirmMessageRes(previewUserAbortOutcome())));
+                break;
             case CONFIRM_STOP:
-                effects.setValue(TimerEffect.finishSession(
-                        TimerService.ACTION_RESET, R.string.timer_toast_timer_ended));
+                if (!isActiveStudy(state)) {
+                    effects.setValue(TimerEffect.showToast(R.string.timer_toast_session_already_ended));
+                    break;
+                }
+                effects.setValue(finishStudyAbortEffect());
                 break;
             case CONFIRM_END_BREAK:
                 effects.setValue(TimerEffect.finishSession(
                         TimerService.ACTION_END_BREAK, R.string.timer_toast_break_ended));
                 break;
             case CONFIRM_EXIT_RESET:
-                effects.setValue(TimerEffect.finishSession(
-                        TimerService.ACTION_RESET, R.string.timer_toast_activity_ended));
+                if (state != null && (state.running || state.paused) && state.isStudySession()) {
+                    effects.setValue(finishStudyAbortEffect());
+                } else {
+                    effects.setValue(TimerEffect.finishSession(
+                            TimerService.ACTION_RESET, R.string.timer_toast_activity_ended));
+                }
                 break;
             default:
                 break;
@@ -166,7 +191,54 @@ public class TimerViewModel extends ViewModel {
                     TimerService.ACTION_RESET, R.string.timer_toast_activity_ended));
             return;
         }
-        effects.setValue(TimerEffect.showStopConfirm());
+        effects.setValue(TimerEffect.showStopConfirm(
+                SessionStopUiHelper.confirmMessageRes(previewUserAbortOutcome())));
+    }
+
+    private boolean isActiveStudy(@Nullable TimerUiState state) {
+        return state != null
+                && state.isStudySession()
+                && state.sessionId > 0L
+                && (state.running || state.paused);
+    }
+
+    private long resolveActiveFocusMs() {
+        TimerService svc = timerServiceRef != null ? timerServiceRef.get() : null;
+        if (svc != null) {
+            return Math.max(0L, svc.getActiveFocusDurationMs());
+        }
+        ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(application);
+        return ActiveSessionStore.computeElapsedMillis(cp);
+    }
+
+    @NonNull
+    private SettleOutcome previewUserAbortOutcome() {
+        boolean strict = pomodoroSettingsRepository.getSettings().strictPomodoro;
+        return SessionStopUiHelper.previewUserAbort(strict, resolveActiveFocusMs());
+    }
+
+    @NonNull
+    private TimerEffect finishStudyAbortEffect() {
+        boolean strict = pomodoroSettingsRepository.getSettings().strictPomodoro;
+        long activeMs = resolveActiveFocusMs();
+        SettleOutcome preview = SessionStopUiHelper.previewUserAbort(strict, activeMs);
+        String resultCode;
+        switch (preview) {
+            case SAVE_EARLY_END:
+                resultCode = ActiveSessionStore.RESULT_EARLY_ENDED;
+                break;
+            case DISCARD_SHORT:
+                resultCode = ActiveSessionStore.RESULT_DISCARDED_SHORT;
+                break;
+            case DISCARD_STRICT:
+                resultCode = ActiveSessionStore.RESULT_DISCARDED_STRICT;
+                break;
+            default:
+                resultCode = ActiveSessionStore.RESULT_NONE;
+                break;
+        }
+        String toast = SessionStopUiHelper.toastForSettleResult(application, resultCode, activeMs);
+        return TimerEffect.finishSessionWithToast(TimerService.ACTION_RESET, toast);
     }
 
     private void onTimerState(@Nullable TimerUiState state) {

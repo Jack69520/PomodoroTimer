@@ -57,6 +57,7 @@ public final class FaqData {
                         item(ctx, R.string.faq_timer_q_after_study, R.string.faq_timer_a_after_study),
                         item(ctx, R.string.faq_timer_q_long_break, R.string.faq_timer_a_long_break),
                         item(ctx, R.string.faq_timer_q_leave_page, R.string.faq_timer_a_leave_page),
+                        item(ctx, R.string.faq_timer_q_early_end, R.string.faq_timer_a_early_end),
                         item(ctx, R.string.faq_timer_q_settings_options, R.string.faq_timer_a_settings_options)
                 )),
                 new FaqSection(ctx.getString(R.string.faq_section_task), R.drawable.ic_edit, Arrays.asList(

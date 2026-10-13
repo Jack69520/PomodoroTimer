@@ -38,6 +38,7 @@ public class StatisticsManager {
                 session.endTime = Math.max(System.currentTimeMillis(), startTime);
                 session.duration = Math.max(0L, duration);
                 session.completed = true;
+                session.countedInFocusDuration = true;
                 session.taskId = taskId;
                 session.category = category;
                 session.tags = tags;
