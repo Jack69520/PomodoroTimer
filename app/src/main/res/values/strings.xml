@@ -50,6 +50,16 @@
     <string name="common_dialog_permission_title">需要权限</string>
     <string name="common_toast_notification_permission_denied">通知权限被拒绝，计时完成时将无法提醒</string>
     <string name="common_toast_audio_permission_denied">音频权限被拒绝，无法选择自定义铃声</string>
+    <string name="ringtone_audio_permission_rationale">需要「音乐与音频」权限才能从系统铃声库选择自定义提示音。</string>
+    <string name="ringtone_audio_permission_rationale_legacy">需要「媒体与文件」权限才能从系统铃声库选择自定义提示音。</string>
+    <string name="ringtone_audio_permission_denied_toast">权限被拒绝，无法选择自定义铃声</string>
+    <string name="ringtone_audio_permission_permanent_message">权限已被关闭且无法再次弹出授权框。请在系统设置中开启相关权限后重试。</string>
+    <string name="ringtone_degraded_hint">需重新授权，暂用系统默认提示音</string>
+    <string name="ringtone_degraded_dialog_title">自定义提示音不可用</string>
+    <string name="ringtone_degraded_dialog_message">你已选择自定义提示音，但未授予读取音乐与音频的权限。重新授权前将使用系统默认提示音；也可稍后在「设置 → 选择提示音」中处理。</string>
+    <string name="ringtone_btn_reauth">重新授权</string>
+    <string name="ringtone_btn_open_settings">去设置</string>
+    <string name="ringtone_btn_later">稍后</string>
     <string name="common_filter_all">全部</string>
     <string name="common_btn_clear">清除</string>
 
@@ -562,7 +572,7 @@
     <string name="select_ringtone">选择提示音</string>
     <string name="settings_toast_theme_applied">主题已应用</string>
     <string name="settings_toast_theme_failed">主题应用失败</string>
-    <string name="settings_dialog_storage_permission_message">需要存储权限才能选择自定义铃声</string>
+    <string name="settings_dialog_storage_permission_message">需要「音乐与音频」或「媒体与文件」权限才能选择自定义铃声</string>
     <string name="settings_toast_storage_permission_denied">权限被拒绝，无法选择自定义铃声</string>
     <string name="settings_toast_ringtone_picker_failed">无法打开铃声选择器</string>
     <string name="settings_toast_custom_ringtone_success">自定义铃声设置成功</string>
@@ -602,7 +612,7 @@
     <string name="faq_timer_q_leave_page">计时进行中离开页面会怎样？</string>
     <string name="faq_timer_a_leave_page">计时以后台前台服务继续运行，通知栏可查看进度。从计时页返回时，若学习阶段仍在计时，会提示确认是否结束活动；学习阶段暂停时可直接返回，计时保持暂停；休息阶段返回不会打断休息计时。</string>
     <string name="faq_timer_q_settings_options">设置里有哪些计时相关选项？</string>
-    <string name="faq_timer_a_settings_options">可设置学习时长、休息时长（1～30分钟）、最大暂停次数（1～5次，默认2次）、严格番茄（默认关闭）、长休息（默认关闭，含间隔2～8个番茄钟与10～15分钟时长）、休息结束后自动开始下一轮、自动删除已完成任务（开启后3天自动清理）、主题色（标准色/中国色/国风渐变/莫兰迪）及提示音（系统默认/静音/自定义，Android 13+选自定义铃声需授予音频读取权限）。</string>
+    <string name="faq_timer_a_settings_options">可设置学习时长、休息时长（1～30分钟）、最大暂停次数（1～5次，默认2次）、严格番茄（默认关闭）、长休息（默认关闭、含间隔2～8个番茄钟与10～15分钟时长）、休息结束后自动开始下一轮、自动删除已完成任务（开启后3天自动清理）、主题色（标准色/中国色/国风渐变/莫兰迪）及提示音（系统默认/静音/自定义；选自定义铃声需授予音频读取权限。若之后在系统中撤销该权限，将暂用系统默认提示音，重新授权后可自动恢复，无需重选）。</string>
     <string name="faq_timer_q_early_end">提前结束会计入专注时长吗？</string>
     <string name="faq_timer_a_early_end">默认会。有效专注满 60 秒后主动结束，会保存为「提前结束」并计入专注时长，但不增加完成番茄数、不推进待办番茄进度。不足 60 秒不记录。若在「我的 → 设置 → 番茄钟与待办」开启「严格番茄」，则仅完整跑完的番茄计入时长与完成数；该开关只影响之后的结算，不重算历史。</string>
     <string name="recovery_result_title_discarded_short">本轮未记录</string>

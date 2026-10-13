@@ -17,7 +17,10 @@ public final class SettingsHubIntent {
         OPEN_SYSTEM_PERMISSIONS,
         RINGTONE_OPTION_SELECTED,
         CUSTOM_RINGTONE_PICKED,
-        CUSTOM_RINGTONE_CANCELLED
+        CUSTOM_RINGTONE_CANCELLED,
+        AUDIO_RATIONALE_CONFIRMED,
+        AUDIO_RATIONALE_CANCELLED,
+        AUDIO_SETTINGS_NAVIGATE_FAILED
     }
 
     public final Type type;
@@ -79,5 +82,20 @@ public final class SettingsHubIntent {
     @NonNull
     public static SettingsHubIntent customRingtoneCancelled() {
         return new SettingsHubIntent(Type.CUSTOM_RINGTONE_CANCELLED, 0, null);
+    }
+
+    @NonNull
+    public static SettingsHubIntent audioRationaleConfirmed() {
+        return new SettingsHubIntent(Type.AUDIO_RATIONALE_CONFIRMED, 0, null);
+    }
+
+    @NonNull
+    public static SettingsHubIntent audioRationaleCancelled() {
+        return new SettingsHubIntent(Type.AUDIO_RATIONALE_CANCELLED, 0, null);
+    }
+
+    @NonNull
+    public static SettingsHubIntent audioSettingsNavigateFailed() {
+        return new SettingsHubIntent(Type.AUDIO_SETTINGS_NAVIGATE_FAILED, 0, null);
     }
 }

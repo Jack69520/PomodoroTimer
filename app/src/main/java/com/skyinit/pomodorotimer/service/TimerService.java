@@ -51,6 +51,7 @@ import com.skyinit.pomodorotimer.util.AppBlockingServiceUtils;
 import com.skyinit.pomodorotimer.util.LockScreenPresenter;
 import com.skyinit.pomodorotimer.util.PermissionUtils;
 import com.skyinit.pomodorotimer.util.SessionPauseUtils;
+import com.skyinit.pomodorotimer.domain.ringtone.RingtoneAccessPolicy;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPolicy;
 import com.skyinit.pomodorotimer.domain.timer.PauseReasonPromptMode;
 import com.skyinit.pomodorotimer.domain.timer.SessionAccountingPolicy;
@@ -1483,7 +1484,14 @@ public class TimerService extends Service {
             Context audioContext = getAudioAttributionContext();
             MediaPlayer player = MediaPlayer.create(audioContext, uri);
             if (player == null) {
-                return;
+                // 自定义 URI 失效等极端情况：当次回退系统默认，不改 prefs
+                Uri fallback = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                if (fallback != null && !fallback.equals(uri)) {
+                    player = MediaPlayer.create(audioContext, fallback);
+                }
+                if (player == null) {
+                    return;
+                }
             }
             player.setOnCompletionListener(MediaPlayer::release);
             player.setOnErrorListener((mp, what, extra) -> {
@@ -1496,16 +1504,13 @@ public class TimerService extends Service {
         }
     }
 
+    /**
+     * 有效可播 URI（R1：自定义无权限时回退系统默认，不改 prefs）。
+     * 须在 Service 提醒路径串行调用。
+     */
     @Nullable
     private Uri resolveRingtoneUri() {
-        String ringtoneUri = settingsManager.getRingtoneUri();
-        if ("silent".equals(ringtoneUri)) {
-            return null;
-        }
-        if ("default".equals(ringtoneUri)) {
-            return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        }
-        return Uri.parse(ringtoneUri);
+        return RingtoneAccessPolicy.resolveEffectiveSoundUri(this, settingsManager.getRingtoneUri());
     }
 
     private Context getAudioAttributionContext() {
@@ -1562,7 +1567,8 @@ public class TimerService extends Service {
         }
 
         String ringtonePref = settingsManager.getRingtoneUri();
-        if (ringtonePref.equals(syncedAlertRingtoneUri)) {
+        String syncKey = RingtoneAccessPolicy.effectiveSyncKey(this, ringtonePref);
+        if (syncKey.equals(syncedAlertRingtoneUri)) {
             return;
         }
 
@@ -1593,7 +1599,7 @@ public class TimerService extends Service {
             channel.enableVibration(true);
         }
         manager.createNotificationChannel(channel);
-        syncedAlertRingtoneUri = ringtonePref;
+        syncedAlertRingtoneUri = syncKey;
     }
 
     private void applyAlertPolicy(NotificationCompat.Builder builder, boolean silent) {

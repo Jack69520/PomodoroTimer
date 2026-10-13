@@ -15,6 +15,9 @@ public final class SettingsHubUiState {
     public final String ringtoneLabel;
     /** 0 默认 / 1 静音 / 2 自定义。 */
     public final int ringtoneOption;
+    public final boolean ringtoneDegraded;
+    @NonNull
+    public final String ringtoneHint;
     @NonNull
     public final String pomodoroSummary;
 
@@ -23,12 +26,16 @@ public final class SettingsHubUiState {
                               boolean themeGradient,
                               @NonNull String ringtoneLabel,
                               int ringtoneOption,
+                              boolean ringtoneDegraded,
+                              @NonNull String ringtoneHint,
                               @NonNull String pomodoroSummary) {
         this.themeName = themeName;
         this.themeResId = themeResId;
         this.themeGradient = themeGradient;
         this.ringtoneLabel = ringtoneLabel;
         this.ringtoneOption = ringtoneOption;
+        this.ringtoneDegraded = ringtoneDegraded;
+        this.ringtoneHint = ringtoneHint;
         this.pomodoroSummary = pomodoroSummary;
     }
 }

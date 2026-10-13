@@ -1,9 +1,7 @@
 package com.skyinit.pomodorotimer.ui.settings;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.drawable.GradientDrawable;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -26,7 +24,9 @@ import androidx.lifecycle.ViewModelProvider;
 import com.skyinit.pomodorotimer.App;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.ui.SubpageActivity;
+import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
+import com.skyinit.pomodorotimer.util.SettingsPermissionHelper;
 
 /**
  * 设置主页：现代化分组列表入口，功能细节下沉至子页。
@@ -42,6 +42,7 @@ public class SettingsActivity extends SubpageActivity {
     private View themeSwatch;
     private TextView themeValue;
     private TextView ringtoneValue;
+    private TextView ringtoneHint;
     private TextView pomodoroSummary;
 
     @Override
@@ -75,6 +76,7 @@ public class SettingsActivity extends SubpageActivity {
         themeSwatch = findViewById(R.id.theme_swatch);
         themeValue = findViewById(R.id.theme_value);
         ringtoneValue = findViewById(R.id.ringtone_value);
+        ringtoneHint = findViewById(R.id.ringtone_hint);
         pomodoroSummary = findViewById(R.id.pomodoro_summary);
     }
 
@@ -85,7 +87,11 @@ public class SettingsActivity extends SubpageActivity {
                     if (isFinishing() || isDestroyed()) {
                         return;
                     }
-                    viewModel.onAudioPermissionResult(granted);
+                    SettingsPermissionHelper.Kind kind = viewModel.getAudioPermissionKind();
+                    boolean openSettingsFallback = !granted
+                            && kind != null
+                            && SettingsPermissionHelper.shouldOpenSettingsDirectly(this, kind);
+                    viewModel.onAudioPermissionResult(granted, openSettingsFallback);
                 });
 
         ringtonePickerLauncher = registerForActivityResult(
@@ -132,6 +138,14 @@ public class SettingsActivity extends SubpageActivity {
         themeValue.setText(state.themeName);
         applyThemeSwatch(state.themeResId, state.themeGradient);
         ringtoneValue.setText(state.ringtoneLabel);
+        if (ringtoneHint != null) {
+            if (state.ringtoneDegraded && state.ringtoneHint != null && !state.ringtoneHint.isEmpty()) {
+                ringtoneHint.setText(state.ringtoneHint);
+                ringtoneHint.setVisibility(View.VISIBLE);
+            } else {
+                ringtoneHint.setVisibility(View.GONE);
+            }
+        }
         pomodoroSummary.setText(state.pomodoroSummary);
     }
 
@@ -177,8 +191,17 @@ public class SettingsActivity extends SubpageActivity {
             case LAUNCH_RINGTONE_PICKER:
                 launchRingtonePicker(effect.existingRingtoneUri);
                 break;
-            case REQUEST_AUDIO_PERMISSION:
-                requestAudioPermission();
+            case SHOW_AUDIO_ACCESS_RATIONALE:
+                showAudioRationale(effect.rationaleMessageRes);
+                break;
+            case REQUEST_AUDIO_RUNTIME:
+                launchAudioRuntime(effect);
+                break;
+            case OPEN_AUDIO_PERMISSION_SETTINGS:
+                openAudioSettings(effect.permissionKind);
+                break;
+            case SHOW_AUDIO_PERMANENT_DENY_DIALOG:
+                showPermanentDenyDialog(effect.permissionKind);
                 break;
             default:
                 break;
@@ -197,28 +220,63 @@ public class SettingsActivity extends SubpageActivity {
                 .show();
     }
 
-    private void requestAudioPermission() {
-        String permission;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permission = Manifest.permission.READ_MEDIA_AUDIO;
-        } else {
-            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
-        }
-        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
-            viewModel.onAudioPermissionResult(true);
+    private void showAudioRationale(int messageRes) {
+        int msg = messageRes != 0 ? messageRes : R.string.ringtone_audio_permission_rationale;
+        ModernPromptDialog.builder(this)
+                .icon(R.drawable.ic_ringtone)
+                .accent(ModernPromptDialog.Accent.BRAND)
+                .title(R.string.common_dialog_permission_title)
+                .message(msg)
+                .primary(R.string.confirm,
+                        () -> viewModel.dispatch(SettingsHubIntent.audioRationaleConfirmed()))
+                .secondary(R.string.cancel,
+                        () -> viewModel.dispatch(SettingsHubIntent.audioRationaleCancelled()))
+                .cancelable(true)
+                .show();
+    }
+
+    private void launchAudioRuntime(@Nullable SettingsHubEffect effect) {
+        if (effect == null || effect.runtimePermission == null || effect.permissionKind == null) {
+            viewModel.dispatch(SettingsHubIntent.audioRationaleCancelled());
             return;
         }
-        if (shouldShowRequestPermissionRationale(permission)) {
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.common_dialog_permission_title)
-                    .setMessage(R.string.settings_dialog_storage_permission_message)
-                    .setPositiveButton(R.string.confirm,
-                            (d, w) -> audioPermissionLauncher.launch(permission))
-                    .setNegativeButton(R.string.cancel, null)
-                    .show();
-        } else {
-            audioPermissionLauncher.launch(permission);
+        if (SettingsPermissionHelper.shouldOpenSettingsDirectly(this, effect.permissionKind)) {
+            viewModel.onAudioPermissionDivertedToSettings();
+            if (!SettingsPermissionHelper.openPermissionSettings(this, effect.permissionKind)) {
+                viewModel.dispatch(SettingsHubIntent.audioSettingsNavigateFailed());
+            }
+            return;
         }
+        SettingsPermissionHelper.markRequested(this, effect.runtimePermission);
+        audioPermissionLauncher.launch(effect.runtimePermission);
+    }
+
+    private void openAudioSettings(@Nullable SettingsPermissionHelper.Kind kind) {
+        if (kind == null) {
+            viewModel.dispatch(SettingsHubIntent.audioSettingsNavigateFailed());
+            return;
+        }
+        if (!SettingsPermissionHelper.openPermissionSettings(this, kind)) {
+            viewModel.dispatch(SettingsHubIntent.audioSettingsNavigateFailed());
+        }
+    }
+
+    private void showPermanentDenyDialog(@Nullable SettingsPermissionHelper.Kind kind) {
+        ModernPromptDialog.builder(this)
+                .icon(R.drawable.ic_permission)
+                .accent(ModernPromptDialog.Accent.BRAND)
+                .title(R.string.common_dialog_permission_title)
+                .message(R.string.ringtone_audio_permission_permanent_message)
+                .primary(R.string.ringtone_btn_open_settings, () -> {
+                    viewModel.onOpenAudioSettingsConfirmed();
+                    if (kind != null
+                            && !SettingsPermissionHelper.openPermissionSettings(this, kind)) {
+                        viewModel.dispatch(SettingsHubIntent.audioSettingsNavigateFailed());
+                    }
+                })
+                .secondary(R.string.cancel, () -> viewModel.onOpenAudioSettingsCancelled())
+                .cancelable(true)
+                .show();
     }
 
     private void launchRingtonePicker(@Nullable String existingUri) {

@@ -168,31 +168,50 @@
             android:paddingVertical="2dp">
 
             <LinearLayout
-                android:id="@+id/row_ringtone"
-                style="@style/SettingsNavRow">
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-                <FrameLayout style="@style/ProfileMenuRowIconWell">
+                <LinearLayout
+                    android:id="@+id/row_ringtone"
+                    style="@style/SettingsNavRow">
+
+                    <FrameLayout style="@style/ProfileMenuRowIconWell">
+
+                        <ImageView
+                            style="@style/ProfileMenuRowIcon"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_ringtone"
+                            app:tint="@color/text_primary" />
+                    </FrameLayout>
+
+                    <TextView
+                        style="@style/ProfileMenuRowText"
+                        android:text="@string/select_ringtone" />
+
+                    <TextView
+                        android:id="@+id/ringtone_value"
+                        style="@style/SettingsNavRowValue" />
 
                     <ImageView
-                        style="@style/ProfileMenuRowIcon"
+                        style="@style/ProfileMenuRowArrow"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_ringtone"
-                        app:tint="@color/text_primary" />
-                </FrameLayout>
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
 
                 <TextView
-                    style="@style/ProfileMenuRowText"
-                    android:text="@string/select_ringtone" />
-
-                <TextView
-                    android:id="@+id/ringtone_value"
-                    style="@style/SettingsNavRowValue" />
-
-                <ImageView
-                    style="@style/ProfileMenuRowArrow"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_arrow_right"
-                    app:tint="@color/text_secondary" />
+                    android:id="@+id/ringtone_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="68dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="10dp"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/semantic_error"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
 

@@ -61,6 +61,7 @@ import com.skyinit.pomodorotimer.ui.home.HomeFragment;
 import com.skyinit.pomodorotimer.ui.home.recovery.SessionRecoveryController;
 import com.skyinit.pomodorotimer.ui.home.SimpleTodoEditActivity;
 import com.skyinit.pomodorotimer.ui.profile.ProfileFragment;
+import com.skyinit.pomodorotimer.ui.ringtone.CustomRingtoneAccessController;
 import com.skyinit.pomodorotimer.ui.home.TimerActivity;
 import com.skyinit.pomodorotimer.util.ColorContrastUtils;
 import com.skyinit.pomodorotimer.util.AppBlockingEnabler;
@@ -90,6 +91,7 @@ public class MainActivity extends BaseActivity {
     private View mainToolbarContainer;
     private BottomNavigationView bottomNavigationView;
     private ActivityResultLauncher<Intent> taskEditLauncher;
+    private ActivityResultLauncher<String> customRingtoneAudioLauncher;
     private boolean mainContentInitialized;
 
     private final ServiceConnection connection = new ServiceConnection() {
@@ -376,6 +378,11 @@ public class MainActivity extends BaseActivity {
         taskEditLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> { /* 列表由 Room LiveData 自动刷新 */ });
+        // 须在 STARTED 前注册；冷启动自定义铃声降级授权用
+        customRingtoneAudioLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> CustomRingtoneAccessController.onRuntimePermissionResult(
+                        MainActivity.this, granted));
 
         App app = (App) getApplication();
         AppBootstrapViewModel bootstrapViewModel = new ViewModelProvider(
@@ -457,6 +464,9 @@ public class MainActivity extends BaseActivity {
         bindService(new Intent(this, TimerService.class), connection, Context.BIND_AUTO_CREATE);
         // 先评估恢复，再处理快捷方式，避免与未完成会话竞态
         SessionRecoveryController.bind(this);
+        if (customRingtoneAudioLauncher != null) {
+            CustomRingtoneAccessController.bind(this, customRingtoneAudioLauncher);
+        }
         handleShortcutIntent(getIntent());
     }
 
@@ -479,27 +489,17 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    /** 仅申请通知权限；音乐音频权限改为按需（自定义铃声 / 冷启动降级提示）。 */
     private void checkAndRequestPermissions() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
-        boolean needRequest = false;
-        String[] permissionsToRequest = new String[]{};
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            needRequest = true;
-            permissionsToRequest = new String[]{Manifest.permission.POST_NOTIFICATIONS};
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
         }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            if (needRequest) {
-                String[] newPermissions = new String[permissionsToRequest.length + 1];
-                System.arraycopy(permissionsToRequest, 0, newPermissions, 0, permissionsToRequest.length);
-                newPermissions[permissionsToRequest.length] = Manifest.permission.READ_MEDIA_AUDIO;
-                permissionsToRequest = newPermissions;
-            } else {
-                needRequest = true;
-                permissionsToRequest = new String[]{Manifest.permission.READ_MEDIA_AUDIO};
-            }
-        }
-        if (needRequest && permissionsToRequest.length > 0) {
-            ActivityCompat.requestPermissions(this, permissionsToRequest, PERMISSION_REQUEST_CODE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -508,12 +508,9 @@ public class MainActivity extends BaseActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             for (int i = 0; i < permissions.length; i++) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    if (Manifest.permission.POST_NOTIFICATIONS.equals(permissions[i])) {
-                        Toast.makeText(this, R.string.common_toast_notification_permission_denied, Toast.LENGTH_LONG).show();
-                    } else if (Manifest.permission.READ_MEDIA_AUDIO.equals(permissions[i])) {
-                        Toast.makeText(this, R.string.common_toast_audio_permission_denied, Toast.LENGTH_LONG).show();
-                    }
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED
+                        && Manifest.permission.POST_NOTIFICATIONS.equals(permissions[i])) {
+                    Toast.makeText(this, R.string.common_toast_notification_permission_denied, Toast.LENGTH_LONG).show();
                 }
             }
         }
@@ -536,6 +533,7 @@ public class MainActivity extends BaseActivity {
         }
         pushServiceToCurrentFragment();
         StandaloneBlockingReconciler.getInstance().maybeReconcile(this);
+        CustomRingtoneAccessController.onHostResumed(this);
     }
 
     @Override
