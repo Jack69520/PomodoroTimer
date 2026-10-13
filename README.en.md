@@ -20,7 +20,8 @@ All data stays on the device—no network, sync, or upload at runtime. This repo
 - Quick presets: 45 / 60 / 90 / 120 / 150 / 180 minutes; durations ≥ 1 hour display as `HH:MM:SS`
 - Short breaks and optional long breaks (every N=2–8 pomodoros → 10–15 minutes; off by default)
 - Pause during focus with a reason (stepped away, interrupted, inspiration, etc.); max pauses 1–5 (default 2); pausing over 5 minutes fails the round
-- About 5 minutes of study is required before a session is suggested as a completed record; after a break, continue manually or enable auto-start for the next focus round
+- **Strict Pomodoro** is off by default (**Profile → Settings → Pomodoro & Todos**). When off: ending early or pause-timeout after ≥60 seconds of active focus (excluding pause time) counts toward focus duration, but not completed pomodoros or todo pomodoro progress; under 60 seconds is not recorded. When on: only naturally finished rounds count toward both duration and completions; the switch affects future settlement only (history is not recalculated)
+- After a break, continue manually or enable auto-start for the next focus round
 - **`TimerService` foreground service** (`specialUse` / `pomodoro_focus_timer`) keeps timing with notification progress; exact alarms cover completion and pause timeout; on boot, alarms are re-scheduled from the session snapshot
 - After process death, sessions can be restored or settled from the local snapshot
 - Ringtone: system default / silent / custom; optional vibration
@@ -44,10 +45,10 @@ All data stays on the device—no network, sync, or upload at runtime. This repo
 
 ### Statistics & calendar
 
-- Today / this week / this month focus counts and duration; 7-day trend, hourly distribution, category pie chart (drill-down)
-- Streaks, week-over-week comparison, monthly insights, interruption diagnostics (pause-reason distribution)
-- Monthly calendar with per-day history; session details support **notes** (up to 200 characters); blocked-app records available
-- Profile shows **total completed pomodoros** for the active account
+- Today / this week / this month: completed-pomodoro counts and counted focus duration (may include early-ended sessions that count toward duration); 7-day trend, hourly distribution, category pie chart (drill-down)
+- Streaks (a day counts if it has any counted focus duration), week-over-week comparison, monthly insights, interruption diagnostics (pause-reason distribution)
+- Monthly calendar with per-day history; session details support **notes** (up to 200 characters) and whether duration counts toward focus totals; blocked-app records available
+- Profile shows **total completed pomodoros** and total focus duration for the active account
 
 ### Focus aids: app blocking & DND
 
