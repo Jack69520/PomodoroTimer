@@ -112,8 +112,20 @@ public class SessionRecoveryViewModel extends AndroidViewModel {
                 }
                 break;
             case OPEN_TIMER:
+                // 「查看休息」：仅当仍有可恢复 active 时进计时页，否则避免空闲假页
+                if (ActiveSessionStore.hasActiveSession(getApplication())) {
+                    emitEffect(SessionRecoveryEffect.FORCE_OPEN_TIMER);
+                } else {
+                    emitEffect(SessionRecoveryEffect.SHOW_BREAK_ENDED_TOAST);
+                }
+                finishToIdle();
+                break;
             case START_NEW_ROUND:
-                emitEffect(SessionRecoveryEffect.FORCE_OPEN_TIMER);
+                emitEffect(SessionRecoveryEffect.START_NEW_ROUND_TIMER);
+                finishToIdle();
+                break;
+            case EDIT_NEXT_DURATION:
+                emitEffect(SessionRecoveryEffect.OPEN_HOME_FOR_DURATION_EDIT);
                 finishToIdle();
                 break;
             case DISMISS:
@@ -342,6 +354,11 @@ public class SessionRecoveryViewModel extends AndroidViewModel {
         clearPendingWork();
         evaluationInFlight = false;
         awaitingService = false;
+        // 兜底清掉陈旧未读结果，避免下次冷启动误弹
+        String leftover = ActiveSessionStore.peekLastResult(getApplication());
+        if (leftover != null && !leftover.isEmpty()) {
+            ActiveSessionStore.consumeLastResult(getApplication());
+        }
         setState(new SessionRecoveryUiState(
                 SessionRecoveryUiState.Phase.CONTINUE_READY,
                 RecoveryDecision.ResultKind.NONE,

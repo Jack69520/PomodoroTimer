@@ -152,6 +152,12 @@ public class TimerServiceTest {
         // Alarm 兜底完成学习后自动进入休息阶段
         assertTrue(service.isRunning());
         assertEquals(1, service.getSessionType());
+        // 进休息后应留下 break active，并清掉 break_started 未读结果
+        assertTrue(ActiveSessionStore.hasActiveSession(context));
+        ActiveSessionStore.Checkpoint cp = ActiveSessionStore.load(context);
+        assertTrue(cp != null && cp.running && cp.sessionType == 1);
+        String leftover = ActiveSessionStore.peekLastResult(context);
+        assertTrue(leftover == null || leftover.isEmpty());
     }
 
     @Test

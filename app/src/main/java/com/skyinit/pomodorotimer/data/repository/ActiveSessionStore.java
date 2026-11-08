@@ -276,19 +276,16 @@ public final class ActiveSessionStore {
                 .putString(KEY_PAUSE_REASONS, pauseReasons != null ? pauseReasons : "")
                 .putBoolean(KEY_IS_LONG_BREAK, isLongBreak)
                 .putBoolean(KEY_AWAITING_POST_BREAK, awaitingPostBreakChoice)
+                // 新会话覆盖旧未读结算结果，避免冷启动误弹过期弹窗
+                .remove(KEY_LAST_RESULT)
+                .remove(KEY_LAST_RESULT_SESSION_ID)
                 .commit();
     }
 
     public static void clear(Context context) {
-        SharedPreferences prefs = prefs(context);
-        String lastResult = prefs.getString(KEY_LAST_RESULT, RESULT_NONE);
-        long lastResultSessionId = prefs.getLong(KEY_LAST_RESULT_SESSION_ID, 0L);
-        SharedPreferences.Editor editor = prefs.edit().clear();
-        if (lastResult != null && !lastResult.isEmpty()) {
-            editor.putString(KEY_LAST_RESULT, lastResult)
-                    .putLong(KEY_LAST_RESULT_SESSION_ID, lastResultSessionId);
-        }
-        editor.commit();
+        // 不再保留 last_result：用户结束/重置与「未读结算通知」解耦；
+        // 需要展示的结果只通过 markSettledResult 写入。
+        prefs(context).edit().clear().commit();
     }
 
     /** 记录自动结算结果供 UI 展示，并清除进行中快照。 */

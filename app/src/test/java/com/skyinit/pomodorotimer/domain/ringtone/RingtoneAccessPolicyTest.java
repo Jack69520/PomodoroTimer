@@ -1,10 +1,10 @@
 package com.skyinit.pomodorotimer.domain.ringtone;
 
 import android.Manifest;
+import android.app.Application;
 import android.content.Context;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.Build;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -13,6 +13,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowApplication;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -25,13 +26,14 @@ import static org.junit.Assert.assertTrue;
 public class RingtoneAccessPolicyTest {
 
     private Context context;
+    private ShadowApplication shadowApp;
 
     @Before
     public void setUp() {
         context = RuntimeEnvironment.getApplication();
+        shadowApp = Shadows.shadowOf((Application) context);
         RingtoneAccessPromptGate.resetForTests();
-        Shadows.shadowOf(context.getPackageManager())
-                .denyPermission(Manifest.permission.READ_MEDIA_AUDIO);
+        shadowApp.denyPermissions(Manifest.permission.READ_MEDIA_AUDIO);
     }
 
     @Test
@@ -66,8 +68,7 @@ public class RingtoneAccessPolicyTest {
 
     @Test
     public void customWithPermission_usesPreferenceUri() {
-        Shadows.shadowOf(context.getPackageManager())
-                .grantPermission(context.getPackageName(), Manifest.permission.READ_MEDIA_AUDIO);
+        shadowApp.grantPermissions(Manifest.permission.READ_MEDIA_AUDIO);
         String custom = "content://media/external/audio/media/99";
         RingtoneAccessSnapshot snap = RingtoneAccessPolicy.evaluate(context, custom);
         assertFalse(snap.degraded);
@@ -80,8 +81,7 @@ public class RingtoneAccessPolicyTest {
     public void syncKeyChangesWhenPermissionFlips() {
         String custom = "content://media/external/audio/media/7";
         String deniedKey = RingtoneAccessPolicy.effectiveSyncKey(context, custom);
-        Shadows.shadowOf(context.getPackageManager())
-                .grantPermission(context.getPackageName(), Manifest.permission.READ_MEDIA_AUDIO);
+        shadowApp.grantPermissions(Manifest.permission.READ_MEDIA_AUDIO);
         String grantedKey = RingtoneAccessPolicy.effectiveSyncKey(context, custom);
         assertEquals(custom + "|fallback", deniedKey);
         assertEquals(custom + "|ok", grantedKey);
@@ -90,8 +90,7 @@ public class RingtoneAccessPolicyTest {
 
     @Test
     public void invalidCustomUri_fallsBackToDefaultWhenGranted() {
-        Shadows.shadowOf(context.getPackageManager())
-                .grantPermission(context.getPackageName(), Manifest.permission.READ_MEDIA_AUDIO);
+        shadowApp.grantPermissions(Manifest.permission.READ_MEDIA_AUDIO);
         RingtoneAccessSnapshot snap = RingtoneAccessPolicy.evaluate(context, "not-a-uri");
         assertEquals(RingtoneAccessSnapshot.Option.CUSTOM, snap.option);
         assertFalse(snap.degraded);

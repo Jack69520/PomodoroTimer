@@ -70,15 +70,17 @@
     <string name="exact_alarm_dialog_enable">去开启</string>
     <string name="recovery_toast_session_invalid">上次计时会话已失效</string>
     <string name="recovery_toast_restore_failed">无法恢复计时，请重新开始</string>
+    <string name="recovery_toast_break_ended">休息已结束</string>
     <string name="recovery_result_title_completed">本轮已自动完成</string>
-    <string name="recovery_result_message_completed">计时已到点并完成结算。你可以开始新一轮专注，或稍后再说。</string>
+    <string name="recovery_result_message_completed">上一轮已到点并完成结算。下一轮默认 %1$d 分钟，可立即开始或先修改时长。</string>
     <string name="recovery_result_title_break">学习完成，已进入休息</string>
-    <string name="recovery_result_message_break">学习到点后已自动开始休息。建议打开计时页查看剩余时间。</string>
+    <string name="recovery_result_message_break">学习到点后已自动开始休息，但当前未检测到进行中的休息计时。可打开计时页确认，或稍后再说。</string>
     <string name="recovery_result_title_failed">暂停超时，本轮已失败</string>
     <string name="recovery_result_message_failed">暂停时间过长，会话已按失败记录。下一次开始新的专注即可。</string>
     <string name="recovery_result_view_break">查看休息</string>
     <string name="recovery_result_later">稍后</string>
     <string name="recovery_result_start_new">开始新一轮</string>
+    <string name="recovery_result_edit_next_duration">修改下一轮时长</string>
     <string name="recovery_result_dismiss">知道了</string>
     <string name="focus_block_overlay_title">应用已被限制</string>
     <string name="focus_block_overlay_warning">专注期间请勿切换应用</string>
@@ -1043,7 +1045,7 @@
 
     <!-- About -->
     <string name="about_link_separator"> · </string>
-    <string name="about_copyright_en">Copyright © 开发者. All Rights Reserved.</string>
+    <string name="about_copyright_en">Copyright ©开发者. All Rights Reserved.</string>
     <string name="about_copyright_zh">版权所有 侵权必究</string>
 
     <!-- Layout placeholders (design-time defaults, replaced at runtime) -->

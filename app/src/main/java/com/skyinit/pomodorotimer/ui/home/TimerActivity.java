@@ -449,8 +449,8 @@ public class TimerActivity extends AppCompatActivity implements PauseReasonDialo
             primaryButton.setText(R.string.start_button);
             primaryButton.setEnabled(true);
             primaryButton.setVisibility(View.VISIBLE);
-            secondaryButton.setText(R.string.stop_button);
-            secondaryButton.setVisibility(View.VISIBLE);
+            // 空闲学习态无进行中会话，隐藏无意义的停止按钮
+            secondaryButton.setVisibility(View.GONE);
         } else {
             primaryButton.setVisibility(View.GONE);
             secondaryButton.setVisibility(View.GONE);

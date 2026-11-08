@@ -781,6 +781,9 @@ public class TimerService extends Service {
         pomodoroSettingsRepository.saveSettings(settings);
 
         beginNewSession();
+        // beginNewSession→notifyStateChanged 已落盘；再显式写一次，缩短
+        // markSettledResult(BREAK_STARTED) 与 break active 之间的空窗。
+        saveCheckpoint();
         dispatchSessionAlert(SessionAlert.BREAK_STARTED);
         openTimerForBreakSession();
     }
@@ -798,6 +801,8 @@ public class TimerService extends Service {
             timeLeftInMillis = getDefaultStudyTimeMs();
             publishState();
             beginNewSession();
+            // 立即落盘，清除 markSettledResult(COMPLETED) 残留，避免冷启动误弹
+            saveCheckpoint();
 
             timerHandler.postDelayed(
                     () -> dispatchSessionAlert(SessionAlert.STUDY_STARTED, true),

@@ -100,7 +100,7 @@ public class SessionRecoveryPolicyTest {
     }
 
     @Test
-    public void lastResult_breakStarted_shows() {
+    public void lastResult_breakStarted_shows_whenNoActive() {
         RecoveryDecision d = SessionRecoveryPolicy.decide(
                 "userA", "break_started", 42L,
                 false, "",
@@ -112,14 +112,35 @@ public class SessionRecoveryPolicyTest {
     }
 
     @Test
-    public void lastResult_takesPrecedenceOverCheckpoint() {
+    public void activeCheckpoint_takesPrecedenceOverLastResult() {
         RecoveryDecision d = SessionRecoveryPolicy.decide(
                 "userA", "failed_timeout", 7L,
                 true, "userA",
                 true, false, false,
                 60_000L, 0L, TIMEOUT, 100L);
+        assertEquals(RecoveryDecision.Kind.CONTINUE_ACTIVE, d.kind);
+        assertEquals(100L, d.sessionId);
+    }
+
+    @Test
+    public void completedResult_ignoredWhenAwaitingActive() {
+        RecoveryDecision d = SessionRecoveryPolicy.decide(
+                "userA", "completed", 7L,
+                true, "userA",
+                false, false, true,
+                25 * 60_000L, 0L, TIMEOUT, 100L);
+        assertEquals(RecoveryDecision.Kind.CONTINUE_ACTIVE, d.kind);
+    }
+
+    @Test
+    public void completedResult_showsWhenNoActive() {
+        RecoveryDecision d = SessionRecoveryPolicy.decide(
+                "userA", "completed", 7L,
+                false, "",
+                false, false, false,
+                0L, 0L, TIMEOUT, 0L);
         assertEquals(RecoveryDecision.Kind.SHOW_RESULT, d.kind);
-        assertEquals(RecoveryDecision.ResultKind.FAILED_TIMEOUT, d.resultKind);
+        assertEquals(RecoveryDecision.ResultKind.COMPLETED, d.resultKind);
     }
 
     @Test

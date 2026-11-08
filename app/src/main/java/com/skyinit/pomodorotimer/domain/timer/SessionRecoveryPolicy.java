@@ -4,6 +4,8 @@ package com.skyinit.pomodorotimer.domain.timer;
  * 启动恢复决策：根据账户边界、结算结果与快照时钟决定 UI/Service 行为。
  * <p>
  * 纯函数，无 Android 依赖。
+ * <p>
+ * 优先级：有效 active（静默恢复）&gt; 到期需结算 &gt; 无 active 的未读结果弹窗。
  */
 public final class SessionRecoveryPolicy {
 
@@ -46,6 +48,38 @@ public final class SessionRecoveryPolicy {
             return RecoveryDecision.none();
         }
 
+        if (hasActiveCheckpoint) {
+            if (checkpointUserId == null || checkpointUserId.isEmpty()
+                    || !activeUserId.equals(checkpointUserId)) {
+                return RecoveryDecision.discardForeignOrGuest();
+            }
+
+            if (awaitingPostBreak) {
+                return RecoveryDecision.continueActive(sessionId);
+            }
+
+            if (running) {
+                if (remainingMs > 0L) {
+                    return RecoveryDecision.continueActive(sessionId);
+                }
+                return RecoveryDecision.settleThenResult(sessionId);
+            }
+
+            if (paused) {
+                long timeout = pauseTimeoutMs > 0L
+                        ? pauseTimeoutMs
+                        : TimerSessionPolicy.DEFAULT_PAUSE_TIMEOUT_MS;
+                if (pauseElapsedMs < timeout) {
+                    return RecoveryDecision.continueActive(sessionId);
+                }
+                return RecoveryDecision.settleThenResult(sessionId);
+            }
+
+            // active 标记存在但阶段不可识别：交 Service 结算/清理
+            return RecoveryDecision.settleThenResult(sessionId);
+        }
+
+        // 无有效 active：仅「错过事件」时展示未读结算结果
         if (hasResult) {
             RecoveryDecision.ResultKind resultKind = mapResult(lastResult);
             if (resultKind != RecoveryDecision.ResultKind.NONE) {
@@ -53,38 +87,7 @@ public final class SessionRecoveryPolicy {
             }
         }
 
-        if (!hasActiveCheckpoint) {
-            return RecoveryDecision.none();
-        }
-
-        if (checkpointUserId == null || checkpointUserId.isEmpty()
-                || !activeUserId.equals(checkpointUserId)) {
-            return RecoveryDecision.discardForeignOrGuest();
-        }
-
-        if (awaitingPostBreak) {
-            return RecoveryDecision.continueActive(sessionId);
-        }
-
-        if (running) {
-            if (remainingMs > 0L) {
-                return RecoveryDecision.continueActive(sessionId);
-            }
-            return RecoveryDecision.settleThenResult(sessionId);
-        }
-
-        if (paused) {
-            long timeout = pauseTimeoutMs > 0L
-                    ? pauseTimeoutMs
-                    : TimerSessionPolicy.DEFAULT_PAUSE_TIMEOUT_MS;
-            if (pauseElapsedMs < timeout) {
-                return RecoveryDecision.continueActive(sessionId);
-            }
-            return RecoveryDecision.settleThenResult(sessionId);
-        }
-
-        // active 标记存在但阶段不可识别：交 Service 结算/清理
-        return RecoveryDecision.settleThenResult(sessionId);
+        return RecoveryDecision.none();
     }
 
     private static RecoveryDecision.ResultKind mapResult(String lastResult) {

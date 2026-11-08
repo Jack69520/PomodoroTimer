@@ -7,6 +7,8 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.skyinit.pomodorotimer.App;
+import com.skyinit.pomodorotimer.MainActivity;
 import com.skyinit.pomodorotimer.R;
 import com.skyinit.pomodorotimer.domain.timer.RecoveryDecision;
 import com.skyinit.pomodorotimer.ui.common.ModernPromptDialog;
@@ -33,7 +35,13 @@ public final class SessionRecoveryController {
             }
             switch (effect) {
                 case FORCE_OPEN_TIMER:
-                    openTimer(activity);
+                    openTimer(activity, false);
+                    break;
+                case START_NEW_ROUND_TIMER:
+                    openTimer(activity, true);
+                    break;
+                case OPEN_HOME_FOR_DURATION_EDIT:
+                    openHome(activity);
                     break;
                 case SHOW_RESULT_DIALOG:
                     showResultDialog(activity, vm);
@@ -43,6 +51,9 @@ public final class SessionRecoveryController {
                     break;
                 case SHOW_RESTORE_FAILED_TOAST:
                     Toast.makeText(activity, R.string.recovery_toast_restore_failed, Toast.LENGTH_SHORT).show();
+                    break;
+                case SHOW_BREAK_ENDED_TOAST:
+                    Toast.makeText(activity, R.string.recovery_toast_break_ended, Toast.LENGTH_SHORT).show();
                     break;
                 case SHOW_EXACT_ALARM_HINT:
                     ExactAlarmPermissionHelper.maybeShowInAppDialog(activity);
@@ -67,13 +78,28 @@ public final class SessionRecoveryController {
         return vm.isBlockingShortcuts();
     }
 
-    private static void openTimer(FragmentActivity activity) {
+    private static void openTimer(FragmentActivity activity, boolean autoStart) {
         if (activity.isFinishing() || activity.isDestroyed()) {
             return;
         }
         Intent intent = new Intent(activity, TimerActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (autoStart) {
+            intent.putExtra("start", true);
+        }
         activity.startActivity(intent);
+    }
+
+    private static void openHome(FragmentActivity activity) {
+        if (activity.isFinishing() || activity.isDestroyed()) {
+            return;
+        }
+        if (activity instanceof MainActivity) {
+            return;
+        }
+        Intent home = new Intent(activity, MainActivity.class);
+        home.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        activity.startActivity(home);
     }
 
     private static void showResultDialog(FragmentActivity activity, SessionRecoveryViewModel vm) {
@@ -126,16 +152,28 @@ public final class SessionRecoveryController {
                 break;
             case COMPLETED:
             default:
+                int defaultMinutes = resolveDefaultStudyMinutes(activity);
                 builder.icon(R.drawable.ic_timer)
                         .accent(ModernPromptDialog.Accent.SUCCESS)
                         .title(R.string.recovery_result_title_completed)
-                        .message(R.string.recovery_result_message_completed)
-                        .primary(R.string.recovery_result_dismiss, () ->
-                                vm.dispatch(SessionRecoveryIntent.DISMISS))
-                        .secondary(R.string.recovery_result_start_new, () ->
-                                vm.dispatch(SessionRecoveryIntent.START_NEW_ROUND));
+                        .message(activity.getString(
+                                R.string.recovery_result_message_completed, defaultMinutes))
+                        .primary(R.string.recovery_result_start_new, () ->
+                                vm.dispatch(SessionRecoveryIntent.START_NEW_ROUND))
+                        .secondary(R.string.recovery_result_edit_next_duration, () ->
+                                vm.dispatch(SessionRecoveryIntent.EDIT_NEXT_DURATION))
+                        .tertiary(R.string.recovery_result_dismiss, () ->
+                                vm.dispatch(SessionRecoveryIntent.DISMISS));
                 break;
         }
         builder.show();
+    }
+
+    private static int resolveDefaultStudyMinutes(FragmentActivity activity) {
+        long ms = ((App) activity.getApplication()).getContainer()
+                .getTimerSettingsRepository()
+                .getDefaultStudyTimeMs();
+        long minutes = Math.max(1L, Math.round(ms / 60_000.0));
+        return (int) minutes;
     }
 }

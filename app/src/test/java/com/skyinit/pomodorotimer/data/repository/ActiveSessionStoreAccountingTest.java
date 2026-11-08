@@ -73,6 +73,32 @@ public class ActiveSessionStoreAccountingTest {
     }
 
     @Test
+    public void save_clearsStaleLastResult() {
+        ActiveSessionStore.markSettledResult(context, 99L, ActiveSessionStore.RESULT_COMPLETED);
+        assertEquals(ActiveSessionStore.RESULT_COMPLETED, ActiveSessionStore.peekLastResult(context));
+
+        long now = SystemClock.elapsedRealtime();
+        ActiveSessionStore.save(
+                context, "u1", 1L, 1, now + 60_000L, 60_000L,
+                true, false, 1, System.currentTimeMillis(),
+                0, 0L, 5 * 60_000L, 0L,
+                -1, -1, "", "学习", "", "", false, false);
+
+        assertTrue(ActiveSessionStore.hasActiveSession(context));
+        String leftover = ActiveSessionStore.peekLastResult(context);
+        assertTrue(leftover == null || leftover.isEmpty());
+    }
+
+    @Test
+    public void clear_doesNotPreserveLastResult() {
+        ActiveSessionStore.markSettledResult(context, 99L, ActiveSessionStore.RESULT_BREAK_STARTED);
+        ActiveSessionStore.clear(context);
+        String leftover = ActiveSessionStore.peekLastResult(context);
+        assertTrue(leftover == null || leftover.isEmpty());
+        assertFalse(ActiveSessionStore.hasActiveSession(context));
+    }
+
+    @Test
     public void saveEligible_requiresActiveFocus_notPauseWall() {
         long now = SystemClock.elapsedRealtime();
         // planned 25m, remaining 24m30s → active 30s < 60s SAVE_ELIGIBLE
